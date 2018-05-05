@@ -184,6 +184,22 @@ def perform_alias(teamname, alias):
     write_tokens()
     print('Added alias %s to team %s' % (alias, team['team_name'],))
 
+def perform_unalias(teamname):
+    team = find_team(teamname)
+    if not team:
+        return
+    if 'alias' not in team:
+        print('Team %s has no aliases' % (team['team_name'],))
+        return
+    ls = team['alias']
+    if teamname not in ls:
+        print('%s is not an alias of %s' % (teamname, team['team_name'],))
+        return
+    pos = ls.index(teamname)
+    del ls[pos]
+    write_tokens()
+    print('Removed alias %s from team %s' % (teamname, team['team_name'],))
+    
 # Begin work.
 
 random.seed()
@@ -223,5 +239,10 @@ elif command == 'alias':
         print('Usage: alias TEAM NEWALIAS')
     else:
         perform_alias(args[0], args[1])
+elif command == 'unalias':
+    if len(args) != 1:
+        print('Usage: unalias ALIAS')
+    else:
+        perform_unalias(args[0])
 else:
     print('Commands: list login logout alias')

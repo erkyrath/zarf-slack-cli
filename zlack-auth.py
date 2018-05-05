@@ -57,7 +57,7 @@ def print_auth_url():
 
     params = [
         ('client_id', opts.client_id),
-        ('scope', 'team:read channels:read'),
+        ('scope', 'client'),
         ('redirect_uri', redirecturl),
         ('state', statecheck),
     ]
@@ -126,9 +126,27 @@ def perform_auth():
         if key in res:
             team[key] = res.get(key)
 
+    # Try fetching user info.
+    cli = SlackClient(team['access_token'])
+    res = cli.api_call('users.info', user=team['user_id'])
+    if not res.get('ok'):
+        print('users.info call failed: %s' % (res.get('error'),))
+        return
+    if not res.get('user'):
+        print('users.info response had no user')
+        return
+    user = res['user']
+    print('###', user)
+
+    team['user_name'] = user['name']
+    team['user_real_name'] = user['real_name']
+            
     # Done.
     tokens[teamid] = team
     write_tokens()
+
+def perform_unauth(teamname):
+    pass
 
 # Begin work.
 
@@ -150,8 +168,14 @@ if command == 'list':
     for team in tokens.values():
         teamname = team.get('team_name', '???')
         username = team.get('user_name', '???')
-        print(' %s (%s)' % (teamname, username,))
+        userrealname = team.get('user_real_name', '???')
+        print(' %s (%s "%s")' % (teamname, username, userrealname))
 elif command in ('login', 'auth'):
     perform_auth()
+elif command in ('logout', 'unauth', 'revoke'):
+    if len(args) != 1:
+        print('Usage: logout TEAM')
+    else:
+        perform_unauth(args[1])
 else:
     print('Commands: list login logout')

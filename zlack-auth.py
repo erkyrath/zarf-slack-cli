@@ -151,7 +151,7 @@ def perform_auth():
         print('users.info response had no user')
         return
     user = res['user']
-    print('###', user)
+    print('###user:', user)
 
     team['user_name'] = user['name']
     team['user_real_name'] = user['real_name']
@@ -165,8 +165,19 @@ def perform_unauth(teamname):
     team = find_team(teamname)
     if not team:
         return
-    print('###', team)
-    ### unauth
+    cli = SlackClient(team['access_token'])
+    res = cli.api_call('auth.revoke')
+    if not res.get('ok'):
+        print('auth.revoke call failed: %s' % (res.get('error'),))
+        return
+    if not res.get('revoked'):
+        print('auth.revoke call failed')
+        return
+
+    # Done.
+    del tokens[team['team_id']]
+    write_tokens()
+    print('Unauthenticated from team %s' % (team['team_name'],))
 
 def perform_alias(teamname, alias):
     team = find_team(teamname)

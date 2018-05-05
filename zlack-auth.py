@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# The Python Slack API library: https://github.com/slackapi/python-slackclient
+# Documentation on using OAuth with Slack: https://api.slack.com/docs/oauth
+
 import sys
 import os
 import os.path
@@ -151,7 +154,6 @@ def perform_auth():
         print('users.info response had no user')
         return
     user = res['user']
-    print('###user:', user)
 
     team['user_name'] = user['name']
     team['user_real_name'] = user['real_name']

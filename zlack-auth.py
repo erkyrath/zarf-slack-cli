@@ -50,6 +50,21 @@ def write_tokens():
     fl.write('\n')
     fl.close()
     os.chmod(path, 0o700)
+
+def find_team(teamname):
+    if not teamname:
+        print('Empty team name!')
+        return None
+    for team in tokens.values():
+        if team.get('team_id') == teamname:
+            return team
+        if team.get('team_name').startswith(teamname):
+            return team
+        alias = team.get('alias')
+        if alias and teamname in alias:
+            return team
+    print('Team name not recognized: %s' % (teamname,))
+    return None
     
 def print_auth_url():
     statecheck = 'state_%d' % (random.randrange(1000000),)
@@ -146,7 +161,10 @@ def perform_auth():
     write_tokens()
 
 def perform_unauth(teamname):
-    pass
+    team = find_team(teamname)
+    if not team:
+        return
+    print('###', team)
 
 # Begin work.
 
@@ -169,13 +187,18 @@ if command == 'list':
         teamname = team.get('team_name', '???')
         username = team.get('user_name', '???')
         userrealname = team.get('user_real_name', '???')
-        print(' %s (%s "%s")' % (teamname, username, userrealname))
+        alias = team.get('alias')
+        if alias:
+            aliases = '(alias: %s) ' % (', '.join(alias))
+        else:
+            aliases = ''
+        print(' %s %s(user: %s "%s")' % (teamname, aliases, username, userrealname))
 elif command in ('login', 'auth'):
     perform_auth()
 elif command in ('logout', 'unauth', 'revoke'):
     if len(args) != 1:
         print('Usage: logout TEAM')
     else:
-        perform_unauth(args[1])
+        perform_unauth(args[0])
 else:
-    print('Commands: list login logout')
+    print('Commands: list login logout alias')

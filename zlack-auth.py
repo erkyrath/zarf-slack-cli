@@ -159,12 +159,30 @@ def perform_auth():
     # Done.
     tokens[teamid] = team
     write_tokens()
+    print('Authenticated as %s in team %s' % (user['name'], team['team_name']))
 
 def perform_unauth(teamname):
     team = find_team(teamname)
     if not team:
         return
     print('###', team)
+    ### unauth
+
+def perform_alias(teamname, alias):
+    team = find_team(teamname)
+    if not team:
+        return
+    if 'alias' not in team:
+        ls = []
+        team['alias'] = ls
+    else:
+        ls = team['alias']
+    if alias in ls:
+        print('Team %s already has alias %s' % (team['team_name'], alias,))
+        return
+    ls.append(alias)
+    write_tokens()
+    print('Added alias %s to team %s' % (alias, team['team_name'],))
 
 # Begin work.
 
@@ -200,5 +218,10 @@ elif command in ('logout', 'unauth', 'revoke'):
         print('Usage: logout TEAM')
     else:
         perform_unauth(args[0])
+elif command == 'alias':
+    if len(args) != 2:
+        print('Usage: alias TEAM NEWALIAS')
+    else:
+        perform_alias(args[0], args[1])
 else:
     print('Commands: list login logout alias')

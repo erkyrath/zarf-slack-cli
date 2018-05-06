@@ -52,6 +52,7 @@ class Connection():
         self.team = tokens[id]
         self.team_name = self.team['team_name']
         self.users = {}
+        self.channels = {}
         self.client = ZarfSlackClient(self.team['access_token'])
 
 def get_next_cursor(res):
@@ -83,6 +84,23 @@ def connect_to_teams():
             if not cursor:
                 break
         print('###', conn.users)
+
+        thread.add_output('Fetching channels from %s' % (conn.team_name,))
+        cursor = None
+        while True:
+            if thread.check_shutdown():
+                return
+            res = conn.client.api_call_check('channels.list', exclude_archived=True, exclude_members=True, cursor=cursor)
+            if not res:
+                break
+            for chan in res.get('channels'):
+                chanid = chan['id']
+                channame = chan['name']
+                conn.channels[chanid] = channame
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
+        print('###', conn.channels)
 
 class SlackThread(threading.Thread):
     def __init__(self):

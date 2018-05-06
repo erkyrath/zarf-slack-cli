@@ -38,6 +38,14 @@ class ZarfSlackClient(SlackClient):
     def __init__(self, token, proxies=None):
         SlackClient.__init__(self, token, proxies)
         
+    def api_call_check(self, method, **kwargs):
+        res = self.api_call(method, **kwargs)
+        if not res.get('ok'):
+            msg = 'Slack error (%s): %s' % (method, res.get('error', '???'),)
+            thread.add_output(msg)
+            return None
+        return res
+
 class Connection():
     def __init__(self, id):
         self.id = id
@@ -45,10 +53,6 @@ class Connection():
         self.team_name = self.team['team_name']
         self.users = {}
         self.client = ZarfSlackClient(self.team['access_token'])
-
-def report_error(res):
-    msg = 'Slack error: %s' % (res.get('error', '???'),)
-    thread.add_output(msg)
 
 def get_next_cursor(res):
     metadata = res.get('response_metadata')
@@ -67,9 +71,8 @@ def connect_to_teams():
         while True:
             if thread.check_shutdown():
                 return
-            res = conn.client.api_call('users.list', cursor=cursor)
-            if not res.get('ok'):
-                report_error(res)
+            res = conn.client.api_call_check('users.list', cursor=cursor)
+            if not res:
                 break
             for user in res.get('members'):
                 userid = user['id']

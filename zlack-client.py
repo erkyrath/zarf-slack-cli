@@ -141,7 +141,7 @@ class SlackThread(threading.Thread):
         with self.lock:
             if self.input_list:
                 res.extend(self.input_list)
-                self.input_list[:] = []
+                self.input_list.clear()
         return res
     
     def add_output(self, val):
@@ -153,7 +153,7 @@ class SlackThread(threading.Thread):
         with self.lock:
             if self.output_list:
                 res.extend(self.output_list)
-                self.output_list[:] = []
+                self.output_list.clear()
         return res
 
 async def input_loop():

@@ -14,8 +14,6 @@ import prompt_toolkit
 from slackclient import SlackClient
 
 token_file = '.zlack-tokens'
-env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
-env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
 
 popt = optparse.OptionParser(usage='slack-client.py [ OPTIONS ]')
 
@@ -35,8 +33,10 @@ def read_tokens():
         return OrderedDict()
 
 class ZarfSlackClient(SlackClient):
-    def __init__(self, token, proxies=None):
+    def __init__(self, token, proxies=None, handler=None):
         SlackClient.__init__(self, token, proxies)
+        self.server.websocket_safe_read = None
+        self.message_handler = handler
         
     def api_call_check(self, method, **kwargs):
         res = self.api_call(method, **kwargs)
@@ -46,6 +46,9 @@ class ZarfSlackClient(SlackClient):
             return None
         return res
 
+    def rtm_read(self):
+        pass
+
 class Connection():
     def __init__(self, id):
         self.id = id
@@ -53,7 +56,10 @@ class Connection():
         self.team_name = self.team['team_name']
         self.users = {}
         self.channels = {}
-        self.client = ZarfSlackClient(self.team['access_token'])
+        self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
+
+    def handle_message(self, msg):
+        thread.add_output('message: %s' % (msg,))
 
 def get_next_cursor(res):
     metadata = res.get('response_metadata')
@@ -101,6 +107,11 @@ def connect_to_teams():
             if not cursor:
                 break
         print('###', conn.channels)
+
+    for conn in connections.values():
+        res = conn.client.rtm_connect(reconnect=True, with_team_state=False)
+        print('### rtm_connect', res)
+        print('### timeout', conn.client.server.websocket.gettimeout())
 
 class SlackThread(threading.Thread):
     def __init__(self):

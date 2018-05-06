@@ -17,6 +17,10 @@ token_file = '.zlack-tokens'
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
 env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
 
+popt = optparse.OptionParser(usage='slack-client.py [ OPTIONS ]')
+
+(opts, args) = popt.parse_args()
+
 thread = None
 connections = OrderedDict()
 
@@ -30,6 +34,41 @@ def read_tokens():
     except:
         return OrderedDict()
 
+class ZarfSlackClient(SlackClient):
+    def __init__(self, token, proxies=None):
+        SlackClient.__init__(self, token, proxies)
+        
+class Connection():
+    def __init__(self, id):
+        self.id = id
+        self.team = tokens[id]
+        self.client = ZarfSlackClient(self.team['access_token'])
+
+def report_error(res):
+    msg = 'Slack error: %s' % (res.get('error', '???'),)
+    thread.add_output(msg)
+
+def get_next_cursor(res):
+    metadata = res.get('response_metadata')
+    if not metadata:
+        return None
+    return metadata.get('next_cursor', None)
+    
+def connect_to_teams():
+    for id in tokens.keys():
+        conn = Connection(id)
+        connections[id] = conn
+    for conn in connections.values():
+        cursor = None
+        while True:
+            res = conn.client.api_call('users.list', cursor=cursor)
+            if not res.get('ok'):
+                report_error(res)
+                break
+            print('###', res.get('members'))
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
 
 class SlackThread(threading.Thread):
     def __init__(self):
@@ -41,6 +80,7 @@ class SlackThread(threading.Thread):
         self.cond = threading.Condition()
         
     def run(self):
+        connect_to_teams()
         while not self.check_shutdown():
             ls = self.fetch_inputs()
             for ln in ls:

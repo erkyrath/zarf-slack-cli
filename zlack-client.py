@@ -5,13 +5,31 @@
 import sys
 import os
 import time
+import json
+from collections import OrderedDict
 import optparse
 import asyncio
 import threading
 import prompt_toolkit
 from slackclient import SlackClient
 
+token_file = '.zlack-tokens'
+env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
+env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
+
 thread = None
+connections = OrderedDict()
+
+def read_tokens():
+    path = os.path.join(os.environ.get('HOME'), token_file)
+    try:
+        fl = open(path)
+        dat = json.load(fl, object_pairs_hook=OrderedDict)
+        fl.close()
+        return dat
+    except:
+        return OrderedDict()
+
 
 class SlackThread(threading.Thread):
     def __init__(self):
@@ -20,6 +38,7 @@ class SlackThread(threading.Thread):
         self.output_list = []
         self.want_shutdown = False
         self.lock = threading.Lock()
+        self.cond = threading.Condition()
         
     def run(self):
         while True:
@@ -30,16 +49,19 @@ class SlackThread(threading.Thread):
             ls = self.fetch_inputs()
             for ln in ls:
                 self.add_output('Processed: ' + ln)
-            time.sleep(0.1)
+            with self.cond:
+                self.cond.wait(5.0)
         self.add_output('Disconnected.')
 
     def set_shutdown(self):
-        with self.lock:
+        with self.cond:
             self.want_shutdown = True
+            self.cond.notify()
 
     def add_input(self, val):
-        with self.lock:
+        with self.cond:
             self.input_list.append(val)
+            self.cond.notify()
             
     def fetch_inputs(self):
         res = []
@@ -65,7 +87,9 @@ async def input_loop():
     while thread.is_alive():
         try:
             input = await prompt_toolkit.prompt_async('>', patch_stdout=True)
-            thread.add_input(input)
+            input = input.rstrip()
+            if input:
+                thread.add_input(input)
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')
             thread.set_shutdown()
@@ -79,7 +103,9 @@ def check_for_outputs(evloop):
         print(ln)
     if thread.is_alive():
         evloop.call_later(0.1, check_for_outputs, evloop)
-        
+
+tokens = read_tokens()
+
 thread = SlackThread()
 thread.start()
 

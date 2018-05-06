@@ -22,7 +22,11 @@ class SlackThread(threading.Thread):
         self.lock = threading.Lock()
         
     def run(self):
-        while not self.want_shutdown:
+        while True:
+            with self.lock:
+                flag = self.want_shutdown
+            if flag:
+                break
             ls = self.fetch_inputs()
             for ln in ls:
                 self.add_output('Processed: ' + ln)

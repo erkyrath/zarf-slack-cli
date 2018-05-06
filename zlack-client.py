@@ -215,10 +215,18 @@ class SlackThread(threading.Thread):
 # (teamid, channelid) for the current default channel
 curchannel = None
 
+pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_channel_command = re.compile(':([a-z0-9_-]+)(?:[/:]([a-z0-9_-]+))?', flags=re.IGNORECASE)
 
 def handle_input(val):
     global curchannel
+    match = pat_special_command.match(val)
+    if match:
+        cmd = match.group(1)
+        val = val[ match.end() : ]
+        val = val.lstrip()
+        print('Special command not recognized:', cmd)
+        return
     match = pat_channel_command.match(val)
     if match:
         val = val[ match.end() : ]

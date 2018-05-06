@@ -172,7 +172,7 @@ class SlackThread(threading.Thread):
                 conn.client.rtm_send_json('message', user=conn.user_id, channel='C03UD0D19', text=ln)
             read_connections()
             with self.cond:
-                self.cond.wait(1.0) ###
+                self.cond.wait(0.1)
         disconnect_all_teams()
         self.add_output('Disconnected.')
 

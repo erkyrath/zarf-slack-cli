@@ -11,6 +11,7 @@ import optparse
 import asyncio
 import threading
 import prompt_toolkit
+from ssl import SSLError
 from slackclient import SlackClient
 
 token_file = '.zlack-tokens'
@@ -37,6 +38,7 @@ class ZarfSlackClient(SlackClient):
         SlackClient.__init__(self, token, proxies)
         self.server.websocket_safe_read = None
         self.message_handler = handler
+        self.msg_counter = 0
         
     def api_call_check(self, method, **kwargs):
         res = self.api_call(method, **kwargs)
@@ -55,14 +57,31 @@ class ZarfSlackClient(SlackClient):
         self.server.connected = False
         self.server.last_connected_at = 0
 
+    def rtm_send_json(self, msgtype, **kwargs):
+        msg = dict(kwargs)
+        msg['type'] = msgtype
+        self.msg_counter += 1
+        msg['id'] = self.msg_counter
+        self.server.send_to_websocket(msg)
+
     def rtm_read(self):
-        pass
+        if self.server.websocket is None:
+            return
+        try:
+            dat = self.server.websocket.recv()
+            print('### got', repr(dat))
+        except SSLError as ex:
+            if ex.errno == 2:
+                return
+            print('### ex', ex.errno, ex)
+            raise
 
 class Connection():
     def __init__(self, id):
         self.id = id
         self.team = tokens[id]
         self.team_name = self.team['team_name']
+        self.user_id = self.team['user_id']
         self.users = {}
         self.channels = {}
         self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
@@ -122,6 +141,10 @@ def connect_to_teams():
         print('### rtm_connect', res)
         print('### timeout', conn.client.server.websocket.gettimeout())
 
+def read_connections():
+    for conn in connections.values():
+        conn.client.rtm_read()
+    
 def disconnect_all_teams():
     for conn in connections.values():
         conn.client.rtm_disconnect()
@@ -140,9 +163,12 @@ class SlackThread(threading.Thread):
         while not self.check_shutdown():
             ls = self.fetch_inputs()
             for ln in ls:
-                self.add_output('Processed: ' + ln)
+                #self.add_output('Processed: ' + ln)
+                conn = connections['T03UD0D0X']
+                conn.client.rtm_send_json('message', user=conn.user_id, channel='C03UD0D19', text=ln)
+            read_connections()
             with self.cond:
-                self.cond.wait(5.0)
+                self.cond.wait(1.0) ###
         disconnect_all_teams()
         self.add_output('Disconnected.')
 

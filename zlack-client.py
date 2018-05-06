@@ -4,6 +4,7 @@
 
 import sys
 import os
+import re
 import time
 import json
 from collections import OrderedDict
@@ -211,13 +212,93 @@ class SlackThread(threading.Thread):
                 self.output_list.clear()
         return res
 
+# (teamid, channelid) for the current default channel
+curchannel = None
+
+pat_channel_command = re.compile(':([a-z0-9_-]+)(?:[/:]([a-z0-9_-]+))?', flags=re.IGNORECASE)
+
+def handle_input(val):
+    global curchannel
+    match = pat_channel_command.match(val)
+    if match:
+        val = val[ match.end() : ]
+        val = val.lstrip()
+        if match.group(2) is not None:
+            # command ":TEAM/CHANNEL"
+            team = parse_team(match.group(1))
+            if not team:
+                print('Team not recognized:', match.group(1))
+                return
+            teamid = team['team_id']
+            channame = match.group(2)
+        else:
+            # command ":CHANNEL"
+            if not curchannel:
+                print('No current team.')
+                return
+            teamid = curchannel[0]
+            channame = match.group(1)
+        conn = connections.get(teamid)
+        if not conn:
+            print('Team not connected:', team_name(teamid))
+            return
+        chanid = parse_channel(conn, channame)
+        if not chanid:
+            print('Channel not recognized:', channame)
+            return
+        curchannel = (teamid, chanid)
+    if not val:
+        return
+    if not curchannel:
+        print('No current channel.')
+        return
+    print('###', curchannel, repr(val))    
+    
+
+def parse_team(val):
+    for team in tokens.values():
+        if team.get('team_id') == val:
+            return team
+        if team.get('team_name').startswith(val):
+            return team
+        alias = team.get('alias')
+        if alias and val in alias:
+            return team
+    return None
+
+def parse_channel(conn, val):
+    for (chanid, name) in conn.channels.items():
+        if val == chanid or val == name:
+            return chanid
+    for (chanid, name) in conn.channels.items():
+        if name.startswith(val):
+            return chanid
+    return None
+        
+def team_name(teamid):
+    if teamid not in tokens:
+        return '???'+teamid
+    return tokens[teamid]['team_name']
+
+def channel_name(teamid, chanid):
+    if teamid not in connections:
+        return '???'+chanid
+    conn = connections[teamid]
+    if chanid not in conn.channels:
+        return '???'+chanid
+    return conn.channels[chanid]
+
 async def input_loop():
     while thread.is_alive():
         try:
-            input = await prompt_toolkit.prompt_async('>', patch_stdout=True)
+            prompt = '> '
+            if curchannel:
+                (teamid, chanid) = curchannel
+                prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
+            input = await prompt_toolkit.prompt_async(prompt, patch_stdout=True)
             input = input.rstrip()
             if input:
-                thread.add_input(input)
+                handle_input(input)
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')
             thread.set_shutdown()

@@ -41,11 +41,7 @@ class SlackThread(threading.Thread):
         self.cond = threading.Condition()
         
     def run(self):
-        while True:
-            with self.lock:
-                flag = self.want_shutdown
-            if flag:
-                break
+        while not self.check_shutdown():
             ls = self.fetch_inputs()
             for ln in ls:
                 self.add_output('Processed: ' + ln)
@@ -57,6 +53,11 @@ class SlackThread(threading.Thread):
         with self.cond:
             self.want_shutdown = True
             self.cond.notify()
+
+    def check_shutdown(self):
+        with self.lock:
+            flag = self.want_shutdown
+        return flag
 
     def add_input(self, val):
         with self.cond:

@@ -69,11 +69,16 @@ class ZarfSlackClient(SlackClient):
             return
         try:
             dat = self.server.websocket.recv()
-            print('### got', repr(dat))
+            msg = None
+            try:
+                msg = json.loads(dat)
+            except:
+                thread.add_output('Websocket error: non-json message: %s' % (dat,))
+            if msg is not None:
+                self.message_handler(msg)
         except SSLError as ex:
             if ex.errno == 2:
                 return
-            print('### ex', ex.errno, ex)
             raise
 
 class Connection():
@@ -138,8 +143,7 @@ def connect_to_teams():
 
     for conn in connections.values():
         res = conn.client.rtm_connect(reconnect=True, with_team_state=False)
-        print('### rtm_connect', res)
-        print('### timeout', conn.client.server.websocket.gettimeout())
+        ### if not res, close connection
 
 def read_connections():
     for conn in connections.values():

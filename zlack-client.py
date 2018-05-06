@@ -46,6 +46,15 @@ class ZarfSlackClient(SlackClient):
             return None
         return res
 
+    def rtm_disconnect(self):
+        if self.server.websocket is not None:
+            print('### closing websocket')
+            self.server.websocket.send_close()
+            self.server.websocket.close()
+            self.server.websocket = None
+        self.server.connected = False
+        self.server.last_connected_at = 0
+
     def rtm_read(self):
         pass
 
@@ -113,6 +122,10 @@ def connect_to_teams():
         print('### rtm_connect', res)
         print('### timeout', conn.client.server.websocket.gettimeout())
 
+def disconnect_all_teams():
+    for conn in connections.values():
+        conn.client.rtm_disconnect()
+    
 class SlackThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self, name='slack-thread')
@@ -130,6 +143,7 @@ class SlackThread(threading.Thread):
                 self.add_output('Processed: ' + ln)
             with self.cond:
                 self.cond.wait(5.0)
+        disconnect_all_teams()
         self.add_output('Disconnected.')
 
     def set_shutdown(self):

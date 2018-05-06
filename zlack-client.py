@@ -30,7 +30,7 @@ class SlackThread(threading.Thread):
             ls = self.fetch_inputs()
             for ln in ls:
                 self.add_output('Processed: ' + ln)
-            time.sleep(1)
+            time.sleep(0.1)
         self.add_output('Disconnected.')
 
     def set_shutdown(self):
@@ -77,10 +77,8 @@ def check_for_outputs(evloop):
     ls = thread.fetch_outputs();
     for ln in ls:
         print(ln)
-    if not ls:
-        print('(no output)')
     if thread.is_alive():
-        evloop.call_later(1.0, check_for_outputs, evloop)
+        evloop.call_later(0.1, check_for_outputs, evloop)
         
 thread = SlackThread()
 thread.start()

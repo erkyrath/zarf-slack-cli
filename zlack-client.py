@@ -11,71 +11,74 @@ import threading
 import prompt_toolkit
 from slackclient import SlackClient
 
-application = None
 thread = None
-shutdown_thread = False
 
-lock = threading.Lock()
-input_list = []
-output_list = []
+class SlackThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, name='slack-thread')
+        self.input_list = []
+        self.output_list = []
+        self.want_shutdown = False
+        self.lock = threading.Lock()
+        
+    def run(self):
+        while not self.want_shutdown:
+            ls = self.fetch_inputs()
+            for ln in ls:
+                self.add_output('Processed: ' + ln)
+            time.sleep(1)
+        self.add_output('Disconnected.')
+
+    def set_shutdown(self):
+        with self.lock:
+            self.want_shutdown = True
+
+    def add_input(self, val):
+        with self.lock:
+            self.input_list.append(val)
+            
+    def fetch_inputs(self):
+        res = []
+        with self.lock:
+            if self.input_list:
+                res.extend(self.input_list)
+                self.input_list[:] = []
+        return res
+    
+    def add_output(self, val):
+        with self.lock:
+            self.output_list.append(val)
+            
+    def fetch_outputs(self):
+        res = []
+        with self.lock:
+            if self.output_list:
+                res.extend(self.output_list)
+                self.output_list[:] = []
+        return res
 
 async def input_loop():
-    global shutdown_thread
-    while thread:
+    while thread.is_alive():
         try:
             input = await prompt_toolkit.prompt_async('>', patch_stdout=True)
-            add_input(input)
+            thread.add_input(input)
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')
-            shutdown_thread = True
+            thread.set_shutdown()
         except EOFError:
             print('<EOFError>')
-            shutdown_thread = True
+            thread.set_shutdown()
 
 def check_for_outputs(evloop):
-    ls = fetch_outputs();
+    ls = thread.fetch_outputs();
     for ln in ls:
         print(ln)
     if not ls:
         print('(no output)')
-    if thread:
+    if thread.is_alive():
         evloop.call_later(1.0, check_for_outputs, evloop)
         
-def thread_main():
-    global thread
-    while not shutdown_thread:
-        ls = fetch_inputs()
-        for ln in ls:
-            add_output('Processed: ' + ln)
-        time.sleep(1)
-    add_output('Disconnected.')
-    thread = None
-
-def add_input(val):
-    with lock:
-        input_list.append(val)
-        
-def fetch_inputs():
-    res = []
-    with lock:
-        if input_list:
-            res.extend(input_list)
-            input_list[:] = []
-    return res
-
-def add_output(val):
-    with lock:
-        output_list.append(val)
-        
-def fetch_outputs():
-    res = []
-    with lock:
-        if output_list:
-            res.extend(output_list)
-            output_list[:] = []
-    return res
-
-thread = threading.Thread(target=thread_main, name='slack-comm')
+thread = SlackThread()
 thread.start()
 
 evloop = asyncio.get_event_loop()

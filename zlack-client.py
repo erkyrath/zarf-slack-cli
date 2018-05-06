@@ -6,6 +6,7 @@ import sys
 import os
 import time
 import optparse
+import asyncio
 import threading
 import prompt_toolkit
 from slackclient import SlackClient
@@ -14,18 +15,32 @@ application = None
 thread = None
 shutdown_thread = False
 
-def check_background(ctx):
-    ls = fetch_outputs()
+lock = threading.Lock()
+input_list = []
+output_list = []
+
+async def input_loop():
+    global shutdown_thread
+    while thread:
+        try:
+            input = await prompt_toolkit.prompt_async('>', patch_stdout=True)
+            add_input(input)
+        except KeyboardInterrupt:
+            print('<KeyboardInterrupt>')
+            shutdown_thread = True
+        except EOFError:
+            print('<EOFError>')
+            shutdown_thread = True
+
+def check_for_outputs(evloop):
+    ls = fetch_outputs();
     for ln in ls:
         print(ln)
-
-def try_shutdown():
-    global shutdown_thread
-    print('<KeyboardInterrupt>')
-    shutdown_thread = True
-    if not thread:
-        return True
-
+    if not ls:
+        print('(no output)')
+    if thread:
+        evloop.call_later(1.0, check_for_outputs, evloop)
+        
 def thread_main():
     global thread
     while not shutdown_thread:
@@ -33,12 +48,8 @@ def thread_main():
         for ln in ls:
             add_output('Processed: ' + ln)
         time.sleep(1)
-    print('Disconnected.')
+    add_output('Disconnected.')
     thread = None
-
-lock = threading.Lock()
-input_list = []
-output_list = []
 
 def add_input(val):
     with lock:
@@ -67,25 +78,9 @@ def fetch_outputs():
 thread = threading.Thread(target=thread_main, name='slack-comm')
 thread.start()
 
-application = prompt_toolkit.shortcuts.create_prompt_application('>')
+evloop = asyncio.get_event_loop()
 
-while thread:
-    try:
-        input = prompt_toolkit.shortcuts.run_application(
-            application,
-            patch_stdout=True,
-            refresh_interval=0,
-            eventloop=prompt_toolkit.shortcuts.create_eventloop(inputhook=check_background))
-        input = input.rstrip()
-        if input:
-            add_input(input)
-    except KeyboardInterrupt:
-        res = try_shutdown()
-        if res:
-            break
-    except EOFError:
-        res = try_shutdown()
-        if res:
-            break
+evloop.call_soon(check_for_outputs, evloop)
 
-    
+evloop.run_until_complete(input_loop())
+evloop.close()

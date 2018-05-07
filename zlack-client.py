@@ -41,6 +41,7 @@ class ZarfSlackClient(SlackClient):
         self.server.websocket_safe_read = None
         self.message_handler = handler
         self.msg_counter = 0
+        self.msg_in_flight = {}
         
     def api_call_check(self, method, **kwargs):
         res = self.api_call(method, **kwargs)
@@ -63,9 +64,15 @@ class ZarfSlackClient(SlackClient):
         if 'id' in msg and msg['id'] is None:
             self.msg_counter += 1
             msg['id'] = self.msg_counter
+            self.msg_in_flight[msg['id']] = msg
         if debug_messages:
             thread.add_output('Sending: %s' % (msg,))
         self.server.send_to_websocket(msg)
+
+    def rtm_complete_in_flight(self, val):
+        if val in self.msg_in_flight:
+            return self.msg_in_flight.pop(val)
+        return None
 
     def rtm_read(self):
         if self.server.websocket is None:
@@ -98,6 +105,19 @@ class Connection():
         if debug_messages:
             thread.add_output('Received: %s' % (msg,))
         typ = msg.get('type')
+        if typ is None and msg.get('reply_to'):
+            origmsg = self.client.rtm_complete_in_flight(msg.get('reply_to'))
+            if not origmsg:
+                thread.add_output('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
+                return
+            teamid = self.id
+            chanid = origmsg.get('channel', '')
+            userid = origmsg.get('user', '')
+            text = msg.get('text') ### translate <@USERID>
+            val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+            thread.add_output(val)
+            return
+                
         if typ == 'message':
             teamid = msg.get('team', '')
             chanid = msg.get('channel', '')
@@ -105,6 +125,7 @@ class Connection():
             text = msg.get('text') ### translate <@USERID>
             val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
+            return
 
 def get_next_cursor(res):
     metadata = res.get('response_metadata')

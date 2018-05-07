@@ -23,7 +23,7 @@ popt = optparse.OptionParser(usage='slack-client.py [ OPTIONS ]')
 
 thread = None
 connections = OrderedDict()
-debug_messages = True
+debug_messages = False
 
 def read_tokens():
     path = os.path.join(os.environ.get('HOME'), token_file)
@@ -122,7 +122,7 @@ class Connection():
             teamid = msg.get('team', '')
             chanid = msg.get('channel', '')
             userid = msg.get('user', '')
-            text = msg.get('text') ### translate <@USERID>
+            text = msg.get('text') ### translate <@USERID>, do & escapes
             val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
             return
@@ -155,7 +155,7 @@ def connect_to_teams():
             cursor = get_next_cursor(res)
             if not cursor:
                 break
-        print('###', conn.users)
+        #print(conn.users)
 
         thread.add_output('Fetching channels from %s' % (conn.team_name,))
         cursor = None
@@ -172,7 +172,7 @@ def connect_to_teams():
             cursor = get_next_cursor(res)
             if not cursor:
                 break
-        print('###', conn.channels)
+        #print(conn.channels)
 
     for conn in connections.values():
         res = conn.client.rtm_connect(reconnect=True, with_team_state=False)
@@ -328,7 +328,11 @@ def parse_channel(conn, val):
 def team_name(teamid):
     if teamid not in tokens:
         return '???'+teamid
-    return tokens[teamid]['team_name']
+    team = tokens[teamid]
+    alias = team.get('alias')
+    if alias:
+        return alias[0]
+    return team['team_name']
 
 def channel_name(teamid, chanid):
     if teamid not in connections:

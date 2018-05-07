@@ -150,6 +150,8 @@ def connect_to_teams():
             for user in res.get('members'):
                 userid = user['id']
                 username = user['profile']['display_name']
+                if not username:
+                    username = user['name']    # legacy data field
                 userrealname = user['profile']['real_name']
                 conn.users[userid] = (username, userrealname)
             cursor = get_next_cursor(res)

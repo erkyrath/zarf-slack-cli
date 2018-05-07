@@ -2,6 +2,11 @@
 
 ### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
 ### private channels are different?
+### translate <@USERID>, maybe also <http://xxx|xxx>
+### newlines in output should be indented
+### test unicode, emoji
+### strip ";" at start
+### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 
 # http://python-prompt-toolkit.readthedocs.io/en/master/pages/building_prompts.html
 
@@ -116,7 +121,7 @@ class Connection():
             teamid = self.id
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
-            text = msg.get('text') ### translate <@USERID>
+            text = msg.get('text')
             val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
             return

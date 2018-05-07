@@ -97,7 +97,14 @@ class Connection():
     def handle_message(self, msg):
         if debug_messages:
             thread.add_output('Received: %s' % (msg,))
-        ###
+        typ = msg.get('type')
+        if typ == 'message':
+            teamid = msg.get('team', '')
+            chanid = msg.get('channel', '')
+            userid = msg.get('user', '')
+            text = msg.get('text') ### translate <@USERID>
+            val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+            thread.add_output(val)
 
 def get_next_cursor(res):
     metadata = res.get('response_metadata')
@@ -309,6 +316,14 @@ def channel_name(teamid, chanid):
     if chanid not in conn.channels:
         return '???'+chanid
     return conn.channels[chanid]
+
+def user_name(teamid, userid):
+    if teamid not in connections:
+        return userid
+    conn = connections[teamid]
+    if userid not in conn.users:
+        return userid
+    return conn.users[userid][0]
 
 async def input_loop():
     while thread.is_alive():

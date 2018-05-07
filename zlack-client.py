@@ -58,11 +58,10 @@ class ZarfSlackClient(SlackClient):
         self.server.connected = False
         self.server.last_connected_at = 0
 
-    def rtm_send_json(self, msgtype, **kwargs):
-        msg = dict(kwargs)
-        msg['type'] = msgtype
-        self.msg_counter += 1
-        msg['id'] = self.msg_counter
+    def rtm_send_json(self, msg):
+        if 'id' in msg and msg['id'] is None:
+            self.msg_counter += 1
+            msg['id'] = self.msg_counter
         self.server.send_to_websocket(msg)
 
     def rtm_read(self):
@@ -167,10 +166,12 @@ class SlackThread(threading.Thread):
         connect_to_teams()
         while not self.check_shutdown():
             ls = self.fetch_inputs()
-            for ln in ls:
-                #self.add_output('Processed: ' + ln)
-                conn = connections['T03UD0D0X']
-                conn.client.rtm_send_json('message', user=conn.user_id, channel='C03UD0D19', text=ln)
+            for (teamid, msg) in ls:
+                conn = connections.get(teamid)
+                if not conn:
+                    self.add_output('Cannot send: %s not connected.' % (team_name(teamid),))
+                else:
+                    conn.client.rtm_send_json(msg)
             read_connections()
             with self.cond:
                 self.cond.wait(0.1)
@@ -255,12 +256,16 @@ def handle_input(val):
             print('Channel not recognized:', channame)
             return
         curchannel = (teamid, chanid)
+        
     if not val:
         return
     if not curchannel:
         print('No current channel.')
         return
-    print('###', curchannel, repr(val))    
+    
+    (teamid, chanid) = curchannel
+    team = tokens[teamid]
+    thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':val }) )
     
 
 def parse_team(val):

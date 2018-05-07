@@ -351,13 +351,14 @@ def user_name(teamid, userid):
     return conn.users[userid][0]
 
 async def input_loop():
+    history = prompt_toolkit.history.InMemoryHistory()
     while thread.is_alive():
         try:
             prompt = '> '
             if curchannel:
                 (teamid, chanid) = curchannel
                 prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
-            input = await prompt_toolkit.prompt_async(prompt, patch_stdout=True)
+            input = await prompt_toolkit.prompt_async(prompt, history=history, patch_stdout=True)
             input = input.rstrip()
             if input:
                 handle_input(input)

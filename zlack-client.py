@@ -262,6 +262,26 @@ def handle_input(val):
         if cmd == 'debug':
             debug_messages = not debug_messages
             print('Message debugging now %s' % (debug_messages,))
+        elif cmd == 'users':
+            if not curchannel:
+                print('No current team.')
+                return
+            teamid = curchannel[0]
+            conn = connections.get(teamid)
+            if not conn:
+                print('Team not connected:', team_name(teamid))
+                return
+            print(conn.users)
+        elif cmd == 'channels':
+            if not curchannel:
+                print('No current team.')
+                return
+            teamid = curchannel[0]
+            conn = connections.get(teamid)
+            if not conn:
+                print('Team not connected:', team_name(teamid))
+                return
+            print(conn.channels)
         else:
             print('Special command not recognized:', cmd)
         return

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
+### private channels are different?
+
 # http://python-prompt-toolkit.readthedocs.io/en/master/pages/building_prompts.html
 
 import sys
@@ -252,7 +255,7 @@ class SlackThread(threading.Thread):
 curchannel = None
 
 pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
-pat_channel_command = re.compile(':([a-z0-9_-]+)(?:[/:]([a-z0-9_-]+))?', flags=re.IGNORECASE)
+pat_channel_command = re.compile('#([a-z0-9_-]+)(?:[/:]([a-z0-9_-]+))?', flags=re.IGNORECASE)
 
 def handle_input(val):
     global curchannel, debug_messages
@@ -292,7 +295,7 @@ def handle_input(val):
         val = val[ match.end() : ]
         val = val.lstrip()
         if match.group(2) is not None:
-            # command ":TEAM/CHANNEL"
+            # command "#TEAM/CHANNEL"
             team = parse_team(match.group(1))
             if not team:
                 print('Team not recognized:', match.group(1))
@@ -300,7 +303,7 @@ def handle_input(val):
             teamid = team['team_id']
             channame = match.group(2)
         else:
-            # command ":CHANNEL"
+            # command "#CHANNEL"
             if not curchannel:
                 print('No current team.')
                 return

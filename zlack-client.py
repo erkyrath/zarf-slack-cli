@@ -23,6 +23,7 @@ popt = optparse.OptionParser(usage='slack-client.py [ OPTIONS ]')
 
 thread = None
 connections = OrderedDict()
+debug_messages = True
 
 def read_tokens():
     path = os.path.join(os.environ.get('HOME'), token_file)
@@ -62,6 +63,8 @@ class ZarfSlackClient(SlackClient):
         if 'id' in msg and msg['id'] is None:
             self.msg_counter += 1
             msg['id'] = self.msg_counter
+        if debug_messages:
+            thread.add_output('Sending: %s' % (msg,))
         self.server.send_to_websocket(msg)
 
     def rtm_read(self):
@@ -92,7 +95,9 @@ class Connection():
         self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
 
     def handle_message(self, msg):
-        thread.add_output('message: %s' % (msg,))
+        if debug_messages:
+            thread.add_output('Received: %s' % (msg,))
+        ###
 
 def get_next_cursor(res):
     metadata = res.get('response_metadata')
@@ -220,13 +225,17 @@ pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_channel_command = re.compile(':([a-z0-9_-]+)(?:[/:]([a-z0-9_-]+))?', flags=re.IGNORECASE)
 
 def handle_input(val):
-    global curchannel
+    global curchannel, debug_messages
     match = pat_special_command.match(val)
     if match:
-        cmd = match.group(1)
+        cmd = match.group(1).lower()
         val = val[ match.end() : ]
         val = val.lstrip()
-        print('Special command not recognized:', cmd)
+        if cmd == 'debug':
+            debug_messages = not debug_messages
+            print('Message debugging now %s' % (debug_messages,))
+        else:
+            print('Special command not recognized:', cmd)
         return
     match = pat_channel_command.match(val)
     if match:

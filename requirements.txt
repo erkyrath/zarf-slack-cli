@@ -1,0 +1,4 @@
+# Zlack Python package requirements
+
+prompt-toolkit>=1.0.15
+slackclient>=1.2.1

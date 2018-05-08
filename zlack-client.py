@@ -177,7 +177,7 @@ def connect_to_teams():
             for chan in res.get('channels'):
                 chanid = chan['id']
                 channame = chan['name']
-                conn.channels[chanid] = channame
+                conn.channels[chanid] = (channame, False)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -349,10 +349,10 @@ def parse_team(val):
     return None
 
 def parse_channel(conn, val):
-    for (chanid, name) in conn.channels.items():
+    for (chanid, (name, private)) in conn.channels.items():
         if val == chanid or val == name:
             return chanid
-    for (chanid, name) in conn.channels.items():
+    for (chanid, (name, private)) in conn.channels.items():
         if name.startswith(val):
             return chanid
     return None
@@ -405,7 +405,7 @@ def channel_name(teamid, chanid):
     conn = connections[teamid]
     if chanid not in conn.channels:
         return '???'+chanid
-    return conn.channels[chanid]
+    return conn.channels[chanid][0]
 
 def user_name(teamid, userid):
     if teamid not in connections:

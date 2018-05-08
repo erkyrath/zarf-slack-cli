@@ -104,6 +104,7 @@ class Connection():
         self.users = {}
         self.users_by_display_name = {}
         self.channels = {}
+        self.lastchannel = None
         self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
 
     def handle_message(self, msg):
@@ -275,7 +276,7 @@ class SlackThread(threading.Thread):
 curchannel = None
 
 pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
-pat_channel_command = re.compile('#([a-z0-9_-]+)(?:[/:]([a-z0-9_-]+))?', flags=re.IGNORECASE)
+pat_channel_command = re.compile('#([a-z0-9_-]+)(?:[/:]([a-z0-9_-]*))?', flags=re.IGNORECASE)
 
 def handle_input(val):
     global curchannel, debug_messages
@@ -337,6 +338,7 @@ def handle_input(val):
         if not chanid:
             print('Channel not recognized:', channame)
             return
+        conn.lastchannel = chanid
         curchannel = (teamid, chanid)
 
     if val.startswith(';'):
@@ -365,6 +367,8 @@ def parse_team(val):
     return None
 
 def parse_channel(conn, val):
+    if not val:
+        return conn.lastchannel
     for (chanid, (name, private)) in conn.channels.items():
         if val == chanid or val == name:
             return chanid

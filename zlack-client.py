@@ -2,8 +2,6 @@
 
 ### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
 ### private channels are different?
-### translate <@USERID>, maybe also <http://xxx|xxx>
-### newlines in output should be indented
 ### test unicode, emoji
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 
@@ -120,8 +118,8 @@ class Connection():
             teamid = self.id
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
-            text = msg.get('text')
-            val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+            text = decode_message(teamid, msg.get('text'))
+            val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
             return
                 
@@ -129,8 +127,8 @@ class Connection():
             teamid = msg.get('team', '')
             chanid = msg.get('channel', '')
             userid = msg.get('user', '')
-            text = msg.get('text') ### translate <@USERID>, do & escapes
-            val = '[%s/%s] (%s) %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+            text = decode_message(teamid, msg.get('text'))
+            val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
             return
 
@@ -355,7 +353,21 @@ def parse_channel(conn, val):
         if name.startswith(val):
             return chanid
     return None
-        
+
+pat_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
+
+def decode_message(teamid, val):
+    if val is None:
+        return ''
+    val = pat_user_id.sub(lambda match:'@'+user_name(teamid, match.group(1)), val)
+    if '\n' in val:
+        val = val.replace('\n', '\n... ')
+    if '&' in val:
+        val = val.replace('&lt;', '<')
+        val = val.replace('&gt;', '>')
+        val = val.replace('&amp;', '&')
+    return val;
+
 def team_name(teamid):
     if teamid not in tokens:
         return '???'+teamid

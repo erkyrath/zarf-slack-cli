@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
 ### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
-### test unicode, emoji
+### figure out how to display threading
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
+### /recap [CHAN] [N]
+### /users [TEAM], /channels [TEAM]
+### /users [CHAN]
+### /reload TEAM (for users, channels)
 
 # http://python-prompt-toolkit.readthedocs.io/en/master/pages/building_prompts.html
+# https://github.com/ErikKalkoken/slackApiDoc
 
 import sys
 import os
@@ -104,6 +109,7 @@ class Connection():
         self.users = {}
         self.users_by_display_name = {}
         self.channels = {}
+        self.muted_channels = set()
         self.lastchannel = None
         self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
 
@@ -119,6 +125,7 @@ class Connection():
             teamid = self.id
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
+            # Print our successful messages even on muted channels
             text = decode_message(teamid, msg.get('text'))
             val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
@@ -128,6 +135,8 @@ class Connection():
             teamid = msg.get('team', '')
             chanid = msg.get('channel', '')
             userid = msg.get('user', '')
+            if chanid in self.muted_channels:
+                return
             text = decode_message(teamid, msg.get('text'))
             val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
@@ -145,6 +154,14 @@ def connect_to_teams():
         connections[id] = conn
         
     for conn in connections.values():
+        thread.add_output('Fetching prefs from %s' % (conn.team_name,))
+        res = conn.client.api_call_check('users.prefs.get')
+        if res:
+            prefs = res.get('prefs')
+            mutels = prefs.get('muted_channels')
+            if mutels:
+                conn.muted_channels = set(mutels.split(','))
+        
         thread.add_output('Fetching users from %s' % (conn.team_name,))
         cursor = None
         while True:
@@ -307,7 +324,10 @@ def handle_input(val):
             if not conn:
                 print('Team not connected:', team_name(teamid))
                 return
-            print(conn.channels)
+            for (id, (name, priv)) in conn.channels.items():
+                privflag = (' (priv)' if priv else '')
+                muteflag = (' (mute)' if id in conn.muted_channels else '')
+                print(' %s%s%s' % (name, privflag, muteflag))
         else:
             print('Special command not recognized:', cmd)
         return

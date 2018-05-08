@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 ### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
-### private channels are different?
 ### test unicode, emoji
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 
@@ -181,6 +180,23 @@ def connect_to_teams():
             cursor = get_next_cursor(res)
             if not cursor:
                 break
+            
+        thread.add_output('Fetching private channels from %s' % (conn.team_name,))
+        cursor = None
+        while True:
+            if thread.check_shutdown():
+                return
+            res = conn.client.api_call_check('groups.list', exclude_archived=True, exclude_members=True, cursor=cursor)
+            if not res:
+                break
+            for chan in res.get('groups'):
+                chanid = chan['id']
+                channame = chan['name']
+                conn.channels[chanid] = (channame, True)
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
+            
         #print(conn.channels)
 
     for conn in connections.values():

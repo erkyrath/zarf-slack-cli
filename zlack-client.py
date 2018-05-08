@@ -103,6 +103,7 @@ class Connection():
         self.team_name = self.team['team_name']
         self.user_id = self.team['user_id']
         self.users = {}
+        self.users_by_display_name = {}
         self.channels = {}
         self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
 
@@ -159,6 +160,7 @@ def connect_to_teams():
                     username = user['name']    # legacy data field
                 userrealname = user['profile']['real_name']
                 conn.users[userid] = (username, userrealname)
+                conn.users_by_display_name[username] = userid
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -331,7 +333,8 @@ def handle_input(val):
     
     (teamid, chanid) = curchannel
     team = tokens[teamid]
-    thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':val }) )
+    text = encode_message(teamid, val)
+    thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':text }) )
     
 
 def parse_team(val):
@@ -354,12 +357,14 @@ def parse_channel(conn, val):
             return chanid
     return None
 
-pat_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
+pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
+pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 
 def decode_message(teamid, val):
     if val is None:
         return ''
-    val = pat_user_id.sub(lambda match:'@'+user_name(teamid, match.group(1)), val)
+    val = pat_encoded_user_id.sub(lambda match:'@'+user_name(teamid, match.group(1)), val)
+    # We could translate <URL> and <URL|SLUG> here, but those look fine as is
     if '\n' in val:
         val = val.replace('\n', '\n... ')
     if '&' in val:
@@ -367,6 +372,23 @@ def decode_message(teamid, val):
         val = val.replace('&gt;', '>')
         val = val.replace('&amp;', '&')
     return val;
+
+def encode_message(teamid, val):
+    val = val.replace('<', '&lt;')
+    val = val.replace('>', '&gt;')
+    val = val.replace('&', '&amp;')
+    val = pat_user_id.sub(lambda match:encode_exact_user_id(teamid, match), val)
+    return val
+
+def encode_exact_user_id(teamid, match):
+    orig = match.group(0)
+    val = match.group(1)
+    conn = connections.get(teamid)
+    if not conn:
+        return orig
+    if val not in conn.users_by_display_name:
+        return orig
+    return '<@' + conn.users_by_display_name[val] + '>'
 
 def team_name(teamid):
     if teamid not in tokens:

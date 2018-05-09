@@ -108,6 +108,10 @@ class Channel:
         self.id = id
         self.name = name
         self.private = private
+        self.member = True ###
+
+    def muted(self):
+        return False ###
     
 class Connection:
     def __init__(self, id):
@@ -388,8 +392,10 @@ def cmd_channels(args):
     if not conn:
         print('Team not connected:', team_name(teamid))
         return
-    for (id, chan) in conn.channels.items():
-        idstring = (' (id %s)' % (id,) if debug_messages else '')
+    ls = list(conn.channels.values())
+    ls.sort(key=lambda chan:(chan.member, chan.muted(), chan.name))
+    for chan in ls:
+        idstring = (' (id %s)' % (chan.id,) if debug_messages else '')
         privflag = (' (priv)' if chan.private else '')
         muteflag = (' (mute)' if chan.id in conn.muted_channels else '')
         print(' %s%s%s%s' % (chan.name, idstring, privflag, muteflag))

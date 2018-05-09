@@ -22,13 +22,15 @@ This tool is written in Python3. You'll need a recent version of that. You'll al
 [slackclient]: https://github.com/slackapi/python-slackclient
 [prompt-toolkit]: https://github.com/jonathanslenders/python-prompt-toolkit
 
-You'll also have to create your own Slack app client ID. This repository doesn't include any such ID, because Slack doesn't want them to be publicized.
+You'll also have to create your own Slack app client ID. This repository doesn't include any such ID, because Slack doesn't want those IDs to be publicized.
 
 Visit [Slack's developer page][slackapp] and create a new app. Then, under "Permissions", add `http://localhost:8090/` as a redirect URL.
 
 [slackapp]: https://api.slack.com/apps
 
 Once you've done this, set the `ZLACK_CLIENT_ID` and `ZLACK_CLIENT_SECRET` environment variables to the values shown on your "App Credentials" page. 
+
+(The developer page suggests that you add "features or permissions scopes", but you don't have to. You're not going to be submitting this to their App Directory.)
 
 ## Authentication
 
@@ -56,7 +58,4 @@ If your input does not begin with a `#` sign, the message will be sent to the mo
 
 ## Work in progress
 
-I haven't written any documentation because I haven't settled on how it works yet. Use at your own risk. Actually, don't use it at all. I can't answer questions about it right now.
-
-I'll keep hammering out the dents between now and May 15th. If it seems usable in real life, I'll write more.
-
+I'll keep hammering out the dents between now and May 15th. If it seems usable in real life, I'll declare it to be 1.0.

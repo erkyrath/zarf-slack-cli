@@ -6,6 +6,19 @@ zlack-client.py: A minimalist command-line Slack client.
 To use this, you must first run the zlack-auth.py. This authorizes
 you with Slack and writes your access token into ~/.zlack-tokens.
 
+The structure of the client is awkward. The Slack connection runs in
+its own background thread; it periodically checks the Slack websocket
+connection (or connections) for updates.
+
+The foreground thread runs the prompt_toolkit utility, which waits for
+command-line input (with editing and command history). This is wrapped
+in an asyncio wrapper. An async coroutine periodically pops up and
+checks for any activity from the Slack thread.
+
+(This would all be simpler if the slackclient library was written in
+async style. Then I wouldn't need a second thread; everything could
+just be async. Sadly, that's not what we've got.)
+
 """
 
 ### figure out how to display threading
@@ -16,8 +29,6 @@ you with Slack and writes your access token into ~/.zlack-tokens.
 ### /users [TEAM], /channels [TEAM]
 ### /users [CHAN]
 ### /reload TEAM (for users, channels)
-
-# http://python-prompt-toolkit.readthedocs.io/en/master/pages/building_prompts.html
 
 import sys
 import os
@@ -43,6 +54,8 @@ connections = OrderedDict()
 debug_messages = False
 
 def read_tokens():
+    """Read the current token list from ~/.zlack-tokens.
+    """
     path = os.path.join(os.environ.get('HOME'), token_file)
     try:
         fl = open(path)
@@ -53,6 +66,11 @@ def read_tokens():
         return OrderedDict()
 
 class ZarfSlackClient(SlackClient):
+    """A customized version of SlackClient.
+    This reworks the existing websocket-read mechanism entirely; I don't
+    like the way slackclient does it. I also add a few more handy
+    features.
+    """
     def __init__(self, token, proxies=None, handler=None):
         SlackClient.__init__(self, token, proxies)
         self.server.websocket_safe_read = None
@@ -61,6 +79,9 @@ class ZarfSlackClient(SlackClient):
         self.msg_in_flight = {}
         
     def api_call_check(self, method, **kwargs):
+        """Make a web API call. Return the result.
+        On error, print an error message and return None.
+        """
         res = self.api_call(method, **kwargs)
         if not res.get('ok'):
             msg = 'Slack error (%s): %s' % (method, res.get('error', '???'),)
@@ -69,8 +90,10 @@ class ZarfSlackClient(SlackClient):
         return res
 
     def rtm_disconnect(self):
+        """Disconnect the web socket. (The slackclient library doesn't
+        have this for some reason.)
+        """
         if self.server.websocket is not None:
-            print('### closing websocket')
             self.server.websocket.send_close()
             self.server.websocket.close()
             self.server.websocket = None
@@ -78,6 +101,11 @@ class ZarfSlackClient(SlackClient):
         self.server.last_connected_at = 0
 
     def rtm_send_json(self, msg):
+        """Send a message object to the server. The argument should
+        be a JSONable dict.
+        If msg.id is None, the value is replaced with a unique integer
+        before sending. (This is handy for tracking the reply_to.)
+        """
         if 'id' in msg and msg['id'] is None:
             self.msg_counter += 1
             msg['id'] = self.msg_counter
@@ -87,11 +115,21 @@ class ZarfSlackClient(SlackClient):
         self.server.send_to_websocket(msg)
 
     def rtm_complete_in_flight(self, val):
+        """Check an id value in a reply_to. If we've sent a message
+        with that value, return it (and remove it from our pool of sent
+        messages.)
+        """
         if val in self.msg_in_flight:
             return self.msg_in_flight.pop(val)
         return None
 
     def rtm_read(self):
+        """Read messages from the web socket. Throw each one into our
+        message_handler.
+
+        This assumes that every distinct websocket message is a complete
+        JSON object.
+        """
         if self.server.websocket is None:
             return
         try:

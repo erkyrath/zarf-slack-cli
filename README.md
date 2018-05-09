@@ -6,29 +6,53 @@
 [license]: ./LICENSE
 [slackpost]: http://blog.zarfhome.com/2018/03/open-letter-slack-should-not.html
 
-As you probably know, Slack is turning off their IRC and XMPP gateways on May 15th. (I have [written an objection to this][slackpost], but it didn't help.)
+As you probably know, Slack is turning off their IRC and XMPP gateways on May 15th. (I have [written an objection to this][slackpost], but it didn't help.) This project is a replacement for those gateways.
 
-I happen to like running a very lightweight Slack client in one corner of my screen, showing just a few of the most important Slack groups. The official Slack client is fine, but it's dwarf-star-weight and shows lots of groups, so I only run it some of the time. My lightweight solution used to be Adium and the XMPP gateway. Now I need a new solution.
+This is *not* a full-on Slack client! It's a replacement for the way I used the XMPP gateway: a little window in the corner of my screen where I can keep an eye on a few important Slack groups and type quick replies. Plain text only. It doesn't try to handle every fancy new feature that Slack rolls out. If you want to do something fancy, you pull up the official Slack client or the web page.
 
-## The very short form
+## Installation
 
-Slack doesn't like people publicizing Slack app identifiers. So, you'll have to create your own. Visit [Slack's developer page][slackapp] and create one. Then, under "Permissions", add `http://localhost:8090/` as a redirect URL.
+This tool is written in Python3. You'll need a recent version of that. You'll also need two packages:
+
+> `pip3 install slackclient`
+> `pip3 install prompt-toolkit`
+
+(This is written to [slackclient 1.2.1][slackclient] and [prompt-toolkit 1.0.15][prompt-toolkit]. Both toolkits are undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
+
+[slackclient]: https://github.com/slackapi/python-slackclient
+[prompt-toolkit]: https://github.com/jonathanslenders/python-prompt-toolkit
+
+You'll also have to create your own Slack app client ID. This repository doesn't include any such ID, because Slack doesn't want them to be publicized.
+
+Visit [Slack's developer page][slackapp] and create a new app. Then, under "Permissions", add `http://localhost:8090/` as a redirect URL.
 
 [slackapp]: https://api.slack.com/apps
 
 Once you've done this, set the `ZLACK_CLIENT_ID` and `ZLACK_CLIENT_SECRET` environment variables to the values shown on your "App Credentials" page. 
 
-Use `zlack-auth.py` to authenticate. (The environment variables must be set.) When you run it, it displays a Slack URL to visit. It also starts listening on localhost port 8090. Authorize the client at Slack, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
+## Authentication
 
-Now you can run `zlack-client.py`. (This does not need the environment variables.) To send a message, type
+Run `zlack-auth.py` to authenticate. (The environment variables must be set.)
 
-> :team/channel Message text to send.
+> `python3 zlack-auth.py login`
+
+This will displays a Slack URL to visit. It also starts listening on localhost port 8090. Authorize the client at Slack, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
+
+## Running the Client
+
+Now you can run `zlack-client.py`. (This does not need the environment variables.) 
+
+> `python3 zlack-client.py`
+
+To send a message, type
+
+> *\#team/channel* Message text to send.
 
 Once you send a message on a channel, you can use this shortcut:
 
-> :channel Message sent to a channel of the most recently-used team.
+> *\#channel* Message sent to a channel of the most recently-used team.
 
-If your input does not begin with a colon, the message will be sent to the most recently-used channel.
+If your input does not begin with a `#` sign, the message will be sent to the most recently-used channel.
 
 ## Work in progress
 

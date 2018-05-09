@@ -124,27 +124,28 @@ class ZarfSlackClient(SlackClient):
         return None
 
     def rtm_read(self):
-        """Read messages from the web socket. Throw each one into our
-        message_handler.
+        """Read messages from the web socket until we don't see any more.
+        Decode each one and pass it to our message_handler.
 
         This assumes that every distinct websocket message is a complete
         JSON object.
         """
         if self.server.websocket is None:
             return
-        try:
-            dat = self.server.websocket.recv()
-            msg = None
+        while True:
             try:
-                msg = json.loads(dat)
-            except:
-                thread.add_output('Websocket error: non-json message: %s' % (dat,))
-            if msg is not None:
-                self.message_handler(msg)
-        except SSLError as ex:
-            if ex.errno == 2:
-                return
-            raise
+                dat = self.server.websocket.recv()
+                msg = None
+                try:
+                    msg = json.loads(dat)
+                except:
+                    thread.add_output('Websocket error: non-json message: %s' % (dat,))
+                if msg is not None:
+                    self.message_handler(msg)
+            except SSLError as ex:
+                if ex.errno == 2:
+                    return
+                raise
 
 class Channel:
     def __init__(self, conn, id, name, private=False):

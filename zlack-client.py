@@ -103,7 +103,13 @@ class ZarfSlackClient(SlackClient):
                 return
             raise
 
-class Connection():
+class Channel:
+    def __init__(self, id, name, private=False):
+        self.id = id
+        self.name = name
+        self.private = private
+    
+class Connection:
     def __init__(self, id):
         self.id = id
         self.team = tokens[id]
@@ -197,7 +203,7 @@ def connect_to_teams():
             for chan in res.get('channels'):
                 chanid = chan['id']
                 channame = chan['name']
-                conn.channels[chanid] = (channame, False)
+                conn.channels[chanid] = Channel(chanid, channame, False)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -213,7 +219,7 @@ def connect_to_teams():
             for chan in res.get('groups'):
                 chanid = chan['id']
                 channame = chan['name']
-                conn.channels[chanid] = (channame, True)
+                conn.channels[chanid] = Channel(chanid, channame, True)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -327,10 +333,11 @@ def handle_input(val):
             if not conn:
                 print('Team not connected:', team_name(teamid))
                 return
-            for (id, (name, priv)) in conn.channels.items():
-                privflag = (' (priv)' if priv else '')
-                muteflag = (' (mute)' if id in conn.muted_channels else '')
-                print(' %s%s%s' % (name, privflag, muteflag))
+            for (id, chan) in conn.channels.items():
+                idstring = (' (id %s)' % (id,) if debug_messages else '')
+                privflag = (' (priv)' if chan.private else '')
+                muteflag = (' (mute)' if chan.id in conn.muted_channels else '')
+                print(' %s%s%s%s' % (chan.name, idstring, privflag, muteflag))
         else:
             print('Special command not recognized:', cmd)
         return
@@ -392,12 +399,12 @@ def parse_team(val):
 def parse_channel(conn, val):
     if not val:
         return conn.lastchannel
-    for (chanid, (name, private)) in conn.channels.items():
-        if val == chanid or val == name:
-            return chanid
-    for (chanid, (name, private)) in conn.channels.items():
-        if name.startswith(val):
-            return chanid
+    for (id, chan) in conn.channels.items():
+        if val == id or val == chan.name:
+            return id
+    for (id, chan) in conn.channels.items():
+        if chan.name.startswith(val):
+            return id
     return None
 
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
@@ -448,7 +455,7 @@ def channel_name(teamid, chanid):
     conn = connections[teamid]
     if chanid not in conn.channels:
         return '???'+chanid
-    return conn.channels[chanid][0]
+    return conn.channels[chanid].name
 
 def user_name(teamid, userid):
     if teamid not in connections:

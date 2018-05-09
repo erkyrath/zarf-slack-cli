@@ -305,39 +305,18 @@ pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_channel_command = re.compile('#([a-z0-9_-]+)(?:[/:]([a-z0-9_-]*))?', flags=re.IGNORECASE)
 
 def handle_input(val):
-    global curchannel, debug_messages
+    global curchannel
     match = pat_special_command.match(val)
     if match:
         cmd = match.group(1).lower()
         val = val[ match.end() : ]
         val = val.lstrip()
         if cmd == 'debug':
-            debug_messages = not debug_messages
-            print('Message debugging now %s' % (debug_messages,))
+            cmd_debug(val)
         elif cmd == 'users':
-            if not curchannel:
-                print('No current team.')
-                return
-            teamid = curchannel[0]
-            conn = connections.get(teamid)
-            if not conn:
-                print('Team not connected:', team_name(teamid))
-                return
-            print(conn.users)
+            cmd_users(val)
         elif cmd == 'channels':
-            if not curchannel:
-                print('No current team.')
-                return
-            teamid = curchannel[0]
-            conn = connections.get(teamid)
-            if not conn:
-                print('Team not connected:', team_name(teamid))
-                return
-            for (id, chan) in conn.channels.items():
-                idstring = (' (id %s)' % (id,) if debug_messages else '')
-                privflag = (' (priv)' if chan.private else '')
-                muteflag = (' (mute)' if chan.id in conn.muted_channels else '')
-                print(' %s%s%s%s' % (chan.name, idstring, privflag, muteflag))
+            cmd_channels(val)
         else:
             print('Special command not recognized:', cmd)
         return
@@ -384,7 +363,37 @@ def handle_input(val):
     text = encode_message(teamid, val)
     thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':text }) )
     
+def cmd_debug(args):
+    global debug_messages
+    debug_messages = not debug_messages
+    print('Message debugging now %s' % (debug_messages,))
 
+def cmd_users(args):
+    if not curchannel:
+        print('No current team.')
+        return
+    teamid = curchannel[0]
+    conn = connections.get(teamid)
+    if not conn:
+        print('Team not connected:', team_name(teamid))
+        return
+    print(conn.users)
+
+def cmd_channels(args):
+    if not curchannel:
+        print('No current team.')
+        return
+    teamid = curchannel[0]
+    conn = connections.get(teamid)
+    if not conn:
+        print('Team not connected:', team_name(teamid))
+        return
+    for (id, chan) in conn.channels.items():
+        idstring = (' (id %s)' % (id,) if debug_messages else '')
+        privflag = (' (priv)' if chan.private else '')
+        muteflag = (' (mute)' if chan.id in conn.muted_channels else '')
+        print(' %s%s%s%s' % (chan.name, idstring, privflag, muteflag))
+        
 def parse_team(val):
     for team in tokens.values():
         if team.get('team_id') == val:

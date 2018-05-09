@@ -70,6 +70,9 @@ class ZarfSlackClient(SlackClient):
     This reworks the existing websocket-read mechanism entirely; I don't
     like the way slackclient does it. I also add a few more handy
     features.
+
+    This runs in the background thread, so it should never print anything
+    directly. All output is routed through the thread.add_output call.
     """
     def __init__(self, token, proxies=None, handler=None):
         SlackClient.__init__(self, token, proxies)
@@ -147,18 +150,16 @@ class ZarfSlackClient(SlackClient):
                     return
                 raise
 
-class Channel:
-    def __init__(self, conn, id, name, private=False):
-        self.conn = conn
-        self.id = id
-        self.name = name
-        self.private = private
-        self.member = True ###
-
-    def muted(self):
-        return (self.id in self.conn.muted_channels)
-    
 class Connection:
+    """A connection to one Slack group. This includes the websocket (which
+    carries the RTM protocol). It also includes information about the
+    group's channels and users.
+
+    The information in this object is used by both the foreground and
+    background threads, which is sloppy thread style. Sorry. I should
+    do a lot more locking. (Or just rewrite the slack client library
+    to be async!)
+    """
     def __init__(self, id):
         self.id = id
         self.team = tokens[id]
@@ -172,6 +173,8 @@ class Connection:
         self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
 
     def handle_message(self, msg):
+        """Handle one RTM message, as received from the websocket connection.
+        """
         if debug_messages:
             thread.add_output('Received: %s' % (msg,))
         typ = msg.get('type')
@@ -222,6 +225,19 @@ class Connection:
             thread.add_output(val)
             return
 
+class Channel:
+    """Simple object representing one channel in a connection.
+    """
+    def __init__(self, conn, id, name, private=False):
+        self.conn = conn
+        self.id = id
+        self.name = name
+        self.private = private
+        self.member = True ###
+
+    def muted(self):
+        return (self.id in self.conn.muted_channels)
+    
 def get_next_cursor(res):
     metadata = res.get('response_metadata')
     if not metadata:

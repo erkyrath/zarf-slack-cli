@@ -1,7 +1,34 @@
 #!/usr/bin/env python3
 
-# The Python Slack API library: https://github.com/slackapi/python-slackclient
-# Documentation on using OAuth with Slack: https://api.slack.com/docs/oauth
+"""
+zlack-auth.py: Authenticate to a Slack group.
+
+To use this, you must set the $ZLACK_CLIENT_ID and $ZLACK_CLIENT_SECRET
+environment variables. See the README.md.
+
+The sequence of events for OAuth authentication is a little baroque.
+
+- We generate a URL to Slack's authorization server, including the client
+  ID and a randomly-generated "check" string.
+- We start listening for web requests on localhost port 8090.
+- The user follows this URL. Slack shows them a page which allows them
+  to authorize the app.
+- Slack redirects the user back to http://localhost:8090/, including
+  a temporary authorization code and the "check" string.
+- We catch that request and read the fields out. We check that the
+  "check" string matches what we sent.
+- We shut down the listener on port 8090. (It's not needed any more.)
+- We make an "oauth.access" call to Slack's web API, including the
+  temp auth code.
+- Slack replies with a permanent access token. We write this into
+  ~/.zlack-tokens.
+- All done.
+
+Docs I relied on when writing this script:
+
+The Python Slack API library: https://github.com/slackapi/python-slackclient
+Documentation on using OAuth with Slack: https://api.slack.com/docs/oauth
+"""
 
 import sys
 import os
@@ -37,6 +64,8 @@ popt.add_option('--secret',
 
 
 def read_tokens():
+    """Read the current token list from ~/.zlack-tokens.
+    """
     path = os.path.join(os.environ.get('HOME'), token_file)
     try:
         fl = open(path)
@@ -47,6 +76,9 @@ def read_tokens():
         return OrderedDict()
 
 def write_tokens():
+    """Write the current token list to ~/.zlack-tokens.
+    (Always chmods the file to 0700, for privacy.)
+    """
     path = os.path.join(os.environ.get('HOME'), token_file)
     fl = open(path, 'w')
     json.dump(tokens, fl, indent=1)
@@ -55,6 +87,8 @@ def write_tokens():
     os.chmod(path, 0o700)
 
 def find_team(teamname):
+    """Select a team, given its name or nickname.
+    """
     if not teamname:
         print('Empty team name!')
         return None
@@ -70,8 +104,14 @@ def find_team(teamname):
     return None
     
 def print_auth_url():
-    statecheck = 'state_%d' % (random.randrange(1000000),)
+    """Construct and print the URL which the user will use for
+    authentication.
+    Returns (url, statestring). The second value is a string
+    which is used to double-check the user's reply when it comes
+    back.
+    """
     redirecturl = 'http://localhost:%d/' % (opts.port,)
+    statecheck = 'state_%d' % (random.randrange(1000000),)
 
     params = [
         ('client_id', opts.client_id),
@@ -83,6 +123,7 @@ def print_auth_url():
     tup = list(urllib.parse.urlparse(auth_url))
     tup[4] = '&'.join(queryls)
     url = urllib.parse.urlunparse(tup)
+    
     print('Visit this URL to authenticate with Slack:')
     print()
     print(url)

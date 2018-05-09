@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+zlack-client.py: A minimalist command-line Slack client.
+
+To use this, you must first run the zlack-auth.py. This authorizes
+you with Slack and writes your access token into ~/.zlack-tokens.
+
+"""
+
 ### figure out how to display threading
 ### private chats and group chats. Should we be using conversations.list?
 ### mark channels that we're on! sort them to bottom
@@ -10,7 +18,6 @@
 ### /reload TEAM (for users, channels)
 
 # http://python-prompt-toolkit.readthedocs.io/en/master/pages/building_prompts.html
-# https://github.com/ErikKalkoken/slackApiDoc
 
 import sys
 import os
@@ -189,6 +196,9 @@ def connect_to_teams():
         
     for conn in connections.values():
         thread.add_output('Fetching prefs from %s' % (conn.team_name,))
+        # The muted_channels information is stored in your Slack preferences,
+        # which are an undocumented (but I guess widely used) API call.
+        # See: https://github.com/ErikKalkoken/slackApiDoc
         res = conn.client.api_call_check('users.prefs.get')
         if res:
             prefs = res.get('prefs')

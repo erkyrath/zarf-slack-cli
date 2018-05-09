@@ -1,4 +1,4 @@
-# Zlack: a minimalist Slack command-line client
+# Zlack: a minimalist command-line Slack client
 
 - Created by Andrew Plotkin <erkyrath@eblong.com>
 - [MIT license][license]

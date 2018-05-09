@@ -217,6 +217,8 @@ def perform_auth():
     print('Authenticated as %s in team %s' % (user['name'], team['team_name']))
 
 def perform_unauth(teamname):
+    """Revoke our authorization with a Slack team.
+    """
     team = find_team(teamname)
     if not team:
         return
@@ -229,12 +231,14 @@ def perform_unauth(teamname):
         print('auth.revoke call failed')
         return
 
-    # Done.
+    # Done. Write ~/.zlack-tokens back out with this entry deleted.
     del tokens[team['team_id']]
     write_tokens()
     print('Unauthenticated from team %s' % (team['team_name'],))
 
 def perform_alias(teamname, alias):
+    """Add an alias (nickname) for a Slack group.
+    """
     team = find_team(teamname)
     if not team:
         return
@@ -251,6 +255,8 @@ def perform_alias(teamname, alias):
     print('Added alias %s to team %s' % (alias, team['team_name'],))
 
 def perform_unalias(teamname):
+    """Remove an alias (nickname) for a Slack group.
+    """
     team = find_team(teamname)
     if not team:
         return

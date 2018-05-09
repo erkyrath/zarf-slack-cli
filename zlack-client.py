@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
 ### figure out how to display threading
 ### private chats and group chats. Should we be using conversations.list?
 ### mark channels that we're on! sort them to bottom
-### show channels ids too in debug mode
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### /recap [CHAN] [N]
 ### /users [TEAM], /channels [TEAM]
@@ -146,10 +144,28 @@ class Connection:
             return
                 
         if typ == 'message':
-            teamid = msg.get('team', '')
+            teamid = self.id
             chanid = msg.get('channel', '')
             userid = msg.get('user', '')
+            subtype = msg.get('subtype', '')
             if chanid in self.muted_channels:
+                return
+            if subtype == 'message_deleted':
+                userid = msg.get('previous_message').get('user', '')
+                oldtext = msg.get('previous_message').get('text')
+                oldtext = decode_message(teamid, oldtext)
+                val = '[%s/%s] DEL %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), oldtext)
+                thread.add_output(val)
+                return
+            if subtype == 'message_changed':
+                oldtext = msg.get('previous_message').get('text')
+                oldtext = decode_message(teamid, oldtext)
+                userid = msg.get('message').get('user', '')
+                newtext = msg.get('message').get('text')
+                newtext = decode_message(teamid, newtext)
+                text = oldtext + '\n -> ' + newtext
+                val = '[%s/%s] EDIT %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+                thread.add_output(val)
                 return
             text = decode_message(teamid, msg.get('text'))
             val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)

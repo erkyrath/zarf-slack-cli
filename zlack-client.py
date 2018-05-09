@@ -154,7 +154,7 @@ class Connection:
                 userid = msg.get('previous_message').get('user', '')
                 oldtext = msg.get('previous_message').get('text')
                 oldtext = decode_message(teamid, oldtext)
-                val = '[%s/%s] DEL %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), oldtext)
+                val = '[%s/%s] (del) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), oldtext)
                 thread.add_output(val)
                 return
             if subtype == 'message_changed':
@@ -164,11 +164,12 @@ class Connection:
                 newtext = msg.get('message').get('text')
                 newtext = decode_message(teamid, newtext)
                 text = oldtext + '\n -> ' + newtext
-                val = '[%s/%s] EDIT %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+                val = '[%s/%s] (edit) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
                 thread.add_output(val)
                 return
             text = decode_message(teamid, msg.get('text'))
-            val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+            subtypeflag = (' (%s)'%(subtype,) if subtype else '')
+            val = '[%s/%s]%s %s: %s' % (team_name(teamid), channel_name(teamid, chanid), subtypeflag, user_name(teamid, userid), text)
             thread.add_output(val)
             return
 

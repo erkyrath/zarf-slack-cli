@@ -132,6 +132,9 @@ def print_auth_url():
     return (statecheck, redirecturl)
 
 class RedirectHandler(http.server.BaseHTTPRequestHandler):
+    """This handler accepts the web request on port 8090. When a valid
+    request is received, it sets a flag in the HTTPServer.
+    """
     def do_GET(self):
         tup = urllib.parse.urlparse(self.path)
         map = urllib.parse.parse_qs(tup[4])
@@ -146,15 +149,22 @@ class RedirectHandler(http.server.BaseHTTPRequestHandler):
         else:
             code = map['code'][0]
             message = 'Auth code received: %s\n' % (code,)
+
+        # If code is not None, we got a valid response.
         self.send_response(200, 'OK')
         self.end_headers()
         self.wfile.write(message.encode())
-
-        self.server.z_got_response = code
+        
+        if code:
+            self.server.z_got_response = code
 
 def perform_auth():
+    """Do the complete authorization sequence.
+    """
+    # Print the URL.
     (statecheck, url) = print_auth_url()
 
+    # Wait for the web request to come back.
     print('Waiting for response on %s ...' % (url,))
     server_address = ('localhost', opts.port)
     httpd = http.server.HTTPServer(server_address, RedirectHandler)
@@ -179,13 +189,15 @@ def perform_auth():
         print('oauth.access response had no team_id')
         return
     teamid = res.get('team_id')
-    
+
+    # Got the permanent token. Create a new entry for ~/.zlack-tokens.
     team = OrderedDict()
     for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
         if key in res:
             team[key] = res.get(key)
 
-    # Try fetching user info.
+    # Try fetching user info. (We want to include the user's name in the
+    # ~/.zlack-tokens entry.)
     cli = SlackClient(team['access_token'])
     res = cli.api_call('users.info', user=team['user_id'])
     if not res.get('ok'):
@@ -199,7 +211,7 @@ def perform_auth():
     team['user_name'] = user['name']
     team['user_real_name'] = user['real_name']
             
-    # Done.
+    # Done. Write ~/.zlack-tokens back out.
     tokens[teamid] = team
     write_tokens()
     print('Authenticated as %s in team %s' % (user['name'], team['team_name']))

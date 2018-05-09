@@ -2,6 +2,9 @@
 
 ### todo: URL previews do something wwird "[???/???C06UBHRA6] () None"
 ### figure out how to display threading
+### private chats and group chats. Should we be using conversations.list?
+### mark channels that we're on! sort them to bottom
+### show channels ids too in debug mode
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### /recap [CHAN] [N]
 ### /users [TEAM], /channels [TEAM]

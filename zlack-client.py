@@ -163,6 +163,9 @@ class Connection:
                 userid = msg.get('message').get('user', '')
                 newtext = msg.get('message').get('text')
                 newtext = decode_message(teamid, newtext)
+                if oldtext == newtext:
+                    # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
+                    return
                 text = oldtext + '\n -> ' + newtext
                 val = '[%s/%s] (edit) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
                 thread.add_output(val)

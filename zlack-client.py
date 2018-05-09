@@ -104,14 +104,15 @@ class ZarfSlackClient(SlackClient):
             raise
 
 class Channel:
-    def __init__(self, id, name, private=False):
+    def __init__(self, conn, id, name, private=False):
+        self.conn = conn
         self.id = id
         self.name = name
         self.private = private
         self.member = True ###
 
     def muted(self):
-        return False ###
+        return (self.id in self.conn.muted_channels)
     
 class Connection:
     def __init__(self, id):
@@ -207,7 +208,7 @@ def connect_to_teams():
             for chan in res.get('channels'):
                 chanid = chan['id']
                 channame = chan['name']
-                conn.channels[chanid] = Channel(chanid, channame, False)
+                conn.channels[chanid] = Channel(conn, chanid, channame, False)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -223,7 +224,7 @@ def connect_to_teams():
             for chan in res.get('groups'):
                 chanid = chan['id']
                 channame = chan['name']
-                conn.channels[chanid] = Channel(chanid, channame, True)
+                conn.channels[chanid] = Channel(conn, chanid, channame, True)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -397,7 +398,7 @@ def cmd_channels(args):
     for chan in ls:
         idstring = (' (id %s)' % (chan.id,) if debug_messages else '')
         privflag = (' (priv)' if chan.private else '')
-        muteflag = (' (mute)' if chan.id in conn.muted_channels else '')
+        muteflag = (' (mute)' if chan.muted() else '')
         print(' %s%s%s%s' % (chan.name, idstring, privflag, muteflag))
         
 def parse_team(val):

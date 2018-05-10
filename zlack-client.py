@@ -334,7 +334,9 @@ class SlackThread(threading.Thread):
     thread.
 
     All message input and output is passed back and forth through the
-    thread-safe add_input(), add_output() calls.
+    thread-safe add_input(), add_output() calls. Messages from the Slack
+    server go to the output queue for printing. Messages from the user
+    go to the input queue for transmission to Slack.
     """
     def __init__(self):
         threading.Thread.__init__(self, name='slack-thread')
@@ -488,7 +490,11 @@ def handle_input(val):
     team = tokens[teamid]
     text = encode_message(teamid, val)
     thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':text }) )
-    
+
+# ----------------
+
+# Handlers for all the special (slash) commands.
+
 def cmd_debug(args):
     global debug_messages
     debug_messages = not debug_messages

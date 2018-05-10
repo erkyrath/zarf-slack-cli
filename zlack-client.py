@@ -498,9 +498,17 @@ def handle_input(val):
 
 # Handlers for all the special (slash) commands.
 
+def cmd_help(args):
+    print('/help -- this list')
+    print('/debug [val] -- set stream debugging on/off or toggle')
+    
 def cmd_debug(args):
     global debug_messages
-    debug_messages = not debug_messages
+    if not args:
+        debug_messages = not debug_messages
+    else:
+        args = args.lower()
+        debug_messages = args.startswith('1') or args.startswith('y') or args.startswith('t') or args=='on'
     print('Message debugging now %s' % (debug_messages,))
 
 def cmd_users(args):

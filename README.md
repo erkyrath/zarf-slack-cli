@@ -56,6 +56,10 @@ Once you send a message on a channel, you can use this shortcut:
 
 If your input does not begin with a `#` sign, the message will be sent to the most recently-used channel.
 
+> /help
+
+...to list special commands, of which there are a few.
+
 ## Work in progress
 
 I'll keep hammering out the dents between now and May 15th. If it seems usable in real life, I'll declare it to be 1.0.

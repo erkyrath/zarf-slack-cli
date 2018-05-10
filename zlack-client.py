@@ -512,7 +512,11 @@ def cmd_users(args):
     if not conn:
         print('Team not connected:', team_name(teamid))
         return
-    print(conn.users)
+    ls = list(conn.users.values())
+    ls.sort(key = lambda user:user.name)
+    for user in ls:
+        idstring = (' (id %s)' % (user.id,) if debug_messages else '')
+        print('  %s%s: %s' % (user.name, idstring, user.real_name))
 
 def cmd_channels(args):
     if not curchannel:

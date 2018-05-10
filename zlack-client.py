@@ -21,6 +21,7 @@ just be async. Sadly, that's not what we've got.)
 
 """
 
+### figure out how to display person-to-person messages
 ### figure out how to display threading
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### got a spontaneous WebSocketConnectionClosedException on rtm_read
@@ -225,15 +226,19 @@ class Connection:
 class Channel:
     """Simple object representing one channel in a connection.
     """
-    def __init__(self, conn, id, name, private=False, member=True):
+    def __init__(self, conn, id, name, private=False, member=True, im=None):
         self.conn = conn
         self.id = id
         self.name = name
         self.private = private
         self.member = member
+        self.imuser = im
 
     def __repr__(self):
-        privflag = (' (priv)' if self.private else '')
+        if self.imuser:
+            privflag = ' (im)'
+        else:
+            privflag = (' (priv)' if self.private else '')
         memberflag = (' (mem)' if self.member else '')
         return '<Channel %s%s%s: "%s">' % (self.id, privflag, memberflag, self.name)
 
@@ -310,6 +315,25 @@ def connect_to_teams():
                 priv = chan['is_private']
                 member = chan['is_member']
                 conn.channels[chanid] = Channel(conn, chanid, channame, private=priv, member=member)
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
+            
+        thread.add_output('Fetching IM channels from %s' % (conn.team_name,))
+        cursor = None
+        while True:
+            if thread.check_shutdown():
+                return
+            res = conn.client.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
+            if not res:
+                break
+            for chan in res.get('channels'):
+                chanid = chan['id']
+                chanuser = chan['user']
+                if chanuser in conn.users:
+                    conn.users[chanuser].im_channel = chanid
+                    channame = '@'+conn.users[chanuser].name
+                    conn.channels[chanid] = Channel(conn, chanid, channame, private=True, member=True, im=chanuser)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -451,6 +475,7 @@ def handle_input(val):
         else:
             print('Special command not recognized:', cmd)
         return
+    
     match = pat_channel_command.match(val)
     if match:
         val = val[ match.end() : ]
@@ -566,6 +591,7 @@ def cmd_channels(args):
         print('Team not connected:', team_name(teamid))
         return
     ls = list(conn.channels.values())
+    ls = [ chan for chan in ls if not chan.imuser ]
     ls.sort(key=lambda chan:(not chan.member, chan.muted(), chan.name))
     for chan in ls:
         idstring = (' (id %s)' % (chan.id,) if debug_messages else '')

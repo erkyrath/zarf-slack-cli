@@ -244,6 +244,18 @@ class Channel:
     def muted(self):
         return (self.id in self.conn.muted_channels)
     
+class User:
+    """Simple object representing one user in a connection.
+    """
+    def __init__(self, conn, id, name, real_name):
+        self.conn = conn
+        self.id = id
+        self.name = name
+        self.real_name = real_name
+        
+    def __repr__(self):
+        return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
+    
 def get_next_cursor(res):
     metadata = res.get('response_metadata')
     if not metadata:
@@ -281,8 +293,8 @@ def connect_to_teams():
                 if not username:
                     username = user['name']    # legacy data field
                 userrealname = user['profile']['real_name']
-                conn.users[userid] = (username, userrealname)
-                conn.users_by_display_name[username] = userid
+                conn.users[userid] = User(conn, userid, username, userrealname)
+                conn.users_by_display_name[username] = conn.users[userid]
             cursor = get_next_cursor(res)
             if not cursor:
                 break
@@ -573,7 +585,7 @@ def encode_exact_user_id(teamid, match):
         return orig
     if val not in conn.users_by_display_name:
         return orig
-    return '<@' + conn.users_by_display_name[val] + '>'
+    return '<@' + conn.users_by_display_name[val].id + '>'
 
 def team_name(teamid):
     if teamid not in tokens:
@@ -598,7 +610,7 @@ def user_name(teamid, userid):
     conn = connections[teamid]
     if userid not in conn.users:
         return userid
-    return conn.users[userid][0]
+    return conn.users[userid].name
 
 async def input_loop():
     history = prompt_toolkit.history.InMemoryHistory()

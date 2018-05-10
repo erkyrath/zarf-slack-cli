@@ -184,7 +184,7 @@ class Connection:
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
             # Print our successful messages even on muted channels
-            text = decode_message(teamid, msg.get('text'))
+            text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
             val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
             return
@@ -208,7 +208,7 @@ class Connection:
                 oldtext = decode_message(teamid, oldtext)
                 userid = msg.get('message').get('user', '')
                 newtext = msg.get('message').get('text')
-                newtext = decode_message(teamid, newtext)
+                newtext = decode_message(teamid, newtext, msg.get('attachments'))
                 if oldtext == newtext:
                     # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
                     return
@@ -216,7 +216,7 @@ class Connection:
                 val = '[%s/%s] (edit) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
                 thread.add_output(val)
                 return
-            text = decode_message(teamid, msg.get('text'))
+            text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             val = '[%s/%s]%s %s: %s' % (team_name(teamid), channel_name(teamid, chanid), subtypeflag, user_name(teamid, userid), text)
             thread.add_output(val)
@@ -682,17 +682,23 @@ def parse_channel(conn, val):
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 
-def decode_message(teamid, val):
+def decode_message(teamid, val, attachments=None):
     if val is None:
-        return ''
-    val = pat_encoded_user_id.sub(lambda match:'@'+user_name(teamid, match.group(1)), val)
-    # We could translate <URL> and <URL|SLUG> here, but those look fine as is
-    if '\n' in val:
-        val = val.replace('\n', '\n... ')
-    if '&' in val:
-        val = val.replace('&lt;', '<')
-        val = val.replace('&gt;', '>')
-        val = val.replace('&amp;', '&')
+        val = ''
+    else:
+        val = pat_encoded_user_id.sub(lambda match:'@'+user_name(teamid, match.group(1)), val)
+        # We could translate <URL> and <URL|SLUG> here, but those look fine as is
+        if '\n' in val:
+            val = val.replace('\n', '\n... ')
+        if '&' in val:
+            val = val.replace('&lt;', '<')
+            val = val.replace('&gt;', '>')
+            val = val.replace('&amp;', '&')
+    if attachments:
+        for att in attachments:
+            fallback = att.get('fallback')
+            if fallback:
+                val += ('\n..+ ' + fallback)
     return val;
 
 def encode_message(teamid, val):

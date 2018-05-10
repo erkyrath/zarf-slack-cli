@@ -229,12 +229,17 @@ class Connection:
 class Channel:
     """Simple object representing one channel in a connection.
     """
-    def __init__(self, conn, id, name, private=False):
+    def __init__(self, conn, id, name, private=False, member=True):
         self.conn = conn
         self.id = id
         self.name = name
         self.private = private
-        self.member = True ###
+        self.member = member
+
+    def __repr__(self):
+        privflag = (' (priv)' if self.private else '')
+        memberflag = (' (mem)' if self.member else '')
+        return '<Channel %s%s%s: "%s">' % (self.id, privflag, memberflag, self.name)
 
     def muted(self):
         return (self.id in self.conn.muted_channels)
@@ -288,29 +293,15 @@ def connect_to_teams():
         while True:
             if thread.check_shutdown():
                 return
-            res = conn.client.api_call_check('channels.list', exclude_archived=True, exclude_members=True, cursor=cursor)
+            res = conn.client.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
             if not res:
                 break
             for chan in res.get('channels'):
                 chanid = chan['id']
                 channame = chan['name']
-                conn.channels[chanid] = Channel(conn, chanid, channame, False)
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-            
-        thread.add_output('Fetching private channels from %s' % (conn.team_name,))
-        cursor = None
-        while True:
-            if thread.check_shutdown():
-                return
-            res = conn.client.api_call_check('groups.list', exclude_archived=True, exclude_members=True, cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('groups'):
-                chanid = chan['id']
-                channame = chan['name']
-                conn.channels[chanid] = Channel(conn, chanid, channame, True)
+                priv = chan['is_private']
+                member = chan['is_member']
+                conn.channels[chanid] = Channel(conn, chanid, channame, private=priv, member=member)
             cursor = get_next_cursor(res)
             if not cursor:
                 break

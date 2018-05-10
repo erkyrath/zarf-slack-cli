@@ -446,6 +446,8 @@ def handle_input(val):
             cmd_help(val)
         elif cmd == 'debug':
             cmd_debug(val)
+        elif cmd == 'teams':
+            cmd_teams(val)
         elif cmd == 'users':
             cmd_users(val)
         elif cmd == 'channels':
@@ -502,6 +504,7 @@ def handle_input(val):
 
 def cmd_help(args):
     print('/help -- this list')
+    print('/teams -- list all teams you are authorized with')
     print('/channels [team] -- list all channels in the current team or a named team')
     print('/users [team] -- list all users in the current team or a named team')
     print('/debug [val] -- set stream debugging on/off or toggle')
@@ -515,6 +518,21 @@ def cmd_debug(args):
         debug_messages = args.startswith('1') or args.startswith('y') or args.startswith('t') or args=='on'
     print('Message debugging now %s' % (debug_messages,))
 
+def cmd_teams(args):
+    ls = list(tokens.values())
+    ls.sort(key = lambda team:team['team_name'])
+    for team in ls:
+        teamname = team['team_name']
+        memflag = ('*' if team['team_id'] in connections else ' ')
+        idstring = (' (id %s)' % (team['team_id'],) if debug_messages else '')
+        aliases = team.get('alias')
+        if aliases:
+            aliases = ', '.join(aliases)
+            aliasstr = ' (%s)' % (aliases,)
+        else:
+            aliasstr = ''
+        print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
+    
 def cmd_users(args):
     if not args:
         if not curchannel:

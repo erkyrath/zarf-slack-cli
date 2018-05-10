@@ -21,7 +21,6 @@ just be async. Sadly, that's not what we've got.)
 
 """
 
-### figure out how to display person-to-person messages
 ### figure out how to display threading
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### got a spontaneous WebSocketConnectionClosedException on rtm_read

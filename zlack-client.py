@@ -512,12 +512,13 @@ def cmd_channels(args):
         print('Team not connected:', team_name(teamid))
         return
     ls = list(conn.channels.values())
-    ls.sort(key=lambda chan:(chan.member, chan.muted(), chan.name))
+    ls.sort(key=lambda chan:(not chan.member, chan.muted(), chan.name))
     for chan in ls:
         idstring = (' (id %s)' % (chan.id,) if debug_messages else '')
+        memflag = ('*' if chan.member else ' ')
         privflag = (' (priv)' if chan.private else '')
         muteflag = (' (mute)' if chan.muted() else '')
-        print(' %s%s%s%s' % (chan.name, idstring, privflag, muteflag))
+        print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
         
 def parse_team(val):
     for team in tokens.values():

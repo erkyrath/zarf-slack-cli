@@ -253,6 +253,7 @@ class User:
         self.id = id
         self.name = name
         self.real_name = real_name
+        self.im_channel = None  # May be set later
         
     def __repr__(self):
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
@@ -453,7 +454,9 @@ class SlackThread(threading.Thread):
 curchannel = None
 
 pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
-pat_channel_command = re.compile('#([a-z0-9_-]+)(?:[/:]([a-z0-9_-]*))?', flags=re.IGNORECASE)
+pat_dest_command = re.compile('#([^ ]+)')
+pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
+pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
 
 def handle_input(val):
     global curchannel
@@ -475,34 +478,70 @@ def handle_input(val):
         else:
             print('Special command not recognized:', cmd)
         return
-    
-    match = pat_channel_command.match(val)
+
+    match = pat_dest_command.match(val)
     if match:
-        val = val[ match.end() : ]
-        val = val.lstrip()
-        if match.group(2) is not None:
-            # command "#TEAM/CHANNEL"
-            team = parse_team(match.group(1))
-            if not team:
-                print('Team not recognized:', match.group(1))
-                return
-            teamid = team['team_id']
+        # Channel/IM command of some kind
+        cmd = match.group(1)
+        val = val[ match.end() : ].lstrip()
+        
+        match_chan = pat_channel_command.match(cmd)
+        match_im = pat_im_command.match(cmd)
+        if match_chan:
+            match = match_chan
+            if match.group(1) is not None:
+                # command "#TEAM/CHANNEL"
+                team = parse_team(match.group(1))
+                if not team:
+                    print('Team not recognized:', match.group(1))
+                    return
+                teamid = team['team_id']
+            else:
+                # command "#CHANNEL"
+                if not curchannel:
+                    print('No current team.')
+                    return
+                teamid = curchannel[0]
             channame = match.group(2)
-        else:
-            # command "#CHANNEL"
-            if not curchannel:
-                print('No current team.')
+            conn = connections.get(teamid)
+            if not conn:
+                print('Team not connected:', team_name(teamid))
                 return
-            teamid = curchannel[0]
-            channame = match.group(1)
-        conn = connections.get(teamid)
-        if not conn:
-            print('Team not connected:', team_name(teamid))
+            chanid = parse_channel(conn, channame)
+            if not chanid:
+                print('Channel not recognized:', channame)
+                return
+        elif match_im:
+            match = match_im
+            if match.group(1) is not None:
+                # command "#TEAM/@USER"
+                team = parse_team(match.group(1))
+                if not team:
+                    print('Team not recognized:', match.group(1))
+                    return
+                teamid = team['team_id']
+            else:
+                # command "#@USER"
+                if not curchannel:
+                    print('No current team.')
+                    return
+                teamid = curchannel[0]
+            username = match.group(2)
+            conn = connections.get(teamid)
+            if not conn:
+                print('Team not connected:', team_name(teamid))
+                return
+            if username not in conn.users_by_display_name:
+                print('User not recognized:', username)
+                return
+            chanid = conn.users_by_display_name[username].im_channel
+            if not chanid:
+                print('No IM channel with user:', username)
+                return
+        else:
+            print('Channel spec not recognized:', cmd)
             return
-        chanid = parse_channel(conn, channame)
-        if not chanid:
-            print('Channel not recognized:', channame)
-            return
+            
         conn.lastchannel = chanid
         curchannel = (teamid, chanid)
 

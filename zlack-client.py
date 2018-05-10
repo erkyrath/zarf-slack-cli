@@ -442,7 +442,9 @@ def handle_input(val):
         cmd = match.group(1).lower()
         val = val[ match.end() : ]
         val = val.lstrip()
-        if cmd == 'debug':
+        if cmd == 'help':
+            cmd_help(val)
+        elif cmd == 'debug':
             cmd_debug(val)
         elif cmd == 'users':
             cmd_users(val)
@@ -500,6 +502,8 @@ def handle_input(val):
 
 def cmd_help(args):
     print('/help -- this list')
+    print('/channels [team] -- list all channels in the current team or a named team')
+    print('/users [team] -- list all users in the current team or a named team')
     print('/debug [val] -- set stream debugging on/off or toggle')
     
 def cmd_debug(args):

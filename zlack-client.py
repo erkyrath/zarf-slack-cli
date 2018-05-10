@@ -25,6 +25,7 @@ just be async. Sadly, that's not what we've got.)
 ### private chats and group chats. Should we be using conversations.list?
 ### mark channels that we're on! sort them to bottom
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
+### got a spontaneous WebSocketConnectionClosedException on rtm_read
 ### /recap [CHAN] [N]
 ### /users [TEAM], /channels [TEAM]
 ### /users [CHAN]
@@ -329,6 +330,12 @@ def disconnect_all_teams():
         conn.client.rtm_disconnect()
     
 class SlackThread(threading.Thread):
+    """Thread class which implements the background (Slack communications)
+    thread.
+
+    All message input and output is passed back and forth through the
+    thread-safe add_input(), add_output() calls.
+    """
     def __init__(self):
         threading.Thread.__init__(self, name='slack-thread')
         self.input_list = []
@@ -338,8 +345,16 @@ class SlackThread(threading.Thread):
         self.cond = threading.Condition()
         
     def run(self):
+        """The body of the background thread.
+        """
+        # Start up, connect to all the Slack groups we're intersteed in.
         connect_to_teams()
+        
+        # The main loop: keep looping until someone sets our want_shutdown
+        # flag.
         while not self.check_shutdown():
+            # Check for messages from the user (the foreground thread).
+            # Pass each one along to the Slack server.
             ls = self.fetch_inputs()
             for (teamid, msg) in ls:
                 conn = connections.get(teamid)
@@ -347,28 +362,44 @@ class SlackThread(threading.Thread):
                     self.add_output('Cannot send: %s not connected.' % (team_name(teamid),))
                 else:
                     conn.client.rtm_send_json(msg)
+            # Check for messages from the Slack server.
             read_connections()
+            # Sleep 100 msec, or until the next add_input() call arrives.
             with self.cond:
                 self.cond.wait(0.1)
+
+        # We've been told to shut down.
         disconnect_all_teams()
         self.add_output('Disconnected.')
 
     def set_shutdown(self):
+        """Set the want_shutdown flag. (thread-safe)
+        """
         with self.cond:
             self.want_shutdown = True
             self.cond.notify()
 
     def check_shutdown(self):
+        """Return the want_shutdown flag. (thread-safe)
+        """
         with self.lock:
             flag = self.want_shutdown
         return flag
 
     def add_input(self, val):
+        """Add a message to the input queue. (thread-safe)
+        A message is a tuple (teamid, dict) which specifies a Slack
+        group and a message to transmit there.
+        When this called, we wake up the background thread to handle it,
+        if it happens to be sleeping. 
+        """
         with self.cond:
             self.input_list.append(val)
             self.cond.notify()
             
     def fetch_inputs(self):
+        """Retrieve all queued messages from the input queue. (thread-safe)
+        """
         res = []
         with self.lock:
             if self.input_list:
@@ -377,10 +408,15 @@ class SlackThread(threading.Thread):
         return res
     
     def add_output(self, val):
+        """Add a message to the output queue (thread-safe).
+        A message is just a string which will be printed at the console.
+        """
         with self.lock:
             self.output_list.append(val)
             
     def fetch_outputs(self):
+        """Retrieve all queued messages from the output queue. (thread-safe)
+        """
         res = []
         with self.lock:
             if self.output_list:

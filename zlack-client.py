@@ -457,6 +457,7 @@ pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
+pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
 
 def handle_input(val):
     global curchannel
@@ -487,6 +488,8 @@ def handle_input(val):
         
         match_chan = pat_channel_command.match(cmd)
         match_im = pat_im_command.match(cmd)
+        match_def = pat_defaultchan_command.match(cmd)
+        
         if match_chan:
             match = match_chan
             if match.group(1) is not None:
@@ -537,6 +540,22 @@ def handle_input(val):
             chanid = conn.users_by_display_name[username].im_channel
             if not chanid:
                 print('No IM channel with user:', username)
+                return
+        elif match_def:
+            match = match_def
+            # command "#TEAM/"
+            team = parse_team(match.group(1))
+            if not team:
+                print('Team not recognized:', match.group(1))
+                return
+            teamid = team['team_id']
+            conn = connections.get(teamid)
+            if not conn:
+                print('Team not connected:', team_name(teamid))
+                return
+            chanid = parse_channel(conn, None)
+            if not chanid:
+                print('No default channel for team:', team_name(teamid))
                 return
         else:
             print('Channel spec not recognized:', cmd)

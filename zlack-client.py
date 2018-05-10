@@ -504,10 +504,16 @@ def cmd_debug(args):
     print('Message debugging now %s' % (debug_messages,))
 
 def cmd_users(args):
-    if not curchannel:
-        print('No current team.')
-        return
-    teamid = curchannel[0]
+    if not args:
+        if not curchannel:
+            print('No current team.')
+            return
+        teamid = curchannel[0]
+    else:
+        team = parse_team(args)
+        if not team:
+            return
+        teamid = team['team_id']
     conn = connections.get(teamid)
     if not conn:
         print('Team not connected:', team_name(teamid))
@@ -519,10 +525,16 @@ def cmd_users(args):
         print('  %s%s: %s' % (user.name, idstring, user.real_name))
 
 def cmd_channels(args):
-    if not curchannel:
-        print('No current team.')
-        return
-    teamid = curchannel[0]
+    if not args:
+        if not curchannel:
+            print('No current team.')
+            return
+        teamid = curchannel[0]
+    else:
+        team = parse_team(args)
+        if not team:
+            return
+        teamid = team['team_id']
     conn = connections.get(teamid)
     if not conn:
         print('Team not connected:', team_name(teamid))

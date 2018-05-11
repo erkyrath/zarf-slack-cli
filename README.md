@@ -40,25 +40,48 @@ Run `zlack-auth.py` to authenticate. (The environment variables must be set.)
 
 This will displays a Slack URL to visit. It also starts listening on localhost port 8090. Authorize the client at Slack, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
 
-## Running the Client
+## Setting aliases
+
+Slack team names can be long, so it's good to have some nicknames for them. Type something like
+
+> `python3 zlack-auth.py alias Zarfhome zh`
+
+Then "zh" will be treated as a synonym for the "Zarfhome" team.
+
+You can set several aliases for a team. The first will be used when printing messages.
+
+## Running the client
 
 Now you can run `zlack-client.py`. (This does not need the environment variables.) 
 
 > `python3 zlack-client.py`
 
-To send a message, type
+At first you have no channel set. So to send a message, type
 
 > *\#team/channel* Message text to send.
 
-Once you send a message on a channel, you can use this shortcut:
+(Again, you can use team aliases here.)
 
-> *\#channel* Message sent to a channel of the most recently-used team.
+Once you send a message on a channel, it becomes the default channel. You don't need to use the channel prefix for subsequent messages.
 
-If your input does not begin with a `#` sign, the message will be sent to the most recently-used channel.
+The channel prefix can be any of:
 
-> /help
+- *\#team/channel* -- a channel of a particular team
+- *\#channel* -- a channel of the current team
+- *\#team/@user* -- the private message channel to a user on a particular team
+- *\#@user* -- the private message channel to a user on the current team
 
-...to list special commands, of which there are a few.
+(Multi-person message channels are not yet supported.)
+
+There are a handful of special commands, which start with a slash.
+
+- */help* -- this list
+- */teams* -- list all teams you are authorized with
+- */channels [team]* -- list all channels in the current team or a named team
+- */users [team]* -- list all users in the current team or a named team
+- */recap \[channel\] [minutes]* -- recap an amount of time (default five minutes) on the current channel or a named channel
+- */debug [val]* -- set stream debugging on/off or toggle
+
 
 ## Work in progress
 

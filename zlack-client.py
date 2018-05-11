@@ -386,7 +386,13 @@ class SlackThread(threading.Thread):
                 if not conn:
                     self.add_output('Cannot send: %s not connected.' % (team_name(teamid),))
                 else:
-                    conn.client.rtm_send_json(msg)
+                    if callable(msg):
+                        try:
+                            msg(conn)
+                        except Exception as ex:
+                            self.add_output('Exception: %s' % (ex,))
+                    else:
+                        conn.client.rtm_send_json(msg)
             # Check for messages from the Slack server.
             read_connections()
             # Sleep 100 msec, or until the next add_input() call arrives.
@@ -413,8 +419,10 @@ class SlackThread(threading.Thread):
 
     def add_input(self, val):
         """Add a message to the input queue. (thread-safe)
-        A message is a tuple (teamid, dict) which specifies a Slack
-        group and a message to transmit there.
+        A message is a tuple (teamid, msg) which specifies a Slack
+        group and a message to transmit there. The message should
+        either be a JSONable dict, or a function to invoke on the
+        background thread.
         When this called, we wake up the background thread to handle it,
         if it happens to be sleeping. 
         """
@@ -613,13 +621,18 @@ def cmd_recap(args):
         arg = args[0]
         try:
             if not arg:
-                print('You must supply a number.')
+                print('You must supply a number of minutes.')
                 return
             count = int(arg)
+            if count < 1:
+                print('Recap must be a positive number of minutes.')
+                return
         except:
             print('Not a number:', arg)
             return
-    print('###', teamid, chanid, count)
+    def func(conn):
+        thread.add_output('### %s %d' % (chanid, count))
+    thread.add_input( (teamid, func) )
 
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)

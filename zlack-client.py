@@ -603,18 +603,21 @@ def cmd_recap(args):
         if not curchannel:
             print('No current team.')
             return
-        teamid = curchannel[0]
-    else:
-        team = parse_team(args)
-        if not team:
-            print('Team not recognized:', args)
+        (teamid, chanid) = curchannel
+        conn = connections.get(teamid)
+        if not conn:
+            print('Team not connected:', team_name(teamid))
             return
-        teamid = team['team_id']
-    conn = connections.get(teamid)
-    if not conn:
-        print('Team not connected:', team_name(teamid))
-        return
-    print('###', teamid, count)
+    else:
+        if not args.startswith('#'):
+            print('First argument is not a channel spec:', args)
+            return
+        tup = parse_channelspec(args[1:])
+        if not tup:
+            return
+        (conn, chanid) = tup
+        teamid = conn.id
+    print('###', teamid, chanid, count)
 
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)

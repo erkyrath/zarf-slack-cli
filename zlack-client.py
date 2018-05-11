@@ -25,6 +25,7 @@ just be async. Sadly, that's not what we've got.)
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### got a spontaneous WebSocketConnectionClosedException on rtm_read
 ### /recap [CHAN] [N]
+### attachment text can contain newlines
 ### /reload TEAM (for users, channels)
 
 import sys
@@ -630,8 +631,28 @@ def cmd_recap(args):
         except:
             print('Not a number:', arg)
             return
+        
     def func(conn):
-        thread.add_output('### %s %d' % (chanid, count))
+        teamid = conn.id
+        timestamp = str(int(time.time()) - count)
+        cursor = None
+        while True:
+            res = conn.client.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
+            if not res:
+                break
+            for msg in res.get('messages'):
+                userid = msg.get('user', '')
+                subtype = msg.get('subtype', '')
+                if subtype:
+                    continue
+                text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
+                val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+                thread.add_output(val)
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
+
+    # Schedule the recap function on the Slack thread.
     thread.add_input( (teamid, func) )
 
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)

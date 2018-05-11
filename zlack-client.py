@@ -590,16 +590,15 @@ def cmd_channels(args):
         print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
         
 def cmd_recap(args):
-    (args, dummy, count) = args.rpartition(' ')
-    try:
-        if not count:
-            print('You must supply a number.')
+    args = args.split()
+    if args and args[0].startswith('#'):
+        arg = args.pop(0)
+        tup = parse_channelspec(arg[1:])
+        if not tup:
             return
-        count = int(count)
-    except:
-        print('Not a number:', count)
-        return
-    if not args:
+        (conn, chanid) = tup
+        teamid = conn.id
+    else:
         if not curchannel:
             print('No current team.')
             return
@@ -608,15 +607,18 @@ def cmd_recap(args):
         if not conn:
             print('Team not connected:', team_name(teamid))
             return
+    if not args:
+        count = 5
     else:
-        if not args.startswith('#'):
-            print('First argument is not a channel spec:', args)
+        arg = args[0]
+        try:
+            if not arg:
+                print('You must supply a number.')
+                return
+            count = int(arg)
+        except:
+            print('Not a number:', arg)
             return
-        tup = parse_channelspec(args[1:])
-        if not tup:
-            return
-        (conn, chanid) = tup
-        teamid = conn.id
     print('###', teamid, chanid, count)
 
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)

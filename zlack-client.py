@@ -25,7 +25,6 @@ just be async. Sadly, that's not what we've got.)
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### got a spontaneous WebSocketConnectionClosedException on rtm_read
 ### /recap [CHAN] [N]
-### attachment text can contain newlines
 ### /reload TEAM (for users, channels)
 
 import sys
@@ -785,7 +784,10 @@ def decode_message(teamid, val, attachments=None):
         for att in attachments:
             fallback = att.get('fallback')
             if fallback:
-                val += ('\n... ' + fallback)
+                if '\n' in fallback:
+                    fallback = fallback.replace('\n', '\n... ')
+                ### & < > also?
+                val += ('\n..> ' + fallback)
     return val;
 
 def encode_message(teamid, val):

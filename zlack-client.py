@@ -24,7 +24,6 @@ just be async. Sadly, that's not what we've got.)
 ### figure out how to display threading
 ### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
 ### got a spontaneous WebSocketConnectionClosedException on rtm_read
-### /recap [CHAN] [N]
 ### /reload TEAM (for users, channels)
 
 import sys
@@ -644,7 +643,7 @@ def cmd_recap(args):
                 subtype = msg.get('subtype', '')
                 if subtype:
                     continue
-                ts = msg.get('ts')
+                ts = msg.get('ts') ### format nicely
                 text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
                 val = '[%s/%s] (%s) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), ts, user_name(teamid, userid), text)
                 thread.add_output(val)

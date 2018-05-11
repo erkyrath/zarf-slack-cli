@@ -633,19 +633,20 @@ def cmd_recap(args):
         
     def func(conn):
         teamid = conn.id
-        timestamp = str(int(time.time()) - count)
+        timestamp = str(int(time.time()) - count*60)
         cursor = None
         while True:
             res = conn.client.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
             if not res:
                 break
-            for msg in res.get('messages'):
+            for msg in reversed(res.get('messages')):
                 userid = msg.get('user', '')
                 subtype = msg.get('subtype', '')
                 if subtype:
                     continue
+                ts = msg.get('ts')
                 text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
-                val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+                val = '[%s/%s] (%s) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), ts, user_name(teamid, userid), text)
                 thread.add_output(val)
             cursor = get_next_cursor(res)
             if not cursor:

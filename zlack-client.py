@@ -367,7 +367,7 @@ def connect_to_teams():
         #print(conn.channels)
 
     for conn in connections.values():
-        res = conn.client.rtm_connect(reconnect=True, with_team_state=False)
+        res = conn.client.rtm_connect(auto_reconnect=True, with_team_state=False)
         ### if not res, close connection
 
 def read_connections():

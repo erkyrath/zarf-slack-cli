@@ -504,6 +504,9 @@ pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
 
 def handle_input(val):
+    """Handle one input line from the player.
+    This runs in the main thread.
+    """
     global curchannel
     match = pat_special_command.match(val)
     if match:
@@ -549,7 +552,7 @@ def handle_input(val):
         return
     
     (teamid, chanid) = curchannel
-    team = tokens[teamid] ###?
+    team = tokens[teamid]
     text = encode_message(teamid, val)
     thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':text }) )
 

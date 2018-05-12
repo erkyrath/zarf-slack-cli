@@ -47,20 +47,25 @@ popt = optparse.OptionParser(usage='slack-client.py [ OPTIONS ]')
 (opts, args) = popt.parse_args()
 
 thread = None
+teams = None
 connections = OrderedDict()
 debug_messages = False
 
-def read_tokens():
+def read_teams():
     """Read the current token list from ~/.zlack-tokens.
+    Return a dict of Team objects.
     """
     path = os.path.join(os.environ.get('HOME'), token_file)
     try:
         fl = open(path)
         dat = json.load(fl, object_pairs_hook=OrderedDict)
         fl.close()
-        return dat
     except:
-        return OrderedDict()
+        dat = OrderedDict()
+    res = OrderedDict()
+    for (id, map) in dat.items():
+        res[id] = Team(map)
+    return res
 
 class ZarfSlackClient(SlackClient):
     """A customized version of SlackClient.
@@ -169,6 +174,29 @@ class ZarfSlackClient(SlackClient):
                 # Other exceptions are passed along.
                 raise
 
+class Team:
+    """Information about one Slack group. (It may be connected or not.)
+    """
+    def __init__(self, map):
+        self.id = map['team_id']
+        self.team_name = map.get('team_name', '???')
+        self.user_id = map['user_id']
+        self.access_token = map['access_token']
+        if 'alias' in map:
+            self.alias = list(map['alias'])
+        else:
+            self.alias = []
+        self.origmap = map
+
+    def __repr__(self):
+        return '<Team %s "%s">' % (self.id, self.team_name)
+
+    def connected(self):
+        """Return whether we have an active RTM connection to this
+        group.
+        """
+        return (self.id in connections)
+    
 class Connection:
     """A connection to one Slack group. This includes the websocket (which
     carries the RTM protocol). It also includes information about the
@@ -181,15 +209,15 @@ class Connection:
     """
     def __init__(self, id):
         self.id = id
-        self.team = tokens[id]
-        self.team_name = self.team['team_name']
-        self.user_id = self.team['user_id']
+        self.team = teams[id]
+        self.team_name = self.team.team_name
+        self.user_id = self.team.user_id
         self.users = {}
         self.users_by_display_name = {}
         self.channels = {}
         self.muted_channels = set()
         self.lastchannel = None
-        self.client = ZarfSlackClient(self.team['access_token'], handler=self.handle_message)
+        self.client = ZarfSlackClient(self.team.access_token, handler=self.handle_message)
 
     def handle_message(self, msg):
         """Handle one RTM message, as received from the websocket connection.
@@ -294,7 +322,7 @@ class User:
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
     
 def connect_to_teams():
-    for id in tokens.keys():
+    for id in teams.keys():
         conn = Connection(id)
         connections[id] = conn
         
@@ -557,9 +585,9 @@ def handle_input(val):
         print('No current channel.')
         return
     (teamid, chanid) = curchannel
-    team = tokens[teamid]
+    team = teams[teamid]
     text = encode_message(teamid, val)
-    thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team['user_id'], 'channel':chanid, 'text':text }) )
+    thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':text }) )
 
 # ----------------
 
@@ -583,13 +611,13 @@ def cmd_debug(args):
     print('Message debugging now %s' % (debug_messages,))
 
 def cmd_teams(args):
-    ls = list(tokens.values())
-    ls.sort(key = lambda team:team['team_name'])
+    ls = list(teams.values())
+    ls.sort(key = lambda team:team.team_name)
     for team in ls:
-        teamname = team['team_name']
-        memflag = ('*' if team['team_id'] in connections else ' ')
-        idstring = (' (id %s)' % (team['team_id'],) if debug_messages else '')
-        aliases = team.get('alias')
+        teamname = team.team_name
+        memflag = ('*' if team.connected() else ' ')
+        idstring = (' (id %s)' % (team.id,) if debug_messages else '')
+        aliases = team.alias
         if aliases:
             aliases = ', '.join(aliases)
             aliasstr = ' (%s)' % (aliases,)
@@ -608,7 +636,7 @@ def cmd_users(args):
         if not team:
             print('Team not recognized:', args)
             return
-        teamid = team['team_id']
+        teamid = team.id
     conn = connections.get(teamid)
     if not conn:
         print('Team not connected:', team_name(teamid))
@@ -630,7 +658,7 @@ def cmd_channels(args):
         if not team:
             print('Team not recognized:', args)
             return
-        teamid = team['team_id']
+        teamid = team.id
     conn = connections.get(teamid)
     if not conn:
         print('Team not connected:', team_name(teamid))
@@ -741,7 +769,7 @@ def parse_channelspec(val):
             if not team:
                 print('Team not recognized:', match.group(1))
                 return
-            teamid = team['team_id']
+            teamid = team.id
         else:
             # format: "CHANNEL"
             if not curchannel:
@@ -765,7 +793,7 @@ def parse_channelspec(val):
             if not team:
                 print('Team not recognized:', match.group(1))
                 return
-            teamid = team['team_id']
+            teamid = team.id
         else:
             # format: "@USER"
             if not curchannel:
@@ -791,7 +819,7 @@ def parse_channelspec(val):
         if not team:
             print('Team not recognized:', match.group(1))
             return
-        teamid = team['team_id']
+        teamid = team.id
         conn = connections.get(teamid)
         if not conn:
             print('Team not connected:', team_name(teamid))
@@ -807,16 +835,15 @@ def parse_channelspec(val):
     return (conn, chanid)
 
 def parse_team(val):
-    """Parse a team name, ID, or alias. Return the team (tokens)
-    entry.
+    """Parse a team name, ID, or alias. Return the team entry.
     """
-    for team in tokens.values():
-        if team.get('team_id') == val:
+    for team in teams.values():
+        if team.id == val:
             return team
-        if team.get('team_name').startswith(val):
+        if team.team_name.startswith(val):
             return team
-        alias = team.get('alias')
-        if alias and val in alias:
+        aliases = team.alias
+        if aliases and val in aliases:
             return team
     return None
 
@@ -908,13 +935,13 @@ def team_name(teamid):
     """Display a team name, either as an alias (if available) or the
     full name.
     """
-    if teamid not in tokens:
+    if teamid not in teams:
         return '???'+teamid
-    team = tokens[teamid]
-    alias = team.get('alias')
-    if alias:
-        return alias[0]
-    return team['team_name']
+    team = teams[teamid]
+    aliases = team.alias
+    if aliases:
+        return aliases[0]
+    return team.team_name
 
 def channel_name(teamid, chanid):
     """Display a channel name.
@@ -977,8 +1004,8 @@ def check_for_outputs(evloop):
 
 # Begin work.
 
-tokens = read_tokens()
-if not tokens:
+teams = read_teams()
+if not teams:
     print('You are not authorized in any Slack groups. Run zlack-auth.py first.')
     sys.exit(-1)
 

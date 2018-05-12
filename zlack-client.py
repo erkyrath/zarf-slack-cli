@@ -196,11 +196,15 @@ class Connection:
 
     def handle_message(self, msg):
         """Handle one RTM message, as received from the websocket connection.
+        A message is a dict, as decoded from JSON.
         """
         if debug_messages:
             thread.add_output('Received: %s' % (msg,))
+            
         typ = msg.get('type')
+        
         if typ is None and msg.get('reply_to'):
+            # A reply to a message we sent.
             origmsg = self.client.rtm_complete_in_flight(msg.get('reply_to'))
             if not origmsg:
                 thread.add_output('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
@@ -215,7 +219,7 @@ class Connection:
             return
 
         if typ == 'hello':
-            # Start pinging.
+            # Websocket-connected message. Start pinging.
             thread.add_output('<Connected: %s>' % (team_name(self.id)))
             self.client.last_pinged_at = time.time()
             return

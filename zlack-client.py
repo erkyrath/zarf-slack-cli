@@ -344,10 +344,15 @@ def connect_to_teams():
         ### if not res, close connection
 
 def read_connections():
+    """Check every active connection to see if messages have arrived from
+    the Slack server. (Called on the Slack thread.)
+    """
     for conn in connections.values():
         conn.client.rtm_read()
     
 def disconnect_all_teams():
+    """Disconnect all active connections.
+    """
     for conn in connections.values():
         conn.client.rtm_disconnect()
     

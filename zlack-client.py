@@ -681,7 +681,32 @@ def cmd_channels(args):
         print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
 def cmd_connect(args):
-    pass ###
+    global curchannel
+    if not args:
+        if not curchannel:
+            print('No current team.')
+            return
+        teamid = curchannel[0]
+    else:
+        team = parse_team(args)
+        if not team:
+            print('Team not recognized:', args)
+            return
+        teamid = team.id
+    conn = connections.get(teamid)
+    if conn:
+        # Should be thread-smarter about this!
+        conn.client.rtm_disconnect()
+        del connections[teamid]
+        conn = None
+        if curchannel and curchannel[0] == teamid:
+            curchannel = None
+        print('Disconnected from', team_name(teamid))
+    conn = Connection(teamid)
+    connections[teamid] = conn
+    res = conn.client.rtm_connect(auto_reconnect=True, with_team_state=False)
+    ### if not res, close connection
+    print('Connected to', team_name(teamid))
 
 def cmd_disconnect(args):
     global curchannel
@@ -700,6 +725,7 @@ def cmd_disconnect(args):
     if not conn:
         print('Team not connected:', team_name(teamid))
         return
+    # Should be thread-smarter about this!
     conn.client.rtm_disconnect()
     del connections[teamid]
     if curchannel and curchannel[0] == teamid:

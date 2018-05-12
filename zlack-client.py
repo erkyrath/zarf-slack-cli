@@ -417,8 +417,9 @@ def read_connections():
 def disconnect_all_teams():
     """Disconnect all active connections.
     """
-    for conn in connections.values():
+    for conn in list(connections.values()):
         conn.client.rtm_disconnect()
+        del connections[conn.id]
     
 class SlackThread(threading.Thread):
     """Thread class which implements the background (Slack communications)
@@ -548,6 +549,10 @@ def handle_input(val):
             cmd_debug(val)
         elif cmd == 'teams':
             cmd_teams(val)
+        elif cmd == 'connect':
+            cmd_connect(val)
+        elif cmd == 'disconnect':
+            cmd_disconnect(val)
         elif cmd == 'users':
             cmd_users(val)
         elif cmd == 'channels':
@@ -672,7 +677,33 @@ def cmd_channels(args):
         privflag = (' (priv)' if chan.private else '')
         muteflag = (' (mute)' if chan.muted() else '')
         print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
-        
+
+def cmd_connect(args):
+    pass ###
+
+def cmd_disconnect(args):
+    global curchannel
+    if not args:
+        if not curchannel:
+            print('No current team.')
+            return
+        teamid = curchannel[0]
+    else:
+        team = parse_team(args)
+        if not team:
+            print('Team not recognized:', args)
+            return
+        teamid = team.id
+    conn = connections.get(teamid)
+    if not conn:
+        print('Team not connected:', team_name(teamid))
+        return
+    conn.client.rtm_disconnect()
+    del connections[teamid]
+    if curchannel and curchannel[0] == teamid:
+        curchannel = None
+    print('Disconnected from', team_name(teamid))
+
 def cmd_recap(args):
     args = args.split()
     if args and args[0].startswith('#'):

@@ -472,6 +472,7 @@ class SlackThread(threading.Thread):
             
     def fetch_inputs(self):
         """Retrieve all queued messages from the input queue. (thread-safe)
+        A message is a tuple (teamid, msg) as described above.
         """
         res = []
         with self.lock:

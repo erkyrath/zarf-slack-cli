@@ -160,6 +160,7 @@ class ZarfSlackClient(SlackClient):
                 self.server.last_connected_at = 0
                 self.last_pinged_at = None
                 self.msg_in_flight.clear()
+                self.server.rtm_connect(reconnect=True, use_rtm_start=False)
             except ConnectionResetError:
                 thread.add_output('<ConnectionReset>')
                 self.server.websocket = None
@@ -167,6 +168,7 @@ class ZarfSlackClient(SlackClient):
                 self.server.last_connected_at = 0
                 self.last_pinged_at = None
                 self.msg_in_flight.clear()
+                self.server.rtm_connect(reconnect=True, use_rtm_start=False)
 
 class Connection:
     """A connection to one Slack group. This includes the websocket (which
@@ -212,6 +214,7 @@ class Connection:
 
         if typ == 'hello':
             # Start pinging.
+            thread.add_output('<Connected: %s>' % (team_name(self.id)))
             self.client.last_pinged_at = time.time()
             return
                 

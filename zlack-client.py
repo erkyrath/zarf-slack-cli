@@ -274,6 +274,10 @@ class Channel:
         return '<Channel %s%s%s: "%s">' % (self.id, privflag, memberflag, self.name)
 
     def muted(self):
+        """Check whether this channel is muted. The mute flag is stored
+        in the Connection, because it comes from Slack's preferences data,
+        not the channel data.
+        """
         return (self.id in self.conn.muted_channels)
     
 class User:
@@ -290,6 +294,10 @@ class User:
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
     
 def get_next_cursor(res):
+    """Utility function: extract the next_cursor field from a message
+    object. This is used by all Web API calls which get paginated
+    results.
+    """
     metadata = res.get('response_metadata')
     if not metadata:
         return None
@@ -698,6 +706,10 @@ def cmd_recap(args):
     # Schedule the recap function on the Slack thread.
     thread.add_input( (teamid, func) )
 
+# ----------------
+
+# Utilities used by this and that.
+    
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
 pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)

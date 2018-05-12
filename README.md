@@ -79,8 +79,8 @@ There are a handful of special commands, which start with a slash.
 - */teams* -- list all teams you are authorized with
 - */channels [team]* -- list all channels in the current team or a named team
 - */users [team]* -- list all users in the current team or a named team
-- */recap \[channel\] [minutes]* -- recap an amount of time (default five minutes) on the current channel or a named channel
-- */debug [val]* -- set stream debugging on/off or toggle
+- */recap \[channel] \[minutes]* -- recap an amount of time (default five minutes) on the current channel or a named channel
+- */debug [bool]* -- set stream debugging on/off or toggle
 
 
 ## Work in progress

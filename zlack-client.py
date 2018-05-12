@@ -601,6 +601,8 @@ def handle_input(val):
 def cmd_help(args):
     print('/help -- this list')
     print('/teams -- list all teams you are authorized with')
+    print('/connect [team] -- connect (or reconnect) to a team')
+    print('/disconnect [team] -- disconnect from a team')
     print('/channels [team] -- list all channels in the current team or a named team')
     print('/users [team] -- list all users in the current team or a named team')
     print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')

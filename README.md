@@ -77,11 +77,11 @@ There are a handful of special commands, which start with a slash.
 
 - */help* -- this list
 - */teams* -- list all teams you are authorized with
+- */connect [team]* -- connect (or reconnect) to a team
+- */disconnect [team]* -- disconnect from a team
 - */channels [team]* -- list all channels in the current team or a named team
 - */users [team]* -- list all users in the current team or a named team
 - */recap \[channel] \[minutes]* -- recap an amount of time (default five minutes) on the current channel or a named channel
-- */connect [team]* -- connect (or reconnect) to a team
-- */disconnect [team]* -- disconnect from a team
 - */debug [bool]* -- set stream debugging on/off or toggle
 
 

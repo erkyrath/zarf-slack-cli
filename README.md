@@ -62,7 +62,7 @@ At first you have no channel set. So to send a message, type
 
 (Again, you can use team aliases here.)
 
-Once you send a message on a channel, it becomes the default channel. You don't need to use the channel prefix for subsequent messages.
+Once you send a message on a channel, it becomes the default channel. You don't need to use the channel prefix for subsequent messages. The current channel is always displayed as the input prompt, so you know where you're typing to.
 
 The channel prefix can be any of:
 

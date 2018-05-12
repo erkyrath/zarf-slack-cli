@@ -531,7 +531,7 @@ def handle_input(val):
 
     match = pat_dest_command.match(val)
     if match:
-        # Channel/IM command of some kind
+        # The line starts with a channel prefix.
         cmd = match.group(1)
         val = val[ match.end() : ].lstrip()
 
@@ -540,17 +540,21 @@ def handle_input(val):
             return
         (conn, chanid) = tup
         teamid = conn.id
+        # Set the current channel.
         conn.lastchannel = chanid
         curchannel = (teamid, chanid)
 
+    # I habitually type lines starting with semicolon. Strip that out.
     if val.startswith(';'):
         val = val[1:].lstrip()
+    # If there's no line at all, this was just a channel prefix. Exit.
     if not val:
         return
+
+    # Send a message to the current channel!
     if not curchannel:
         print('No current channel.')
         return
-    
     (teamid, chanid) = curchannel
     team = tokens[teamid]
     text = encode_message(teamid, val)

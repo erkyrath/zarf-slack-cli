@@ -86,3 +86,12 @@ There are a handful of special commands, which start with a slash.
 ## Work in progress
 
 I'll keep hammering out the dents between now and May 15th. If it seems usable in real life, I'll declare it to be 1.0.
+
+Features this does not currently handle which I might someday add:
+
+- multi-person IM chat
+- threaded messages
+- the you-are-typing signal
+- alerts and notifications
+
+(Not listed: all the features which I don't intend to add. I'm not even trying to keep up with Slack here.)

@@ -137,7 +137,7 @@ class ZarfSlackClient(SlackClient):
         now = time.time()
         if self.last_pinged_at and now > self.last_pinged_at + 5:
             self.last_pinged_at = now
-            self.server.ping()
+            self.rtm_send_json({ 'type':'ping', 'id':None })
         while True:
             try:
                 dat = self.server.websocket.recv()

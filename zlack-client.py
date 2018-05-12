@@ -929,7 +929,14 @@ def user_name(teamid, userid):
     return conn.users[userid].name
 
 async def input_loop():
+    """This coroutine handles the "user interface" of the application.
+    It runs in the main thread. Since it's async, it permits other
+    eventloop items to execute in the main thread -- specifically,
+    the check_for_outputs call.
+    """
+    # Create a history storage object for the command-line prompt.
     history = prompt_toolkit.history.InMemoryHistory()
+    # Keep running as long as the Slack thread is running.
     while thread.is_alive():
         try:
             prompt = '> '
@@ -948,23 +955,37 @@ async def input_loop():
             thread.set_shutdown()
 
 def check_for_outputs(evloop):
-    ls = thread.fetch_outputs();
+    """Check for output messages from the Slack thread. If there are
+    any, print them.
+    This runs in the main thread, every 100 milliseconds, as
+    long as the eventloop is running.
+    """
+    ls = thread.fetch_outputs()
     for ln in ls:
         print(ln)
     if thread.is_alive():
+        # Reschedule ourself to be called 100 milliseconds from now.
         evloop.call_later(0.1, check_for_outputs, evloop)
+
+# Begin work.
 
 tokens = read_tokens()
 if not tokens:
     print('You are not authorized in any Slack groups. Run zlack-auth.py first.')
     sys.exit(-1)
 
+# Launch the Slack thread.
 thread = SlackThread()
 thread.start()
 
+# We (the main thread) will be running a standard eventloop.
+
 evloop = asyncio.get_event_loop()
 
+# Set up the first call of the output checker. (It will re-invoke itself
+# every 100 milliseconds.)
 evloop.call_soon(check_for_outputs, evloop)
 
+# Set up the main UI loop, and run it until it's done.
 evloop.run_until_complete(input_loop())
 evloop.close()

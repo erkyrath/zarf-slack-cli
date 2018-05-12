@@ -90,13 +90,17 @@ class ZarfSlackClient(SlackClient):
             return None
         return res
 
-    def rtm_disconnect(self):
+    def rtm_disconnect(self, goterror=False):
         """Disconnect the web socket. (The slackclient library doesn't
         have this for some reason.)
+        Pass goterror=True if we're calling this because of a websocket
+        error. In this case, we don't try to close the socket cleanly,
+        we just throw it away.
         """
         if self.server.websocket is not None:
-            self.server.websocket.send_close()
-            self.server.websocket.close()
+            if not goterror:
+                self.server.websocket.send_close()
+                self.server.websocket.close()
             self.server.websocket = None
         self.server.connected = False
         self.server.last_connected_at = 0
@@ -132,6 +136,10 @@ class ZarfSlackClient(SlackClient):
 
         This assumes that every distinct websocket message is a complete
         JSON object.
+
+        Any exception (pretty much) means that the socket has died and
+        should be reconnected. We can expect ConnectionResetError,
+        WebSocketConnectionClosedException, and probably others.
         """
         if self.server.websocket is None:
             return
@@ -156,24 +164,10 @@ class ZarfSlackClient(SlackClient):
                 if ex.errno == 2:
                     # More data needs to be received on the underlying TCP
                     # transport before the request can be fulfilled.
+                    # Exit quietly.
                     return
+                # Other exceptions are passed along.
                 raise
-            except WebSocketConnectionClosedException:
-                thread.add_output('<WebSocketConnectionClosed>')
-                self.server.websocket = None
-                self.server.connected = False
-                self.server.last_connected_at = 0
-                self.last_pinged_at = None
-                self.msg_in_flight.clear()
-                self.server.rtm_connect(reconnect=True, use_rtm_start=False)
-            except ConnectionResetError:
-                thread.add_output('<ConnectionReset>')
-                self.server.websocket = None
-                self.server.connected = False
-                self.server.last_connected_at = 0
-                self.last_pinged_at = None
-                self.msg_in_flight.clear()
-                self.server.rtm_connect(reconnect=True, use_rtm_start=False)
 
 class Connection:
     """A connection to one Slack group. This includes the websocket (which
@@ -387,8 +381,13 @@ def read_connections():
     the Slack server. (Called on the Slack thread.)
     """
     for conn in connections.values():
-        conn.client.rtm_read()
-    
+        try:
+            conn.client.rtm_read()
+        except Exception as ex:
+            thread.add_output('<Error: %s> %s' % (team_name(conn.id), ex,))
+            conn.client.rtm_disconnect(goterror=True)
+            conn.client.server.rtm_connect(reconnect=True, use_rtm_start=False)
+
 def disconnect_all_teams():
     """Disconnect all active connections.
     """

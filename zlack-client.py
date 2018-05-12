@@ -681,7 +681,7 @@ def cmd_recap(args):
                 if subtype:
                     continue
                 ts = msg.get('ts')
-                ts = time.strftime('%H:%M', time.localtime(float(ts)))
+                ts = short_timestamp(ts)
                 text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
                 val = '[%s/%s] (%s) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), ts, user_name(teamid, userid), text)
                 thread.add_output(val)
@@ -844,6 +844,19 @@ def encode_exact_user_id(teamid, match):
     if val not in conn.users_by_display_name:
         return orig
     return '<@' + conn.users_by_display_name[val].id + '>'
+
+def short_timestamp(ts):
+    """Given a Slack-style timestamp (a string like "1526150036.000002"),
+    display it in a nice way.
+    """
+    tup = time.localtime(float(ts))
+    # If the timestamp is from today, we use a shorter form.
+    nowtup = time.localtime()
+    if tup.tm_year == nowtup.tm_year and tup.tm_yday == nowtup.tm_yday:
+        val = time.strftime('%H:%M', tup)
+    else:
+        val = time.strftime('%m/%d %H:%M', tup)
+    return val
 
 def team_name(teamid):
     if teamid not in tokens:

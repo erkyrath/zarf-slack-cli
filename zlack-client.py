@@ -74,6 +74,7 @@ class ZarfSlackClient(SlackClient):
         SlackClient.__init__(self, token, proxies)
         self.server.websocket_safe_read = None
         self.message_handler = handler
+        self.last_pinged_at = None
         self.msg_counter = 0
         self.msg_in_flight = {}
         
@@ -98,6 +99,8 @@ class ZarfSlackClient(SlackClient):
             self.server.websocket = None
         self.server.connected = False
         self.server.last_connected_at = 0
+        self.last_pinged_at = None
+        self.msg_in_flight.clear()
 
     def rtm_send_json(self, msg):
         """Send a message object to the server. The argument should
@@ -131,6 +134,10 @@ class ZarfSlackClient(SlackClient):
         """
         if self.server.websocket is None:
             return
+        now = time.time()
+        if self.last_pinged_at and now > self.last_pinged_at + 3:
+            self.last_pinged_at = now
+            self.server.ping()
         while True:
             try:
                 dat = self.server.websocket.recv()
@@ -186,6 +193,11 @@ class Connection:
             text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
             val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
             thread.add_output(val)
+            return
+
+        if typ == 'hello':
+            # Start pinging.
+            self.client.last_pinged_at = time.time()
             return
                 
         if typ == 'message':

@@ -680,7 +680,8 @@ def cmd_recap(args):
                 subtype = msg.get('subtype', '')
                 if subtype:
                     continue
-                ts = msg.get('ts') ### format nicely
+                ts = msg.get('ts')
+                ts = time.strftime('%H:%M', time.localtime(float(ts)))
                 text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
                 val = '[%s/%s] (%s) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), ts, user_name(teamid, userid), text)
                 thread.add_output(val)

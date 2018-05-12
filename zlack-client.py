@@ -859,6 +859,9 @@ def check_for_outputs(evloop):
         evloop.call_later(0.1, check_for_outputs, evloop)
 
 tokens = read_tokens()
+if not tokens:
+    print('You are not authorized in any Slack groups. Run zlack-auth.py first.')
+    sys.exit(-1)
 
 thread = SlackThread()
 thread.start()

@@ -148,7 +148,10 @@ class ZarfSlackClient(SlackClient):
                 except:
                     thread.add_output('Websocket error: non-json message: %s' % (dat,))
                 if msg is not None:
-                    self.message_handler(msg)
+                    try:
+                        self.message_handler(msg)
+                    except Exception as ex:
+                        thread.add_output('Error: %s: handling: %s' % (ex, msg,))
             except SSLError as ex:
                 if ex.errno == 2:
                     # More data needs to be received on the underlying TCP

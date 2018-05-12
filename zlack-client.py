@@ -38,6 +38,7 @@ import threading
 import prompt_toolkit
 from ssl import SSLError
 from slackclient import SlackClient
+from websocket._exceptions import WebSocketConnectionClosedException
 
 token_file = '.zlack-tokens'
 
@@ -152,6 +153,20 @@ class ZarfSlackClient(SlackClient):
                 if ex.errno == 2:
                     return
                 raise
+            except WebSocketConnectionClosedException:
+                thread.add_output('<WebSocketConnectionClosed>')
+                self.server.websocket = None
+                self.server.connected = False
+                self.server.last_connected_at = 0
+                self.last_pinged_at = None
+                self.msg_in_flight.clear()
+            except ConnectionResetError:
+                thread.add_output('<ConnectionReset>')
+                self.server.websocket = None
+                self.server.connected = False
+                self.server.last_connected_at = 0
+                self.last_pinged_at = None
+                self.msg_in_flight.clear()
 
 class Connection:
     """A connection to one Slack group. This includes the websocket (which

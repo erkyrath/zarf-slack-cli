@@ -870,8 +870,12 @@ def encode_message(teamid, val):
     return val
 
 def encode_exact_user_id(teamid, match):
-    orig = match.group(0)
-    val = match.group(1)
+    """Utility function used by encode_message. Given a match object from
+    pat_user_id, return a <@USERID> substitution. If the match doesn't
+    exactly match a user display name, we return the original string.    
+    """
+    orig = match.group(0)  # '@name'
+    val = match.group(1)   # 'name'
     conn = connections.get(teamid)
     if not conn:
         return orig
@@ -893,6 +897,9 @@ def short_timestamp(ts):
     return val
 
 def team_name(teamid):
+    """Display a team name, either as an alias (if available) or the
+    full name.
+    """
     if teamid not in tokens:
         return '???'+teamid
     team = tokens[teamid]
@@ -902,6 +909,8 @@ def team_name(teamid):
     return team['team_name']
 
 def channel_name(teamid, chanid):
+    """Display a channel name.
+    """
     if teamid not in connections:
         return '???'+chanid
     conn = connections[teamid]
@@ -910,6 +919,8 @@ def channel_name(teamid, chanid):
     return conn.channels[chanid].name
 
 def user_name(teamid, userid):
+    """Display a user name (the displayname).
+    """
     if teamid not in connections:
         return userid
     conn = connections[teamid]

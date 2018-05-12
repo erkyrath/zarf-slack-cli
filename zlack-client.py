@@ -135,7 +135,7 @@ class ZarfSlackClient(SlackClient):
         if self.server.websocket is None:
             return
         now = time.time()
-        if self.last_pinged_at and now > self.last_pinged_at + 3:
+        if self.last_pinged_at and now > self.last_pinged_at + 5:
             self.last_pinged_at = now
             self.server.ping()
         while True:

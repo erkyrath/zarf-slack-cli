@@ -293,16 +293,6 @@ class User:
     def __repr__(self):
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
     
-def get_next_cursor(res):
-    """Utility function: extract the next_cursor field from a message
-    object. This is used by all Web API calls which get paginated
-    results.
-    """
-    metadata = res.get('response_metadata')
-    if not metadata:
-        return None
-    return metadata.get('next_cursor', None)
-    
 def connect_to_teams():
     for id in tokens.keys():
         conn = Connection(id)
@@ -710,6 +700,15 @@ def cmd_recap(args):
 
 # Utilities used by this and that.
     
+def get_next_cursor(res):
+    """Extract the next_cursor field from a message object. This is
+    used by all Web API calls which get paginated results.
+    """
+    metadata = res.get('response_metadata')
+    if not metadata:
+        return None
+    return metadata.get('next_cursor', None)
+    
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
 pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
@@ -800,6 +799,9 @@ def parse_channelspec(val):
     return (conn, chanid)
 
 def parse_team(val):
+    """Parse a team name, ID, or alias. Return the team (tokens)
+    entry.
+    """
     for team in tokens.values():
         if team.get('team_id') == val:
             return team
@@ -811,6 +813,9 @@ def parse_team(val):
     return None
 
 def parse_channel(conn, val):
+    """Parse a channel name (a bare channel, no # or team prefix)
+    for a given connection. Return the channel ID.
+    """
     if not val:
         return conn.lastchannel
     for (id, chan) in conn.channels.items():
@@ -825,6 +830,13 @@ pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 
 def decode_message(teamid, val, attachments=None):
+    """Convert a plain-text message in standard Slack form into a printable
+    string. You can also pass a list of attachments from the message.
+    Slack message text has a few special features:
+    - User references look like <@USERID>
+    - URLs look like <URL> or <URL|SLUG>
+    - &, <, and > characters are &-encoded (as in HTML)
+    """
     if val is None:
         val = ''
     else:
@@ -847,9 +859,13 @@ def decode_message(teamid, val, attachments=None):
     return val;
 
 def encode_message(teamid, val):
+    """Encode a human-typed message into standard Slack form.
+    """
     val = val.replace('<', '&lt;')
     val = val.replace('>', '&gt;')
     val = val.replace('&', '&amp;')
+    # We try to locate @displayname references and convert them to
+    # <@USERID>.
     val = pat_user_id.sub(lambda match:encode_exact_user_id(teamid, match), val)
     return val
 

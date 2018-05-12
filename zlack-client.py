@@ -151,6 +151,8 @@ class ZarfSlackClient(SlackClient):
                     self.message_handler(msg)
             except SSLError as ex:
                 if ex.errno == 2:
+                    # More data needs to be received on the underlying TCP
+                    # transport before the request can be fulfilled.
                     return
                 raise
             except WebSocketConnectionClosedException:

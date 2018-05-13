@@ -691,6 +691,9 @@ def cmd_channels(args):
         print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
 def cmd_connect(args):
+    """Command: connect to a group. If we're already connected, disconnect
+    and then reconnect.
+    """
     global curchannel
     if not args:
         if not curchannel:
@@ -716,6 +719,9 @@ def cmd_connect(args):
     print('Connected to', team_name(team))
 
 def cmd_disconnect(args):
+    """Command: disconnect from a group. This only applies to the RTM
+    connection.
+    """
     global curchannel
     if not args:
         if not curchannel:
@@ -740,6 +746,8 @@ def cmd_disconnect(args):
     print('Disconnected from', team_name(team))
 
 def cmd_reload(args):
+    """Command: reload user and channel data from a group.
+    """
     if not args:
         if not curchannel:
             print('No current team.')
@@ -757,6 +765,10 @@ def cmd_reload(args):
     thread.add_input( (team.id, load_connection_data) )
 
 def cmd_recap(args):
+    """Command: recap messages from a channel, going back a given
+    interval. The interval can be a number like "10" (minutes), or
+    terms like "20m", "2h", "1d". The default is five minutes.
+    """
     args = args.split()
     if args and args[0].startswith('#'):
         arg = args.pop(0)

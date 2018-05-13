@@ -225,23 +225,21 @@ class Team:
             if not origmsg:
                 thread.add_output('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
                 return
-            teamid = self.id
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
             # Print our successful messages even on muted channels
-            text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
-            val = '[%s/%s] %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+            text = decode_message(self.id, msg.get('text'), msg.get('attachments'))
+            val = '[%s/%s] %s: %s' % (team_name(self), channel_name(self, chanid), user_name(self, userid), text)
             thread.add_output(val)
             return
 
         if typ == 'hello':
             # Websocket-connected message. Start pinging.
-            thread.add_output('<Connected: %s>' % (team_name(self.id)))
+            thread.add_output('<Connected: %s>' % (team_name(self)))
             self.client.last_pinged_at = time.time()
             return
                 
         if typ == 'message':
-            teamid = self.id
             chanid = msg.get('channel', '')
             userid = msg.get('user', '')
             subtype = msg.get('subtype', '')
@@ -250,26 +248,26 @@ class Team:
             if subtype == 'message_deleted':
                 userid = msg.get('previous_message').get('user', '')
                 oldtext = msg.get('previous_message').get('text')
-                oldtext = decode_message(teamid, oldtext)
-                val = '[%s/%s] (del) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), oldtext)
+                oldtext = decode_message(self.id, oldtext)
+                val = '[%s/%s] (del) %s: %s' % (team_name(self), channel_name(team, chanid), user_name(team, userid), oldtext)
                 thread.add_output(val)
                 return
             if subtype == 'message_changed':
                 oldtext = msg.get('previous_message').get('text')
-                oldtext = decode_message(teamid, oldtext)
+                oldtext = decode_message(team.id, oldtext)
                 userid = msg.get('message').get('user', '')
                 newtext = msg.get('message').get('text')
-                newtext = decode_message(teamid, newtext, msg.get('attachments'))
+                newtext = decode_message(team.id, newtext, msg.get('attachments'))
                 if oldtext == newtext:
                     # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
                     return
                 text = oldtext + '\n -> ' + newtext
-                val = '[%s/%s] (edit) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), user_name(teamid, userid), text)
+                val = '[%s/%s] (edit) %s: %s' % (team_name(self), channel_name(self, chanid), user_name(self, userid), text)
                 thread.add_output(val)
                 return
-            text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
+            text = decode_message(team.id, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
-            val = '[%s/%s]%s %s: %s' % (team_name(teamid), channel_name(teamid, chanid), subtypeflag, user_name(teamid, userid), text)
+            val = '[%s/%s]%s %s: %s' % (team_name(self), channel_name(self, chanid), subtypeflag, user_name(self, userid), text)
             thread.add_output(val)
             return
 
@@ -673,23 +671,21 @@ def cmd_connect(args):
         if not curchannel:
             print('No current team.')
             return
-        teamid = curchannel[0]
+        team = teams.get(curchannel[0])
     else:
         team = parse_team(args)
         if not team:
             print('Team not recognized:', args)
             return
-        teamid = team.id
-    team = teams.get(teamid)
-    if team:
+    if team.connected():
         # Should be thread-smarter about this!
         team.client.rtm_disconnect()
-        if curchannel and curchannel[0] == teamid:
+        if curchannel and curchannel[0] == team.id:
             curchannel = None
-        print('Disconnected from', team_name(teamid))
+        print('Disconnected from', team_name(team))
     res = team.client.rtm_connect(auto_reconnect=True, with_team_state=False)
     ### if not res, close connection
-    print('Connected to', team_name(teamid))
+    print('Connected to', team_name(team))
 
 def cmd_disconnect(args):
     global curchannel
@@ -697,22 +693,20 @@ def cmd_disconnect(args):
         if not curchannel:
             print('No current team.')
             return
-        teamid = curchannel[0]
+        team = teams.get(curchannel[0])
     else:
         team = parse_team(args)
         if not team:
             print('Team not recognized:', args)
             return
-        teamid = team.id
-    team = teams.get(teamid)
-    if not team:
-        print('Team not connected:', team_name(teamid))
+    if not team.connected():
+        print('Team not connected:', team_name(team))
         return
     # Should be thread-smarter about this!
     team.client.rtm_disconnect()
-    if curchannel and curchannel[0] == teamid:
+    if curchannel and curchannel[0] == team.id:
         curchannel = None
-    print('Disconnected from', team_name(teamid))
+    print('Disconnected from', team_name(team))
 
 def cmd_recap(args):
     args = args.split()
@@ -722,7 +716,6 @@ def cmd_recap(args):
         if not tup:
             return
         (team, chanid) = tup
-        teamid = team.id
     else:
         if not curchannel:
             print('No current team.')
@@ -749,7 +742,6 @@ def cmd_recap(args):
             return
         
     def func(team):
-        teamid = team.id
         timestamp = str(int(time.time()) - count*60)
         cursor = None
         while True:
@@ -763,15 +755,15 @@ def cmd_recap(args):
                     continue
                 ts = msg.get('ts')
                 ts = short_timestamp(ts)
-                text = decode_message(teamid, msg.get('text'), msg.get('attachments'))
-                val = '[%s/%s] (%s) %s: %s' % (team_name(teamid), channel_name(teamid, chanid), ts, user_name(teamid, userid), text)
+                text = decode_message(team.id, msg.get('text'), msg.get('attachments'))
+                val = '[%s/%s] (%s) %s: %s' % (team_name(team), channel_name(team, chanid), ts, user_name(team, userid), text)
                 thread.add_output(val)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
 
     # Schedule the recap function on the Slack thread.
-    thread.add_input( (teamid, func) )
+    thread.add_input( (team.id, func) )
 
 # ----------------
 
@@ -876,7 +868,7 @@ def parse_channelspec(val):
     return (team, chanid)
 
 def parse_team(val):
-    """Parse a team name, ID, or alias. Return the team entry.
+    """Parse a team name, ID, or alias. Return the Team entry.
     """
     for team in teams.values():
         if team.id == val:
@@ -890,7 +882,7 @@ def parse_team(val):
 
 def parse_channel(team, val):
     """Parse a channel name (a bare channel, no # or team prefix)
-    for a given connection. Return the channel ID.
+    for a given Team. Return the channel ID.
     """
     if not val:
         return team.lastchannel
@@ -972,34 +964,37 @@ def short_timestamp(ts):
         val = time.strftime('%m/%d %H:%M', tup)
     return val
 
-def team_name(teamid):
-    """Display a team name, either as an alias (if available) or the
-    full name.
+def team_name(team):
+    """Look up a team name, either as an alias (if available) or the
+    full name. The argument can be a Team or team ID string.
     """
-    if teamid not in teams:
-        return '???'+teamid
-    team = teams[teamid]
+    if not isinstance(team, Team):
+        if team not in teams:
+            return '???'+team
+        team = teams[team]
     aliases = team.alias
     if aliases:
         return aliases[0]
     return team.team_name
 
-def channel_name(teamid, chanid):
-    """Display a channel name.
+def channel_name(team, chanid):
+    """Look up a channel name.
     """
-    if teamid not in teams:
-        return '???'+chanid
-    team = teams[teamid]
+    if not isinstance(team, Team):
+        if team not in teams:
+            return '???'+chanid
+        team = teams[team]
     if chanid not in team.channels:
         return '???'+chanid
     return team.channels[chanid].name
 
-def user_name(teamid, userid):
-    """Display a user name (the displayname).
+def user_name(team, userid):
+    """Look up a user name (the displayname).
     """
-    if teamid not in teams:
-        return userid
-    team = teams[teamid]
+    if not isinstance(team, Team):
+        if team not in teams:
+            return userid
+        team = teams[team]
     if userid not in team.users:
         return userid
     return team.users[userid].name

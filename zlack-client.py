@@ -393,7 +393,8 @@ def read_connections():
     """
     for team in teams.values():
         try:
-            team.client.rtm_read()
+            if team.connected():
+                team.client.rtm_read()
         except Exception as ex:
             thread.add_output('<Error: %s> %s' % (team_name(team.id), ex,))
             team.client.rtm_disconnect(goterror=True)

@@ -402,7 +402,6 @@ def disconnect_all_teams():
     """
     for team in list(teams.values()):
         team.client.rtm_disconnect()
-        ####
     
 class SlackThread(threading.Thread):
     """Thread class which implements the background (Slack communications)

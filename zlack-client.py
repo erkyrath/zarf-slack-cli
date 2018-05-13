@@ -307,82 +307,93 @@ class User:
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
     
 def connect_to_teams():
+    # Load all the connection data.
     for team in teams.values():
-        thread.add_output('Fetching user information for %s' % (team.team_name,))
-        # The muted_channels information is stored in your Slack preferences,
-        # which are an undocumented (but I guess widely used) API call.
-        # See: https://github.com/ErikKalkoken/slackApiDoc
-        res = team.client.api_call_check('users.prefs.get')
-        if res:
-            prefs = res.get('prefs')
-            mutels = prefs.get('muted_channels')
-            if mutels:
-                team.muted_channels = set(mutels.split(','))
-        
-        # Fetch user lists
-        cursor = None
-        while True:
-            if thread.check_shutdown():
-                return
-            res = team.client.api_call_check('users.list', cursor=cursor)
-            if not res:
-                break
-            for user in res.get('members'):
-                userid = user['id']
-                username = user['profile']['display_name']
-                if not username:
-                    username = user['name']    # legacy data field
-                userrealname = user['profile']['real_name']
-                team.users[userid] = User(team, userid, username, userrealname)
-                team.users_by_display_name[username] = team.users[userid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-        #print(team.users)
-
-        # Fetch public and private channels
-        cursor = None
-        while True:
-            if thread.check_shutdown():
-                return
-            res = team.client.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                channame = chan['name']
-                priv = chan['is_private']
-                member = chan['is_member']
-                team.channels[chanid] = Channel(team, chanid, channame, private=priv, member=member)
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-            
-        # Fetch IM (person-to-person) channels
-        cursor = None
-        while True:
-            if thread.check_shutdown():
-                return
-            res = team.client.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                chanuser = chan['user']
-                if chanuser in team.users:
-                    team.users[chanuser].im_channel = chanid
-                    channame = '@'+team.users[chanuser].name
-                    team.channels[chanid] = Channel(team, chanid, channame, private=True, member=True, im=chanuser)
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-            
-        #print(team.channels)
+        load_connection_data(team)
 
     # Now bring up all the RTM (websocket) connections.
     for team in teams.values():
         res = team.client.rtm_connect(auto_reconnect=True, with_team_state=False)
         ### if not res, close connection
+
+def load_connection_data(team):
+    """Load all the information we need for a connection: the channel
+    and user lists.
+    This is a blocking call, and a pretty slow one at that. Oh well.
+    """
+    thread.add_output('Fetching user information for %s' % (team.team_name,))
+
+    team.muted_channels.clear()
+    team.channels.clear()
+    team.users.clear()
+    
+    # The muted_channels information is stored in your Slack preferences,
+    # which are an undocumented (but I guess widely used) API call.
+    # See: https://github.com/ErikKalkoken/slackApiDoc
+    res = team.client.api_call_check('users.prefs.get')
+    if res:
+        prefs = res.get('prefs')
+        mutels = prefs.get('muted_channels')
+        if mutels:
+            team.muted_channels = set(mutels.split(','))
+    
+    # Fetch user lists
+    cursor = None
+    while True:
+        if thread.check_shutdown():
+            return
+        res = team.client.api_call_check('users.list', cursor=cursor)
+        if not res:
+            break
+        for user in res.get('members'):
+            userid = user['id']
+            username = user['profile']['display_name']
+            if not username:
+                username = user['name']    # legacy data field
+            userrealname = user['profile']['real_name']
+            team.users[userid] = User(team, userid, username, userrealname)
+            team.users_by_display_name[username] = team.users[userid]
+        cursor = get_next_cursor(res)
+        if not cursor:
+            break
+    #print(team.users)
+
+    # Fetch public and private channels
+    cursor = None
+    while True:
+        if thread.check_shutdown():
+            return
+        res = team.client.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
+        if not res:
+            break
+        for chan in res.get('channels'):
+            chanid = chan['id']
+            channame = chan['name']
+            priv = chan['is_private']
+            member = chan['is_member']
+            team.channels[chanid] = Channel(team, chanid, channame, private=priv, member=member)
+        cursor = get_next_cursor(res)
+        if not cursor:
+            break
+        
+    # Fetch IM (person-to-person) channels
+    cursor = None
+    while True:
+        if thread.check_shutdown():
+            return
+        res = team.client.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
+        if not res:
+            break
+        for chan in res.get('channels'):
+            chanid = chan['id']
+            chanuser = chan['user']
+            if chanuser in team.users:
+                team.users[chanuser].im_channel = chanid
+                channame = '@'+team.users[chanuser].name
+                team.channels[chanid] = Channel(team, chanid, channame, private=True, member=True, im=chanuser)
+        cursor = get_next_cursor(res)
+        if not cursor:
+            break
 
 def read_connections():
     """Check every active connection to see if messages have arrived from
@@ -710,7 +721,20 @@ def cmd_disconnect(args):
     print('Disconnected from', team_name(team))
 
 def cmd_reload(args):
-    pass ###
+    if not args:
+        if not curchannel:
+            print('No current team.')
+            return
+        team = teams.get(curchannel[0])
+        if not team:
+            print('Team not connected:', team_name(curchannel[0]))
+            return
+    else:
+        team = parse_team(args)
+        if not team:
+            print('Team not recognized:', args)
+            return
+    load_connection_data(team)
 
 def cmd_recap(args):
     args = args.split()

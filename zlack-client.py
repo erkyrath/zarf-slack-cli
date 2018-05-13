@@ -599,6 +599,8 @@ def handle_input(val):
 # Handlers for all the special (slash) commands.
 
 def cmd_help(args):
+    """Command: display the command list.
+    """
     print('/help -- this list')
     print('/teams -- list all teams you are authorized with')
     print('/connect [team] -- connect (or reconnect) to a team')
@@ -610,6 +612,9 @@ def cmd_help(args):
     print('/debug [bool] -- set stream debugging on/off or toggle')
     
 def cmd_debug(args):
+    """Command: set or toggle the debug_messages flag, which shows all
+    commands that go to or from the Slack server.
+    """
     global debug_messages
     if not args:
         debug_messages = not debug_messages
@@ -619,6 +624,9 @@ def cmd_debug(args):
     print('Message debugging now %s' % (debug_messages,))
 
 def cmd_teams(args):
+    """Command: display the list of teams. Asterisk indicates an active
+    RTM connection.
+    """
     ls = list(teams.values())
     ls.sort(key = lambda team:team.team_name)
     for team in ls:
@@ -634,6 +642,8 @@ def cmd_teams(args):
         print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
     
 def cmd_users(args):
+    """Command: display the list of users.
+    """
     if not args:
         if not curchannel:
             print('No current team.')
@@ -654,6 +664,9 @@ def cmd_users(args):
         print('  %s%s: %s' % (user.name, idstring, user.real_name))
 
 def cmd_channels(args):
+    """Command: display the list of channels. Asterisk marks channels
+    that we are members of. Muted and private channels are also flagged.
+    """
     if not args:
         if not curchannel:
             print('No current team.')

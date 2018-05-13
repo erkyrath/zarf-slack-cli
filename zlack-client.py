@@ -437,7 +437,7 @@ class SlackThread(threading.Thread):
             ls = self.fetch_inputs()
             for (teamid, msg) in ls:
                 team = teams.get(teamid)
-                if not team:
+                if not (team and team.connected()):
                     self.add_output('Cannot send: %s not connected.' % (team_name(teamid),))
                 else:
                     if callable(msg):

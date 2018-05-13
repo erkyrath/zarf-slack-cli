@@ -90,6 +90,8 @@ There are a handful of special commands, which start with a slash.
 
 I'll keep hammering out the dents between now and May 15th. If it seems usable in real life, I'll declare it to be 1.0.
 
+The client doesn't handle status changes such as new users or new channels. In particular, it won't recognize the new IM channel that is created the first time you talk to a given user. Use the */reload* command to fetch an up-to-date user and channel information.
+
 Features this does not currently handle which I might someday add:
 
 - multi-person IM chat

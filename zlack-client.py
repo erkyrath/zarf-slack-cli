@@ -75,8 +75,9 @@ class ZarfSlackClient(SlackClient):
     This runs in the background thread, so it should never print anything
     directly. All output is routed through the thread.add_output call.
     """
-    def __init__(self, token, proxies=None, handler=None):
+    def __init__(self, team, token, proxies=None, handler=None):
         SlackClient.__init__(self, token, proxies)
+        self.teamref = team
         self.server.websocket_safe_read = None
         self.message_handler = handler
         self.last_pinged_at = None
@@ -122,7 +123,7 @@ class ZarfSlackClient(SlackClient):
             msg['id'] = self.msg_counter
             self.msg_in_flight[msg['id']] = msg
         if debug_messages:
-            thread.add_output('Sending: %s' % (msg,))
+            thread.add_output('Sending (%s): %s' % (team_name(self.teamref), msg,))
         self.server.send_to_websocket(msg)
 
     def rtm_complete_in_flight(self, val):
@@ -199,7 +200,7 @@ class Team:
         self.channels = {}
         self.muted_channels = set()
         self.lastchannel = None
-        self.client = ZarfSlackClient(self.access_token, handler=self.handle_message)
+        self.client = ZarfSlackClient(self, self.access_token, handler=self.handle_message)
 
     def __repr__(self):
         return '<Team %s "%s">' % (self.id, self.team_name)
@@ -215,7 +216,7 @@ class Team:
         A message is a dict, as decoded from JSON.
         """
         if debug_messages:
-            thread.add_output('Received: %s' % (msg,))
+            thread.add_output('Received (%s): %s' % (team_name(self), msg,))
             
         typ = msg.get('type')
         

@@ -803,17 +803,18 @@ def parse_channelspec(val):
             if not team:
                 print('Team not recognized:', match.group(1))
                 return
-            teamid = team.id
         else:
             # format: "CHANNEL"
             if not curchannel:
                 print('No current team.')
                 return
-            teamid = curchannel[0]
+            team = teams.get(curchannel[0])
+            if not team:
+                print('Team not recognized:', curchannel[0])
+                return
         channame = match.group(2)
-        team = teams.get(teamid)
         if not team:
-            print('Team not connected:', team_name(teamid))
+            print('Team not connected:', team_name(team))
             return
         chanid = parse_channel(team, channame)
         if not chanid:
@@ -827,18 +828,16 @@ def parse_channelspec(val):
             if not team:
                 print('Team not recognized:', match.group(1))
                 return
-            teamid = team.id
         else:
             # format: "@USER"
             if not curchannel:
                 print('No current team.')
                 return
-            teamid = curchannel[0]
+            team = teams.get(curchannel[0])
+            if not team:
+                print('Team not recognized:', curchannel[0])
+                return
         username = match.group(2)
-        team = teams.get(teamid)
-        if not team:
-            print('Team not connected:', team_name(teamid))
-            return
         if username not in team.users_by_display_name:
             print('User not recognized:', username)
             return
@@ -853,14 +852,9 @@ def parse_channelspec(val):
         if not team:
             print('Team not recognized:', match.group(1))
             return
-        teamid = team.id
-        team = teams.get(teamid)
-        if not team:
-            print('Team not connected:', team_name(teamid))
-            return
         chanid = parse_channel(team, None)
         if not chanid:
-            print('No default channel for team:', team_name(teamid))
+            print('No default channel for team:', team_name(team))
             return
     else:
         print('Channel spec not recognized:', val)

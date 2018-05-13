@@ -202,8 +202,7 @@ class Team:
         return '<Team %s "%s">' % (self.id, self.team_name)
 
     def connected(self):
-        """Return whether we have an active RTM connection to this
-        group.
+        """Return whether we have an active RTM connection to this group.
         """
         return self.client.server.connected
     
@@ -269,7 +268,7 @@ class Team:
             return
 
 class Channel:
-    """Simple object representing one channel in a connection.
+    """Simple object representing one channel in a group.
     """
     def __init__(self, team, id, name, private=False, member=True, im=None):
         self.team = team
@@ -295,7 +294,7 @@ class Channel:
         return (self.id in self.team.muted_channels)
     
 class User:
-    """Simple object representing one user in a connection.
+    """Simple object representing one user in a group.
     """
     def __init__(self, team, id, name, real_name):
         self.team = team
@@ -310,8 +309,8 @@ class User:
 def connect_to_teams():
     """Initial connection. Read user and channel data for all teams
     and then start up the RTM connections.
-    This is called on the Slack thread. In fact, it is the first thing
-    that the Slack thread does.
+    (This is called on the Slack thread. In fact, it is the first thing
+    that the Slack thread does.)
     """
     # Load all the connection data.
     for team in teams.values():
@@ -326,7 +325,7 @@ def load_connection_data(team):
     """Load all the information we need for a connection: the channel
     and user lists.
     This is a blocking call, and a pretty slow one at that. Oh well.
-    Called on the Slack thread.
+    (Called on the Slack thread.)
     """
     thread.add_output('Fetching user information for %s' % (team.team_name,))
 

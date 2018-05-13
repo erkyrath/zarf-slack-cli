@@ -105,6 +105,7 @@ Features this does not currently handle which I might someday add:
 - telling Slack what messages you've seen
 - alerts and notifications
 - muting some channels just in this client
+- muting Slackbot entirely
 - deactivating/muting an entire team
 
 (Not listed: all the features which I don't intend to add. I'm not even trying to keep up with Slack here.)

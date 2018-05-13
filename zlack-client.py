@@ -730,23 +730,20 @@ def cmd_recap(args):
             print('Team not connected:', team_name(teamid))
             return
     if not args:
-        count = 5
+        count = 5 * 60  # five minutes
     else:
-        arg = args[0]
-        try:
-            if not arg:
-                print('You must supply a number of minutes.')
-                return
-            count = int(arg)
-            if count < 1:
-                print('Recap must be a positive number of minutes.')
-                return
-        except:
-            print('Not a number:', arg)
+        if not args[0]:
+            print('You must supply a number of minutes.')
+            return
+        count = parse_interval(args[0])
+        if count is None:
+            return
+        if count < 1:
+            print('Recap must be a (nonzero) amount of time.')
             return
         
     def func(team):
-        timestamp = str(int(time.time()) - count*60)
+        timestamp = str(int(time.time()) - count)
         cursor = None
         while True:
             res = team.client.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
@@ -892,6 +889,36 @@ def parse_channel(team, val):
             return id
     return None
 
+pat_interval = re.compile('^([0-9]+)([a-z]*)$', flags=re.IGNORECASE)
+
+def parse_interval(val):
+    """Convert a string to a number of seconds. This accepts values like
+    "5" (default minutes), "10m", "2h", "1d". On error, prints a message
+    and returns None.
+    """
+    match = pat_interval.match(val)
+    if not match:
+        print('Interval not recognized:', val)
+        return None
+    try:
+        count = int(match.group(1))
+    except:
+        print('Interval has no number:', val)
+        return None
+    unit = match.group(2)
+    if not unit:
+        return count * 60  # minutes
+    if unit in ('s', 'sec'):
+        return count
+    if unit in ('m', 'min'):
+        return count * 60  # minutes
+    if unit in ('h', 'hr', 'hour'):
+        return count * 60 * 60  # hours
+    if unit in ('d', 'day'):
+        return count * 60 * 60 * 24  # days
+    print('Interval unit not recognized:', unit)
+    return None
+    
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 

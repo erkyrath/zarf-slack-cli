@@ -87,7 +87,7 @@ There are a handful of special commands, which start with a slash.
 - */reload [team]* -- reload users and channels for a team
 - */channels [team]* -- list all channels in the current team or a named team
 - */users [team]* -- list all users in the current team or a named team
-- */recap \[channel] \[minutes]* -- recap an amount of time (default five minutes) on the current channel or a named channel
+- */recap \[channel] \[interval]* -- recap an amount of time (default five minutes) on the current channel or a named channel
 - */debug [bool]* -- set stream debugging on/off or toggle
 
 
@@ -102,6 +102,9 @@ Features this does not currently handle which I might someday add:
 - multi-person IM chat
 - threaded messages
 - the you-are-typing signal
+- telling Slack what messages you've seen
 - alerts and notifications
+- muting some channels just in this client
+- deactivating/muting an entire team
 
 (Not listed: all the features which I don't intend to add. I'm not even trying to keep up with Slack here.)

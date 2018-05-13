@@ -170,7 +170,8 @@ class ZarfSlackClient(SlackClient):
                 raise
 
 class Team:
-    """A connection to one Slack group. This includes the websocket (which
+    """Represents one Slack group (team, workspace... I'm not all that
+    consistent about it, sorry). This includes the websocket (which
     carries the RTM protocol). It also includes information about the
     group's channels and users.
 

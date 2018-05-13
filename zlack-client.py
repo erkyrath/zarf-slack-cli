@@ -307,6 +307,11 @@ class User:
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
     
 def connect_to_teams():
+    """Initial connection. Read user and channel data for all teams
+    and then start up the RTM connections.
+    This is called on the Slack thread. In fact, it is the first thing
+    that the Slack thread does.
+    """
     # Load all the connection data.
     for team in teams.values():
         load_connection_data(team)
@@ -320,6 +325,7 @@ def load_connection_data(team):
     """Load all the information we need for a connection: the channel
     and user lists.
     This is a blocking call, and a pretty slow one at that. Oh well.
+    Called on the Slack thread.
     """
     thread.add_output('Fetching user information for %s' % (team.team_name,))
 
@@ -734,7 +740,8 @@ def cmd_reload(args):
         if not team:
             print('Team not recognized:', args)
             return
-    load_connection_data(team)
+    # Schedule the reload function on the Slack thread.
+    thread.add_input( (team.id, load_connection_data) )
 
 def cmd_recap(args):
     args = args.split()

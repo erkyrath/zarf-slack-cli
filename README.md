@@ -37,7 +37,13 @@ Run `zlack-auth.py` to authenticate. (The environment variables must be set.)
 
 > `python3 zlack-auth.py login`
 
-This will displays a Slack URL to visit. It also starts listening on localhost port 8090. Authorize the client at Slack, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
+If you don't know what an environment variable is, you can type everything out on the command line:
+
+> `python3 zlack-auth.py --id CLIENT_ID --secret CLIENT_SECRET login`
+
+...where *CLIENT_ID* and *CLIENT_SECRET* are the long hex strings you got off the developer page.
+
+The script will displays a Slack URL to visit. It also starts listening on localhost port 8090. Go to the Slack URL in your web browser, authorize the client, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
 
 ## Setting aliases
 

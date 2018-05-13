@@ -21,11 +21,6 @@ just be async. Sadly, that's not what we've got.)
 
 """
 
-### figure out how to display threading
-### on wake, rtm_read throws ConnectionResetError, but only after I try to send something. (ping?)
-### got a spontaneous WebSocketConnectionClosedException on rtm_read
-### /reload TEAM (for users, channels)
-
 import sys
 import os
 import re
@@ -313,7 +308,7 @@ class User:
     
 def connect_to_teams():
     for team in teams.values():
-        thread.add_output('Fetching prefs from %s' % (team.team_name,))
+        thread.add_output('Fetching user information for %s' % (team.team_name,))
         # The muted_channels information is stored in your Slack preferences,
         # which are an undocumented (but I guess widely used) API call.
         # See: https://github.com/ErikKalkoken/slackApiDoc
@@ -324,7 +319,7 @@ def connect_to_teams():
             if mutels:
                 team.muted_channels = set(mutels.split(','))
         
-        thread.add_output('Fetching users from %s' % (team.team_name,))
+        # Fetch user lists
         cursor = None
         while True:
             if thread.check_shutdown():
@@ -345,7 +340,7 @@ def connect_to_teams():
                 break
         #print(team.users)
 
-        thread.add_output('Fetching channels from %s' % (team.team_name,))
+        # Fetch public and private channels
         cursor = None
         while True:
             if thread.check_shutdown():
@@ -363,7 +358,7 @@ def connect_to_teams():
             if not cursor:
                 break
             
-        thread.add_output('Fetching IM channels from %s' % (team.team_name,))
+        # Fetch IM (person-to-person) channels
         cursor = None
         while True:
             if thread.check_shutdown():
@@ -384,6 +379,7 @@ def connect_to_teams():
             
         #print(team.channels)
 
+    # Now bring up all the RTM (websocket) connections.
     for team in teams.values():
         res = team.client.rtm_connect(auto_reconnect=True, with_team_state=False)
         ### if not res, close connection
@@ -540,6 +536,8 @@ def handle_input(val):
             cmd_connect(val)
         elif cmd == 'disconnect':
             cmd_disconnect(val)
+        elif cmd == 'reload':
+            cmd_reload(val)
         elif cmd == 'users':
             cmd_users(val)
         elif cmd == 'channels':
@@ -589,6 +587,7 @@ def cmd_help(args):
     print('/teams -- list all teams you are authorized with')
     print('/connect [team] -- connect (or reconnect) to a team')
     print('/disconnect [team] -- disconnect from a team')
+    print('/reload [team] -- reload users and channels for a team')
     print('/channels [team] -- list all channels in the current team or a named team')
     print('/users [team] -- list all users in the current team or a named team')
     print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
@@ -710,6 +709,9 @@ def cmd_disconnect(args):
     if curchannel and curchannel[0] == team.id:
         curchannel = None
     print('Disconnected from', team_name(team))
+
+def cmd_reload(args):
+    pass ###
 
 def cmd_recap(args):
     args = args.split()

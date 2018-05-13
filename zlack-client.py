@@ -48,7 +48,6 @@ popt = optparse.OptionParser(usage='slack-client.py [ OPTIONS ]')
 
 thread = None
 teams = None
-connections = OrderedDict()
 debug_messages = False
 
 def read_teams():
@@ -175,7 +174,14 @@ class ZarfSlackClient(SlackClient):
                 raise
 
 class Team:
-    """Information about one Slack group. (It may be connected or not.)
+    """A connection to one Slack group. This includes the websocket (which
+    carries the RTM protocol). It also includes information about the
+    group's channels and users.
+
+    The information in this object is used by both the foreground and
+    background threads, which is sloppy thread style. Sorry. I should
+    do a lot more locking. (Or just rewrite the slack client library
+    to be async!)
     """
     def __init__(self, map):
         self.id = map['team_id']
@@ -188,6 +194,13 @@ class Team:
             self.alias = []
         self.origmap = map
 
+        self.users = {}
+        self.users_by_display_name = {}
+        self.channels = {}
+        self.muted_channels = set()
+        self.lastchannel = None
+        self.client = ZarfSlackClient(self.access_token, handler=self.handle_message)
+
     def __repr__(self):
         return '<Team %s "%s">' % (self.id, self.team_name)
 
@@ -195,30 +208,8 @@ class Team:
         """Return whether we have an active RTM connection to this
         group.
         """
-        return (self.id in connections)
+        return self.client.server.connected
     
-class Connection:
-    """A connection to one Slack group. This includes the websocket (which
-    carries the RTM protocol). It also includes information about the
-    group's channels and users.
-
-    The information in this object is used by both the foreground and
-    background threads, which is sloppy thread style. Sorry. I should
-    do a lot more locking. (Or just rewrite the slack client library
-    to be async!)
-    """
-    def __init__(self, id):
-        self.id = id
-        self.team = teams[id]
-        self.team_name = self.team.team_name
-        self.user_id = self.team.user_id
-        self.users = {}
-        self.users_by_display_name = {}
-        self.channels = {}
-        self.muted_channels = set()
-        self.lastchannel = None
-        self.client = ZarfSlackClient(self.team.access_token, handler=self.handle_message)
-
     def handle_message(self, msg):
         """Handle one RTM message, as received from the websocket connection.
         A message is a dict, as decoded from JSON.
@@ -285,8 +276,8 @@ class Connection:
 class Channel:
     """Simple object representing one channel in a connection.
     """
-    def __init__(self, conn, id, name, private=False, member=True, im=None):
-        self.conn = conn
+    def __init__(self, team, id, name, private=False, member=True, im=None):
+        self.team = team
         self.id = id
         self.name = name
         self.private = private
@@ -303,16 +294,16 @@ class Channel:
 
     def muted(self):
         """Check whether this channel is muted. The mute flag is stored
-        in the Connection, because it comes from Slack's preferences data,
+        in the Team, because it comes from Slack's preferences data,
         not the channel data.
         """
-        return (self.id in self.conn.muted_channels)
+        return (self.id in self.team.muted_channels)
     
 class User:
     """Simple object representing one user in a connection.
     """
-    def __init__(self, conn, id, name, real_name):
-        self.conn = conn
+    def __init__(self, team, id, name, real_name):
+        self.team = team
         self.id = id
         self.name = name
         self.real_name = real_name
@@ -322,28 +313,24 @@ class User:
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
     
 def connect_to_teams():
-    for id in teams.keys():
-        conn = Connection(id)
-        connections[id] = conn
-        
-    for conn in connections.values():
-        thread.add_output('Fetching prefs from %s' % (conn.team_name,))
+    for team in teams.values():
+        thread.add_output('Fetching prefs from %s' % (team.team_name,))
         # The muted_channels information is stored in your Slack preferences,
         # which are an undocumented (but I guess widely used) API call.
         # See: https://github.com/ErikKalkoken/slackApiDoc
-        res = conn.client.api_call_check('users.prefs.get')
+        res = team.client.api_call_check('users.prefs.get')
         if res:
             prefs = res.get('prefs')
             mutels = prefs.get('muted_channels')
             if mutels:
-                conn.muted_channels = set(mutels.split(','))
+                team.muted_channels = set(mutels.split(','))
         
-        thread.add_output('Fetching users from %s' % (conn.team_name,))
+        thread.add_output('Fetching users from %s' % (team.team_name,))
         cursor = None
         while True:
             if thread.check_shutdown():
                 return
-            res = conn.client.api_call_check('users.list', cursor=cursor)
+            res = team.client.api_call_check('users.list', cursor=cursor)
             if not res:
                 break
             for user in res.get('members'):
@@ -352,19 +339,19 @@ def connect_to_teams():
                 if not username:
                     username = user['name']    # legacy data field
                 userrealname = user['profile']['real_name']
-                conn.users[userid] = User(conn, userid, username, userrealname)
-                conn.users_by_display_name[username] = conn.users[userid]
+                team.users[userid] = User(team, userid, username, userrealname)
+                team.users_by_display_name[username] = team.users[userid]
             cursor = get_next_cursor(res)
             if not cursor:
                 break
-        #print(conn.users)
+        #print(team.users)
 
-        thread.add_output('Fetching channels from %s' % (conn.team_name,))
+        thread.add_output('Fetching channels from %s' % (team.team_name,))
         cursor = None
         while True:
             if thread.check_shutdown():
                 return
-            res = conn.client.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
+            res = team.client.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
             if not res:
                 break
             for chan in res.get('channels'):
@@ -372,54 +359,54 @@ def connect_to_teams():
                 channame = chan['name']
                 priv = chan['is_private']
                 member = chan['is_member']
-                conn.channels[chanid] = Channel(conn, chanid, channame, private=priv, member=member)
+                team.channels[chanid] = Channel(team, chanid, channame, private=priv, member=member)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
             
-        thread.add_output('Fetching IM channels from %s' % (conn.team_name,))
+        thread.add_output('Fetching IM channels from %s' % (team.team_name,))
         cursor = None
         while True:
             if thread.check_shutdown():
                 return
-            res = conn.client.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
+            res = team.client.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
             if not res:
                 break
             for chan in res.get('channels'):
                 chanid = chan['id']
                 chanuser = chan['user']
-                if chanuser in conn.users:
-                    conn.users[chanuser].im_channel = chanid
-                    channame = '@'+conn.users[chanuser].name
-                    conn.channels[chanid] = Channel(conn, chanid, channame, private=True, member=True, im=chanuser)
+                if chanuser in team.users:
+                    team.users[chanuser].im_channel = chanid
+                    channame = '@'+team.users[chanuser].name
+                    team.channels[chanid] = Channel(team, chanid, channame, private=True, member=True, im=chanuser)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
             
-        #print(conn.channels)
+        #print(team.channels)
 
-    for conn in connections.values():
-        res = conn.client.rtm_connect(auto_reconnect=True, with_team_state=False)
+    for team in teams.values():
+        res = team.client.rtm_connect(auto_reconnect=True, with_team_state=False)
         ### if not res, close connection
 
 def read_connections():
     """Check every active connection to see if messages have arrived from
     the Slack server. (Called on the Slack thread.)
     """
-    for conn in connections.values():
+    for team in teams.values():
         try:
-            conn.client.rtm_read()
+            team.client.rtm_read()
         except Exception as ex:
-            thread.add_output('<Error: %s> %s' % (team_name(conn.id), ex,))
-            conn.client.rtm_disconnect(goterror=True)
-            conn.client.server.rtm_connect(reconnect=True, use_rtm_start=False)
+            thread.add_output('<Error: %s> %s' % (team_name(team.id), ex,))
+            team.client.rtm_disconnect(goterror=True)
+            team.client.server.rtm_connect(reconnect=True, use_rtm_start=False)
 
 def disconnect_all_teams():
     """Disconnect all active connections.
     """
-    for conn in list(connections.values()):
-        conn.client.rtm_disconnect()
-        del connections[conn.id]
+    for team in list(teams.values()):
+        team.client.rtm_disconnect()
+        ####
     
 class SlackThread(threading.Thread):
     """Thread class which implements the background (Slack communications)
@@ -451,17 +438,17 @@ class SlackThread(threading.Thread):
             # Pass each one along to the Slack server.
             ls = self.fetch_inputs()
             for (teamid, msg) in ls:
-                conn = connections.get(teamid)
-                if not conn:
+                team = teams.get(teamid)
+                if not team:
                     self.add_output('Cannot send: %s not connected.' % (team_name(teamid),))
                 else:
                     if callable(msg):
                         try:
-                            msg(conn)
+                            msg(team)
                         except Exception as ex:
                             self.add_output('Exception: %s' % (ex,))
                     else:
-                        conn.client.rtm_send_json(msg)
+                        team.client.rtm_send_json(msg)
             # Check for messages from the Slack server.
             read_connections()
             # Sleep 100 msec, or until the next add_input() call arrives.
@@ -572,10 +559,10 @@ def handle_input(val):
         tup = parse_channelspec(cmd)
         if not tup:
             return
-        (conn, chanid) = tup
-        teamid = conn.id
+        (team, chanid) = tup
+        teamid = team.id
         # Set the current channel.
-        conn.lastchannel = chanid
+        team.lastchannel = chanid
         curchannel = (teamid, chanid)
 
     # I habitually type lines starting with semicolon. Strip that out.
@@ -644,11 +631,11 @@ def cmd_users(args):
             print('Team not recognized:', args)
             return
         teamid = team.id
-    conn = connections.get(teamid)
-    if not conn:
+    team = teams.get(teamid)
+    if not team:
         print('Team not connected:', team_name(teamid))
         return
-    ls = list(conn.users.values())
+    ls = list(team.users.values())
     ls.sort(key = lambda user:user.name)
     for user in ls:
         idstring = (' (id %s)' % (user.id,) if debug_messages else '')
@@ -666,11 +653,11 @@ def cmd_channels(args):
             print('Team not recognized:', args)
             return
         teamid = team.id
-    conn = connections.get(teamid)
-    if not conn:
+    team = teams.get(teamid)
+    if not team:
         print('Team not connected:', team_name(teamid))
         return
-    ls = list(conn.channels.values())
+    ls = list(team.channels.values())
     ls = [ chan for chan in ls if not chan.imuser ]
     ls.sort(key=lambda chan:(not chan.member, chan.muted(), chan.name))
     for chan in ls:
@@ -693,18 +680,14 @@ def cmd_connect(args):
             print('Team not recognized:', args)
             return
         teamid = team.id
-    conn = connections.get(teamid)
-    if conn:
+    team = teams.get(teamid)
+    if team:
         # Should be thread-smarter about this!
-        conn.client.rtm_disconnect()
-        del connections[teamid]
-        conn = None
+        team.client.rtm_disconnect()
         if curchannel and curchannel[0] == teamid:
             curchannel = None
         print('Disconnected from', team_name(teamid))
-    conn = Connection(teamid)
-    connections[teamid] = conn
-    res = conn.client.rtm_connect(auto_reconnect=True, with_team_state=False)
+    res = team.client.rtm_connect(auto_reconnect=True, with_team_state=False)
     ### if not res, close connection
     print('Connected to', team_name(teamid))
 
@@ -721,13 +704,12 @@ def cmd_disconnect(args):
             print('Team not recognized:', args)
             return
         teamid = team.id
-    conn = connections.get(teamid)
-    if not conn:
+    team = teams.get(teamid)
+    if not team:
         print('Team not connected:', team_name(teamid))
         return
     # Should be thread-smarter about this!
-    conn.client.rtm_disconnect()
-    del connections[teamid]
+    team.client.rtm_disconnect()
     if curchannel and curchannel[0] == teamid:
         curchannel = None
     print('Disconnected from', team_name(teamid))
@@ -739,15 +721,15 @@ def cmd_recap(args):
         tup = parse_channelspec(arg[1:])
         if not tup:
             return
-        (conn, chanid) = tup
-        teamid = conn.id
+        (team, chanid) = tup
+        teamid = team.id
     else:
         if not curchannel:
             print('No current team.')
             return
         (teamid, chanid) = curchannel
-        conn = connections.get(teamid)
-        if not conn:
+        team = teams.get(teamid)
+        if not team:
             print('Team not connected:', team_name(teamid))
             return
     if not args:
@@ -766,12 +748,12 @@ def cmd_recap(args):
             print('Not a number:', arg)
             return
         
-    def func(conn):
-        teamid = conn.id
+    def func(team):
+        teamid = team.id
         timestamp = str(int(time.time()) - count*60)
         cursor = None
         while True:
-            res = conn.client.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
+            res = team.client.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
             if not res:
                 break
             for msg in reversed(res.get('messages')):
@@ -813,7 +795,7 @@ def parse_channelspec(val):
     TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
     (No initial hash character, please.)
 
-    Returns (connection, channelid). On error, prints a message and
+    Returns (team, channelid). On error, prints a message and
     returns None.
     """
     match_chan = pat_channel_command.match(val)
@@ -836,11 +818,11 @@ def parse_channelspec(val):
                 return
             teamid = curchannel[0]
         channame = match.group(2)
-        conn = connections.get(teamid)
-        if not conn:
+        team = teams.get(teamid)
+        if not team:
             print('Team not connected:', team_name(teamid))
             return
-        chanid = parse_channel(conn, channame)
+        chanid = parse_channel(team, channame)
         if not chanid:
             print('Channel not recognized:', channame)
             return
@@ -860,14 +842,14 @@ def parse_channelspec(val):
                 return
             teamid = curchannel[0]
         username = match.group(2)
-        conn = connections.get(teamid)
-        if not conn:
+        team = teams.get(teamid)
+        if not team:
             print('Team not connected:', team_name(teamid))
             return
-        if username not in conn.users_by_display_name:
+        if username not in team.users_by_display_name:
             print('User not recognized:', username)
             return
-        chanid = conn.users_by_display_name[username].im_channel
+        chanid = team.users_by_display_name[username].im_channel
         if not chanid:
             print('No IM channel with user:', username)
             return
@@ -879,11 +861,11 @@ def parse_channelspec(val):
             print('Team not recognized:', match.group(1))
             return
         teamid = team.id
-        conn = connections.get(teamid)
-        if not conn:
+        team = teams.get(teamid)
+        if not team:
             print('Team not connected:', team_name(teamid))
             return
-        chanid = parse_channel(conn, None)
+        chanid = parse_channel(team, None)
         if not chanid:
             print('No default channel for team:', team_name(teamid))
             return
@@ -891,7 +873,7 @@ def parse_channelspec(val):
         print('Channel spec not recognized:', val)
         return
 
-    return (conn, chanid)
+    return (team, chanid)
 
 def parse_team(val):
     """Parse a team name, ID, or alias. Return the team entry.
@@ -906,16 +888,16 @@ def parse_team(val):
             return team
     return None
 
-def parse_channel(conn, val):
+def parse_channel(team, val):
     """Parse a channel name (a bare channel, no # or team prefix)
     for a given connection. Return the channel ID.
     """
     if not val:
-        return conn.lastchannel
-    for (id, chan) in conn.channels.items():
+        return team.lastchannel
+    for (id, chan) in team.channels.items():
         if val == id or val == chan.name:
             return id
-    for (id, chan) in conn.channels.items():
+    for (id, chan) in team.channels.items():
         if chan.name.startswith(val):
             return id
     return None
@@ -970,12 +952,12 @@ def encode_exact_user_id(teamid, match):
     """
     orig = match.group(0)  # '@name'
     val = match.group(1)   # 'name'
-    conn = connections.get(teamid)
-    if not conn:
+    team = teams.get(teamid)
+    if not team:
         return orig
-    if val not in conn.users_by_display_name:
+    if val not in team.users_by_display_name:
         return orig
-    return '<@' + conn.users_by_display_name[val].id + '>'
+    return '<@' + team.users_by_display_name[val].id + '>'
 
 def short_timestamp(ts):
     """Given a Slack-style timestamp (a string like "1526150036.000002"),
@@ -1005,22 +987,22 @@ def team_name(teamid):
 def channel_name(teamid, chanid):
     """Display a channel name.
     """
-    if teamid not in connections:
+    if teamid not in teams:
         return '???'+chanid
-    conn = connections[teamid]
-    if chanid not in conn.channels:
+    team = teams[teamid]
+    if chanid not in team.channels:
         return '???'+chanid
-    return conn.channels[chanid].name
+    return team.channels[chanid].name
 
 def user_name(teamid, userid):
     """Display a user name (the displayname).
     """
-    if teamid not in connections:
+    if teamid not in teams:
         return userid
-    conn = connections[teamid]
-    if userid not in conn.users:
+    team = teams[teamid]
+    if userid not in team.users:
         return userid
-    return conn.users[userid].name
+    return team.users[userid].name
 
 async def input_loop():
     """This coroutine handles the "user interface" of the application.

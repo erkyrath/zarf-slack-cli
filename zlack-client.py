@@ -249,15 +249,15 @@ class Team:
                 userid = msg.get('previous_message').get('user', '')
                 oldtext = msg.get('previous_message').get('text')
                 oldtext = decode_message(self.id, oldtext)
-                val = '[%s/%s] (del) %s: %s' % (team_name(self), channel_name(team, chanid), user_name(team, userid), oldtext)
+                val = '[%s/%s] (del) %s: %s' % (team_name(self), channel_name(self, chanid), user_name(self, userid), oldtext)
                 thread.add_output(val)
                 return
             if subtype == 'message_changed':
                 oldtext = msg.get('previous_message').get('text')
-                oldtext = decode_message(team.id, oldtext)
+                oldtext = decode_message(self.id, oldtext)
                 userid = msg.get('message').get('user', '')
                 newtext = msg.get('message').get('text')
-                newtext = decode_message(team.id, newtext, msg.get('attachments'))
+                newtext = decode_message(self.id, newtext, msg.get('attachments'))
                 if oldtext == newtext:
                     # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
                     return
@@ -265,7 +265,7 @@ class Team:
                 val = '[%s/%s] (edit) %s: %s' % (team_name(self), channel_name(self, chanid), user_name(self, userid), text)
                 thread.add_output(val)
                 return
-            text = decode_message(team.id, msg.get('text'), msg.get('attachments'))
+            text = decode_message(self.id, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             val = '[%s/%s]%s %s: %s' % (team_name(self), channel_name(self, chanid), subtypeflag, user_name(self, userid), text)
             thread.add_output(val)

@@ -145,7 +145,7 @@ class ZarfSlackClient(SlackClient):
         should be reconnected. We can expect ConnectionResetError,
         WebSocketConnectionClosedException, and probably others.
         """
-        if self.server.websocket is None:
+        if self.server.websocket is None or not self.server.connected:
             return
         now = time.time()
         if self.last_pinged_at and now > self.last_pinged_at + 5:

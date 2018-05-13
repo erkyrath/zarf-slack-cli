@@ -14,8 +14,7 @@ This is *not* a full-on Slack client! It's a replacement for the way I used the 
 
 This tool is written in Python3. You'll need a recent version of that. You'll also need two packages:
 
-> `pip3 install slackclient`
-> `pip3 install prompt-toolkit`
+> `pip3 install slackclient prompt-toolkit`
 
 (This is written to [slackclient 1.2.1][slackclient] and [prompt-toolkit 1.0.15][prompt-toolkit]. Both toolkits are undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
 

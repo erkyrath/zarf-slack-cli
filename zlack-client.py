@@ -558,10 +558,9 @@ def handle_input(val):
         if not tup:
             return
         (team, chanid) = tup
-        teamid = team.id
         # Set the current channel.
         team.lastchannel = chanid
-        curchannel = (teamid, chanid)
+        curchannel = (team.id, chanid)
 
     # I habitually type lines starting with semicolon. Strip that out.
     if val.startswith(';'):
@@ -622,17 +621,15 @@ def cmd_users(args):
         if not curchannel:
             print('No current team.')
             return
-        teamid = curchannel[0]
+        team = teams.get(curchannel[0])
+        if not team:
+            print('Team not connected:', team_name(curchannel[0]))
+            return
     else:
         team = parse_team(args)
         if not team:
             print('Team not recognized:', args)
             return
-        teamid = team.id
-    team = teams.get(teamid)
-    if not team:
-        print('Team not connected:', team_name(teamid))
-        return
     ls = list(team.users.values())
     ls.sort(key = lambda user:user.name)
     for user in ls:
@@ -644,17 +641,15 @@ def cmd_channels(args):
         if not curchannel:
             print('No current team.')
             return
-        teamid = curchannel[0]
+        team = teams.get(curchannel[0])
+        if not team:
+            print('Team not connected:', team_name(curchannel[0]))
+            return
     else:
         team = parse_team(args)
         if not team:
             print('Team not recognized:', args)
             return
-        teamid = team.id
-    team = teams.get(teamid)
-    if not team:
-        print('Team not connected:', team_name(teamid))
-        return
     ls = list(team.channels.values())
     ls = [ chan for chan in ls if not chan.imuser ]
     ls.sort(key=lambda chan:(not chan.member, chan.muted(), chan.name))
@@ -672,6 +667,9 @@ def cmd_connect(args):
             print('No current team.')
             return
         team = teams.get(curchannel[0])
+        if not team:
+            print('Team not recognized:', team_name(curchannel[0]))
+            return
     else:
         team = parse_team(args)
         if not team:
@@ -694,6 +692,9 @@ def cmd_disconnect(args):
             print('No current team.')
             return
         team = teams.get(curchannel[0])
+        if not team:
+            print('Team not recognized:', team_name(curchannel[0]))
+            return
     else:
         team = parse_team(args)
         if not team:

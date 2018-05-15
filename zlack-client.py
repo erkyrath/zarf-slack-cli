@@ -1010,9 +1010,9 @@ def decode_message(teamid, val, attachments=None):
 def encode_message(teamid, val):
     """Encode a human-typed message into standard Slack form.
     """
+    val = val.replace('&', '&amp;')
     val = val.replace('<', '&lt;')
     val = val.replace('>', '&gt;')
-    val = val.replace('&', '&amp;')
     # We try to locate @displayname references and convert them to
     # <@USERID>.
     val = pat_user_id.sub(lambda match:encode_exact_user_id(teamid, match), val)

@@ -249,8 +249,10 @@ class Team:
                 thread.add_output(val)
                 return
             if subtype == 'message_changed':
-                oldtext = msg.get('previous_message').get('text')
-                oldtext = decode_message(self.id, oldtext)
+                oldtext = ''
+                if 'previous_message' in msg:
+                    oldtext = msg.get('previous_message').get('text')
+                    oldtext = decode_message(self.id, oldtext)
                 userid = msg.get('message').get('user', '')
                 newtext = msg.get('message').get('text')
                 newtext = decode_message(self.id, newtext, msg.get('attachments'))

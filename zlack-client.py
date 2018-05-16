@@ -263,7 +263,8 @@ class Team:
                 return
             text = decode_message(self.id, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
-            val = '[%s/%s]%s %s: %s' % (team_name(self), channel_name(self, chanid), subtypeflag, user_name(self, userid), text)
+            colon = (':' if subtype != 'me_message' else '')
+            val = '[%s/%s]%s %s%s %s' % (team_name(self), channel_name(self, chanid), subtypeflag, user_name(self, userid), colon, text)
             thread.add_output(val)
             return
 
@@ -809,7 +810,7 @@ def cmd_recap(args):
                 userid = msg.get('user', '')
                 subtype = msg.get('subtype', '')
                 if subtype:
-                    continue
+                    continue  # don't recap subtype messages
                 ts = msg.get('ts')
                 ts = short_timestamp(ts)
                 text = decode_message(team.id, msg.get('text'), msg.get('attachments'))

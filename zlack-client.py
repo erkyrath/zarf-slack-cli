@@ -582,6 +582,10 @@ def handle_input(val):
     # I habitually type lines starting with semicolon. Strip that out.
     if val.startswith(';'):
         val = val[1:].lstrip()
+    # TODO: A line starting with colon should generate a me_message.
+    # However, I don't seem to be able to send me_message -- that subtype
+    # is ignored. Maybe it needs to go via the web API?
+    
     # If there's no line at all, this was just a channel prefix. Exit.
     if not val:
         return

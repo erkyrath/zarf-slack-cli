@@ -21,6 +21,8 @@ just be async. Sadly, that's not what we've got.)
 
 """
 
+### <#C17AEJGBE|asmadi>, <#C17AEJGBE>
+
 import sys
 import os
 import re
@@ -984,6 +986,8 @@ def parse_interval(val):
     
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
+pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
+pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
 
 def decode_message(teamid, val, attachments=None):
     """Convert a plain-text message in standard Slack form into a printable
@@ -997,6 +1001,7 @@ def decode_message(teamid, val, attachments=None):
         val = ''
     else:
         val = pat_encoded_user_id.sub(lambda match:'@'+user_name(teamid, match.group(1)), val)
+        val = pat_encoded_channel_id.sub(lambda match:'#'+channel_name(teamid, match.group(1))+(match.group(2) if match.group(2) else ''), val)
         # We could translate <URL> and <URL|SLUG> here, but those look fine as is
         if '\n' in val:
             val = val.replace('\n', '\n... ')

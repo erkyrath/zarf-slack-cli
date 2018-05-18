@@ -21,8 +21,6 @@ just be async. Sadly, that's not what we've got.)
 
 """
 
-### <#C17AEJGBE|asmadi>, <#C17AEJGBE>
-
 import sys
 import os
 import re
@@ -196,6 +194,7 @@ class Team:
         self.users = {}
         self.users_by_display_name = {}
         self.channels = {}
+        self.channels_by_name = {}
         self.muted_channels = set()
         self.lastchannel = None
         self.client = ZarfSlackClient(self, self.access_token, handler=self.handle_message)
@@ -383,6 +382,7 @@ def load_connection_data(team):
             priv = chan['is_private']
             member = chan['is_member']
             team.channels[chanid] = Channel(team, chanid, channame, private=priv, member=member)
+            team.channels_by_name[channame] = team.channels[chanid]
         cursor = get_next_cursor(res)
         if not cursor:
             break
@@ -402,6 +402,7 @@ def load_connection_data(team):
                 team.users[chanuser].im_channel = chanid
                 channame = '@'+team.users[chanuser].name
                 team.channels[chanid] = Channel(team, chanid, channame, private=True, member=True, im=chanuser)
+                # But not channels_by_name.
         cursor = get_next_cursor(res)
         if not cursor:
             break
@@ -1028,6 +1029,7 @@ def encode_message(teamid, val):
     # We try to locate @displayname references and convert them to
     # <@USERID>.
     val = pat_user_id.sub(lambda match:encode_exact_user_id(teamid, match), val)
+    val = pat_channel_id.sub(lambda match:encode_exact_channel_id(teamid, match), val)
     return val
 
 def encode_exact_user_id(teamid, match):
@@ -1043,6 +1045,20 @@ def encode_exact_user_id(teamid, match):
     if val not in team.users_by_display_name:
         return orig
     return '<@' + team.users_by_display_name[val].id + '>'
+
+def encode_exact_channel_id(teamid, match):
+    """Utility function used by encode_message. Given a match object from
+    pat_channel_id, return a <#CHANID> substitution. If the match doesn't
+    exactly match a channel name, we return the original string.    
+    """
+    orig = match.group(0)  # '#channel'
+    val = match.group(1)   # 'channel'
+    team = teams.get(teamid)
+    if not team:
+        return orig
+    if val not in team.channels_by_name:
+        return orig
+    return '<#' + team.channels_by_name[val].id + '>'
 
 def short_timestamp(ts):
     """Given a Slack-style timestamp (a string like "1526150036.000002"),

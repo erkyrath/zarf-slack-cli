@@ -78,6 +78,8 @@ The channel prefix can be any of:
 
 (Multi-person message channels are not yet supported.)
 
+If you type a semicolon on a line by itself, it will switch your default channel to match the last message you *received*. (If you're reading several conversations at once, look at the prompt to make sure you got what you thought!)
+
 There are a handful of special commands, which start with a slash.
 
 - */help* -- this list

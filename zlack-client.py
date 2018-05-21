@@ -211,6 +211,7 @@ class Team:
         """Handle one RTM message, as received from the websocket connection.
         A message is a dict, as decoded from JSON.
         """
+        global lastchannel
         if debug_messages:
             thread.add_output('Received (%s): %s' % (team_name(self), msg,))
             
@@ -263,12 +264,14 @@ class Team:
                 text = oldtext + '\n -> ' + newtext
                 val = '[%s/%s] (edit) %s: %s' % (team_name(self), channel_name(self, chanid), user_name(self, userid), text)
                 thread.add_output(val)
+                lastchannel = (self.id, chanid)
                 return
             text = decode_message(self.id, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             colon = (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (team_name(self), channel_name(self, chanid), subtypeflag, user_name(self, userid), colon, text)
             thread.add_output(val)
+            lastchannel = (self.id, chanid)
             return
 
 class Channel:
@@ -534,6 +537,10 @@ class SlackThread(threading.Thread):
 
 # (teamid, channelid) for the current default channel
 curchannel = None
+# (teamid, channelid) for the last channel we received a message from. This
+# is mostly touched by the Slack thread, but occasionally read from the
+# main thread -- sorry.
+lastchannel = None
 
 pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
@@ -542,7 +549,7 @@ def handle_input(val):
     """Handle one input line from the player.
     This runs in the main thread.
     """
-    global curchannel
+    global curchannel, lastchannel
     match = pat_special_command.match(val)
     if match:
         cmd = match.group(1).lower()
@@ -583,10 +590,19 @@ def handle_input(val):
         # Set the current channel.
         team.lastchannel = chanid
         curchannel = (team.id, chanid)
+        lastchannel = curchannel
 
     # I habitually type lines starting with semicolon. Strip that out.
     if val.startswith(';'):
         val = val[1:].lstrip()
+        # Special case: a lone semicolon means "set to the last channel
+        # we saw."
+        if not val:
+            if not lastchannel:
+                print('No recent channel.')
+            else:
+                curchannel = lastchannel
+            return
     # TODO: A line starting with colon should generate a me_message.
     # However, I don't seem to be able to send me_message -- that subtype
     # is ignored. Maybe it needs to go via the web API?

@@ -879,12 +879,14 @@ def parse_channelspec(val):
     
     if match_chan:
         match = match_chan
+        knownteam = False
         if match.group(1) is not None:
             # format: "TEAM/CHANNEL"
             team = parse_team(match.group(1))
             if not team:
                 print('Team not recognized:', match.group(1))
                 return
+            knownteam = True
         else:
             # format: "CHANNEL"
             if not curchannel:
@@ -899,6 +901,8 @@ def parse_channelspec(val):
             print('Team not connected:', team_name(team))
             return
         chanid = parse_channel(team, channame)
+        if (not chanid) and (not knownteam):
+            (team, chanid) = parse_channel_anyteam(channame)
         if not chanid:
             print('Channel not recognized:', channame)
             return
@@ -971,6 +975,19 @@ def parse_channel(team, val):
             return id
     return None
 
+def parse_channel_anyteam(val):
+    """Parse a channel name, checking all teams.
+    Returns (team, chanid).
+    """
+    for team in teams.values():
+        for (id, chan) in team.channels.items():
+            if val == id or val == chan.name:
+                return (team, id)
+        for (id, chan) in team.channels.items():
+            if chan.name.startswith(val):
+                return (team, id)
+    return (None, None)
+    
 pat_interval = re.compile('^([0-9]+)([a-z]*)$', flags=re.IGNORECASE)
 
 def parse_interval(val):

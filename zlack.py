@@ -66,11 +66,13 @@ class Team:
         
         data = {}
         for (key, val) in kwargs.items():
+            if val is None:
+                continue
             ### channels, users, types: convert list to comma-separated string
             ### other lists/dicts: convert to json.dumps()
             data[key] = val
             
-        async with self.session.post(url, json=data) as resp:
+        async with self.session.post(url, data=data) as resp:
             return await resp.json()
     
     async def api_call_check(self, method, **kwargs):
@@ -153,10 +155,7 @@ class Team:
             if not res:
                 break
             for chan in res.get('channels'):
-                print('###', chan)
                 chanid = chan['id']
-                if 'user' not in chan:
-                    continue
                 chanuser = chan['user']
                 if chanuser in self.users:
                     self.users[chanuser].im_channel = chanid

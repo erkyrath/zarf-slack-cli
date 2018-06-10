@@ -1,4 +1,7 @@
 # Zlack Python package requirements
 
 prompt-toolkit>=1.0.15
-slackclient>=1.2.1
+websockets>=5.0.1
+aiohttp>=3.3.1
+aiodns>=1.1.1
+

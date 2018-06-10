@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import platform
 import os
 import re
 import time
@@ -224,7 +225,7 @@ if not teams:
 async def create_all_sessions():
     for team in teams.values():
         headers = {
-            'user-agent': 'zlack-test', ###versions
+            'user-agent': 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()), ### should include zlack version also
             'Authorization': 'Bearer {}'.format(team.access_token)
         }
         team.session = aiohttp.ClientSession(headers=headers)

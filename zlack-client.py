@@ -21,6 +21,8 @@ just be async. Sadly, that's not what we've got.)
 
 """
 
+### add a way to display the last few JSON inputs/outputs, ignoring pings.
+
 import sys
 import os
 import re

@@ -19,6 +19,7 @@ def read_teams():
     Return a dict of Team objects.
     """
     path = os.path.join(os.environ.get('HOME'), token_file)
+    path = 'zh-token' ### for testing
     try:
         fl = open(path)
         dat = json.load(fl, object_pairs_hook=OrderedDict)
@@ -165,8 +166,6 @@ class Team:
             cursor = get_next_cursor(res)
             if not cursor:
                 break
-
-        
 
 class Channel:
     """Simple object representing one channel in a group.

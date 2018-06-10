@@ -86,7 +86,7 @@ class Team:
                 return None
             return res
         except Exception as ex:
-            print('Slack exception (%s): %s' % (method, ex,))
+            print('Slack exception (%s): %s: %s' % (method, ex.__class__.__name__, ex,))
             if debug_exceptions:
                 traceback.print_exc()
             return None
@@ -242,7 +242,7 @@ async def main():
     for res in done:
         ex = res.exception()
         if ex is not None:
-            print('could not load data:', ex)
+            print('could not load data: %s: %s' % (ex.__class__.__name__, ex))
             if debug_exceptions:
                 traceback.print_tb(ex.__traceback__)
     await shutdown_all()

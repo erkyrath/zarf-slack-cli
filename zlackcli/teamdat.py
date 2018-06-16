@@ -146,6 +146,8 @@ class Team:
             if not cursor:
                 break
 
+        #print(self.channels)
+
 class Channel:
     """Simple object representing one channel in a group.
     """

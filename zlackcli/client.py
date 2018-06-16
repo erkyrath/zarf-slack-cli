@@ -32,7 +32,7 @@ class ZlackClient:
         for (id, map) in dat.items():
             self.teams[id] = Team(self, map)
     
-    async def create_all_sessions(self):
+    async def open(self):
         useragent = 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()) ### should include zlack version also
         
         for team in self.teams.values():
@@ -42,7 +42,7 @@ class ZlackClient:
             }
             team.session = aiohttp.ClientSession(headers=headers)
     
-    async def shutdown_all(self):
+    async def close(self):
         for team in self.teams.values():
             if team.session:
                 await team.session.close()

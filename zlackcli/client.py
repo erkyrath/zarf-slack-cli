@@ -13,6 +13,8 @@ from .auth import construct_auth_url, construct_auth_handler
 
 class ZlackClient:
     
+    domain = 'slack.com'
+    
     def __init__(self, tokenpath, opts={}):
         self.tokenpath = tokenpath
         self.opts = opts
@@ -50,12 +52,34 @@ class ZlackClient:
         for (id, map) in dat.items():
             self.teams[id] = Team(self, map)
     
-    async def open(self):
-        useragent = 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()) ### should include zlack version also
+    async def api_call_unauth(self, method, **kwargs):
+        url = 'https://{0}/api/{1}'.format(self.domain, method)
         
+        data = {}
+        for (key, val) in kwargs.items():
+            if val is None:
+                continue
+            data[key] = val
+
+        headers = {
+            'user-agent': self.get_useragent(),
+        }
+        session = aiohttp.ClientSession(headers=headers)
+            
+        async with session.post(url, data=data) as resp:
+            res = await resp.json()
+
+        await session.close()
+        return res
+
+    def get_useragent(self):
+        useragent = 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()) ### should include zlack version also
+        return useragent
+    
+    async def open(self):
         for team in self.teams.values():
             headers = {
-                'user-agent': useragent,
+                'user-agent': self.get_useragent(),
                 'Authorization': 'Bearer '+team.access_token,
             }
             team.session = aiohttp.ClientSession(headers=headers)
@@ -128,7 +152,7 @@ class ZlackClient:
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call_check('oauth.access', client_id=opts.client_id, client_secret=opts.client_secret, code=auth_code)
+        res = await self.api_call_unauth('oauth.access', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
         
         if not res.get('ok'):
             self.print('oauth.access call failed: %s' % (res.get('error'),))

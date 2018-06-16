@@ -12,7 +12,6 @@ class Team:
     carries the RTM protocol). It also includes information about the
     group's channels and users.
     """
-    domain = 'slack.com'
     
     def __init__(self, client, map):
         self.client = client
@@ -40,7 +39,7 @@ class Team:
         return '<Team %s "%s">' % (self.id, self.team_name)
 
     async def api_call(self, method, **kwargs):
-        url = 'https://{0}/api/{1}'.format(self.domain, method)
+        url = 'https://{0}/api/{1}'.format(self.client.domain, method)
         
         data = {}
         for (key, val) in kwargs.items():

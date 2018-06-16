@@ -60,13 +60,14 @@ class Team:
         try:
             res = await self.api_call(method, **kwargs)
             if res is None or not res.get('ok'):
-                print('Slack error (%s): %s' % (method, res.get('error', '???'),))
+                self.client.print('Slack error (%s): %s' % (method, res.get('error', '???'),))
                 return None
             return res
         except Exception as ex:
-            print('Slack exception (%s): %s: %s' % (method, ex.__class__.__name__, ex,))
+            self.client.print('Slack exception (%s): %s: %s' % (method, ex.__class__.__name__, ex,))
             if self.client.debug_exceptions:
-                traceback.print_exc()
+                val = traceback.format_exc()
+                self.client.print(val)
             return None
         
     async def load_connection_data(self):
@@ -74,7 +75,7 @@ class Team:
         and user lists.
         """
         
-        print('Fetching user information for %s' % (self.team_name,))
+        self.client.print('Fetching user information for %s' % (self.team_name,))
 
         self.muted_channels.clear()
         self.channels.clear()
@@ -108,7 +109,7 @@ class Team:
             if not cursor:
                 break
             
-        #print(self.users)
+        #self.client.print(self.users)
     
         # Fetch public and private channels
         cursor = None
@@ -145,7 +146,7 @@ class Team:
             if not cursor:
                 break
 
-        #print(self.channels)
+        #self.client.print(self.channels)
 
 class Channel:
     """Simple object representing one channel in a group.

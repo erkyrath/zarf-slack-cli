@@ -1,6 +1,7 @@
 import sys
 import os
 import platform
+import traceback
 from collections import OrderedDict
 import json
 import asyncio
@@ -14,10 +15,13 @@ class ZlackClient:
         self.teams = OrderedDict()
         self.tokenpath = tokenpath
         self.debug_exceptions = debug_exceptions
-        
+
         self.read_teams()
         if not self.teams:
-            print('You are not authorized in any Slack groups. Type /auth to join one.')
+            self.print('You are not authorized in any Slack groups. Type /auth to join one.')
+
+    def print(self, msg):
+        print(str(msg))
         
     def read_teams(self):
         """Read the current token list from ~/.zlack-tokens.
@@ -47,9 +51,11 @@ class ZlackClient:
             for res in done:
                 ex = res.exception()
                 if ex is not None:
-                    print('could not load data: %s: %s' % (ex.__class__.__name__, ex))
+                    self.print('could not load data: %s: %s' % (ex.__class__.__name__, ex))
                     if self.debug_exceptions:
-                        traceback.print_tb(ex.__traceback__)
+                        ls = traceback.format_tb(ex.__traceback__)
+                        for ln in ls:
+                            self.print(ln.rstrip())
     
     async def close(self):
         for team in self.teams.values():

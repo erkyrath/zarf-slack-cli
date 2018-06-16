@@ -10,12 +10,32 @@ import prompt_toolkit
 import zlackcli.client
 
 token_file = '.zlack-tokens'
-debug_exceptions = True ###
 
 path = os.path.join(os.environ.get('HOME'), token_file)
 path = './zh-token' ### for testing
 
-client = zlackcli.client.ZlackClient(path, debug_exceptions=debug_exceptions)
+env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
+env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
+
+popt = optparse.OptionParser(usage='slack-auth.py [ OPTIONS ] command...')
+
+popt.add_option('--authport',
+                action='store', type=int, dest='authport', default=8090,
+                help='localhost port to redirect authentication to (default: 8090)')
+popt.add_option('--clientid',
+                action='store', dest='client_id', default=env_client_id,
+                help='Slack client id (default: $ZLACK_CLIENT_ID)')
+popt.add_option('--clientsecret',
+                action='store', dest='client_secret', default=env_client_secret,
+                help='Slack client secret (default: $ZLACK_CLIENT_SECRET)')
+popt.add_option('--debugexceptions',
+                action='store_true', dest='debug_exceptions',
+                help='Display complete stack traces of exceptions')
+
+(opts, args) = popt.parse_args()
+
+
+client = zlackcli.client.ZlackClient(path, opts=opts)
 
 async def main():
     await client.open()

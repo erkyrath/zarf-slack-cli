@@ -12,11 +12,12 @@ from .teamdat import Team
 
 class ZlackClient:
     
-    def __init__(self, tokenpath, debug_exceptions=False):
-        self.teams = OrderedDict()
+    def __init__(self, tokenpath, opts={}):
         self.tokenpath = tokenpath
-        self.debug_exceptions = debug_exceptions
+        self.opts = opts
+        self.debug_exceptions = opts.debug_exceptions
 
+        self.teams = OrderedDict()
         self.authtask = None
 
         self.read_teams()
@@ -72,6 +73,13 @@ class ZlackClient:
     def begin_auth(self, evloop):
         if self.authtask:
             self.print('Already awaiting authentication callback!')
+            return
+
+        if not self.opts.client_id:
+            self.print('You must set --clientid or $ZLACK_CLIENT_ID to use the /auth command.')
+            return
+        if not self.opts.client_secret:
+            self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
             return
             
         self.print('### beginning auth...')

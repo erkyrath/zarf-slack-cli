@@ -17,7 +17,7 @@ class ZlackClient:
         self.tokenpath = tokenpath
         self.debug_exceptions = debug_exceptions
 
-        self.authserver = None
+        self.authtask = None
 
         self.read_teams()
         if not self.teams:
@@ -61,24 +61,23 @@ class ZlackClient:
                             self.print(ln.rstrip())
     
     async def close(self):
-        if self.authserver:
-            self.authserver[2].cancel() ###
+        if self.authtask:
+            self.authtask.cancel()
             
         for team in self.teams.values():
             if team.session:
                 await team.session.close()
                 team.session = None
 
-    def begin_auth_task(self, evloop):
-        if self.authserver:
+    def begin_auth(self, evloop):
+        if self.authtask:
             self.print('Already awaiting authentication callback!')
             return
             
-        evloop.create_task(self.begin_auth(evloop))
-        
-    async def begin_auth(self, evloop):
         self.print('### beginning auth...')
-
+        self.authtask = evloop.create_task(self.begin_auth_task(evloop))
+        
+    async def begin_auth_task(self, evloop):
         future = asyncio.Future(loop=evloop)
         
         async def handler(request):
@@ -86,9 +85,9 @@ class ZlackClient:
             future.set_result('Hello')
             return aiohttp.web.Response(text="Hello, world")
         
+        self.print('### launching server...')
         server = aiohttp.web.Server(handler)
         sockserv = await evloop.create_server(server, 'localhost', 8080)
-        self.authserver = (server, sockserv, future)
 
         res = None
         try:
@@ -101,7 +100,7 @@ class ZlackClient:
         await server.shutdown()
         sockserv.close()
 
-        self.authserver = None
+        self.authtask = None
         
         self.print('### ending auth...')
         

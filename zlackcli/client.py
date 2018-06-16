@@ -28,9 +28,18 @@ class ZlackClient:
             self.print('You are not authorized in any Slack groups. Type /auth to join one.')
 
     def print(self, msg):
+        """Output a line of text. (Or several lines, as it could contain
+        internal line breaks.) This is normally just print(), but you could
+        subclass this and customize it.
+        """
         print(str(msg))
 
     def print_exception(self, ex, label):
+        """Convenience function to print an exception using self.print().
+        If ex is None, this does nothing (so you can conveniently use it
+        when you only *might* have an exception). If --debugexceptions is
+        set, this prints complete stack traces.
+        """
         if ex is None:
             return
         self.print('%s: %s: %s' % (label, ex.__class__.__name__, ex))
@@ -41,7 +50,7 @@ class ZlackClient:
         
     def read_teams(self):
         """Read the current token list from ~/.zlack-tokens.
-        Return a dict of Team objects.
+        Fills out self.teams with Team objects.
         """
         try:
             fl = open(self.tokenpath)
@@ -53,6 +62,9 @@ class ZlackClient:
             self.teams[id] = Team(self, map)
     
     async def api_call_unauth(self, method, **kwargs):
+        """Make an unauthenticated Slack API call. This is only used
+        when authenticating to a new team.
+        """
         url = 'https://{0}/api/{1}'.format(self.domain, method)
         
         data = {}
@@ -61,6 +73,8 @@ class ZlackClient:
                 continue
             data[key] = val
 
+        # Create a temporary session, which is bad style, but we
+        # only do it on special occasions.
         headers = {
             'user-agent': self.get_useragent(),
         }
@@ -73,10 +87,15 @@ class ZlackClient:
         return res
 
     def get_useragent(self):
+        """Construct a user-agent string for our web API requests.
+        """
         useragent = 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()) ### should include zlack version also
         return useragent
     
     async def open(self):
+        """Open web sessions for all the teams, and load their team data.
+        (This does not open the websocket.)
+        """
         for team in self.teams.values():
             headers = {
                 'user-agent': self.get_useragent(),
@@ -90,6 +109,9 @@ class ZlackClient:
                 self.print_exception(res.exception(), 'could not load data')
     
     async def close(self):
+        """Shut down all our open sessions and whatnot, in preparation
+        for quitting.
+        """
         if self.authtask:
             self.authtask.cancel()
             
@@ -99,6 +121,9 @@ class ZlackClient:
                 team.session = None
 
     def begin_auth(self, evloop):
+        """Launch the process of authenticating to a new Slack team.
+        (This returns immediately.)
+        """
         if self.authtask:
             self.print('Already awaiting authentication callback!')
             return
@@ -121,16 +146,22 @@ class ZlackClient:
         self.authtask.add_done_callback(callback)
         
     async def begin_auth_task(self, evloop):
+        """Do the work of authenticating to a new Slack teams.
+        This is async.
+        """
         (slackurl, redirecturl, statecheck) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
 
         self.print('Visit this URL to authenticate with Slack:\n')
         self.print(slackurl+'\n')
 
         future = asyncio.Future(loop=evloop)
-        
+
+        # Bring up a local web server to wait for the redirect callback.
+        # When we get it, the future will be set.
         server = aiohttp.web.Server(construct_auth_handler(future, statecheck))
         sockserv = await evloop.create_server(server, 'localhost', self.opts.auth_port)
 
+        # Wait for the callback. (With a timeout.)
         auth_code = None
         try:
             auth_code = await asyncio.wait_for(future, 60, loop=evloop)
@@ -141,10 +172,12 @@ class ZlackClient:
         except Exception as ex:
             self.print_exception(ex, 'wait for URL redirect')
 
+        # We're done with the local server.
         await server.shutdown()
         sockserv.close()
 
         if not auth_code:
+            # We were cancelled or something.
             return
         
         self.print('Slack authentication response received.')

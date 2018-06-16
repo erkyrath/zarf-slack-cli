@@ -1,27 +1,20 @@
 #!/usr/bin/env python
 
 import sys
-import platform
 import os
-import re
-import time
-import json
-from collections import OrderedDict
 import optparse
 import traceback
 import asyncio
-import aiohttp
 
-from zlackcli import teamdat
+import zlackcli.client
 
 token_file = '.zlack-tokens'
 debug_exceptions = True ###
 
 path = os.path.join(os.environ.get('HOME'), token_file)
 path = 'zh-token' ### for testing
-teams = teamdat.read_teams(path)
-if not teams:
-    print('You are not authorized in any Slack groups. Type /auth to join one.')
+
+client = zlackcli.client.ZlackClient(path)
 
 async def main():
     await teamdat.create_all_sessions(teams)

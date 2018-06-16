@@ -5,7 +5,6 @@ import re
 import time
 import json
 from collections import OrderedDict
-import optparse
 import traceback
 import asyncio
 import aiohttp
@@ -194,21 +193,6 @@ def get_next_cursor(res):
         return None
     return metadata.get('next_cursor', None)
     
-def read_teams(path):
-    """Read the current token list from ~/.zlack-tokens.
-    Return a dict of Team objects.
-    """
-    try:
-        fl = open(path)
-        dat = json.load(fl, object_pairs_hook=OrderedDict)
-        fl.close()
-    except:
-        dat = OrderedDict()
-    res = OrderedDict()
-    for (id, map) in dat.items():
-        res[id] = Team(map)
-    return res
-
 async def create_all_sessions(teams):
     for team in teams.values():
         headers = {

@@ -6,6 +6,7 @@ from collections import OrderedDict
 import json
 import asyncio
 import aiohttp
+import aiohttp.web
 
 from .teamdat import Team
 
@@ -63,6 +64,21 @@ class ZlackClient:
                 await team.session.close()
                 team.session = None
     
-    
+    async def begin_auth(self):
+        self.print('### beginning auth...')
+
+        async def hello(request):
+            return aiohttp.web.Response(text="Hello, world")
+        
+        app = aiohttp.web.Application()
+        app.add_routes([aiohttp.web.get('/', hello)])
+        
+        runner = aiohttp.web.AppRunner(app)
+        await runner.setup()
+        site = aiohttp.web.TCPSite(runner, 'localhost', 8080)
+        await site.start()
+        
+        self.print('### ending auth...')
+        
         
     

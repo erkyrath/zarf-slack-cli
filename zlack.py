@@ -33,6 +33,9 @@ async def main():
             input = await prompt_toolkit.prompt_async(prompt, history=history, patch_stdout=True)
             input = input.rstrip()
             if input:
+                if input == '/auth':
+                    evloop.create_task(client.begin_auth())
+                    continue
                 print('Got: "' + input + '"')
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')

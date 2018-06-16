@@ -9,6 +9,7 @@ import aiohttp
 import aiohttp.web
 
 from .teamdat import Team
+from .auth import construct_auth_url
 
 class ZlackClient:
     
@@ -26,6 +27,15 @@ class ZlackClient:
 
     def print(self, msg):
         print(str(msg))
+
+    def print_exception(self, ex, label):
+        if ex is None:
+            return
+        self.print('%s: %s: %s' % (label, ex.__class__.__name__, ex))
+        if self.debug_exceptions:
+            ls = traceback.format_tb(ex.__traceback__)
+            for ln in ls:
+                self.print(ln.rstrip())
         
     def read_teams(self):
         """Read the current token list from ~/.zlack-tokens.
@@ -53,13 +63,7 @@ class ZlackClient:
         if self.teams:
             (done, pending) = await asyncio.wait([ team.load_connection_data() for team in self.teams.values() ])
             for res in done:
-                ex = res.exception()
-                if ex is not None:
-                    self.print('could not load data: %s: %s' % (ex.__class__.__name__, ex))
-                    if self.debug_exceptions:
-                        ls = traceback.format_tb(ex.__traceback__)
-                        for ln in ls:
-                            self.print(ln.rstrip())
+                self.print_exception(res.exception(), 'could not load data')
     
     async def close(self):
         if self.authtask:
@@ -84,8 +88,20 @@ class ZlackClient:
             
         self.print('### beginning auth...')
         self.authtask = evloop.create_task(self.begin_auth_task(evloop))
+        def callback(future):
+            # This is not called if authtask is cancelled. (But it is called
+            # if the auth's future is cancelled.)
+            self.authtask = None
+            self.print_exception(future.exception(), 'begin_auth_task')
+            self.print('### ending auth...')
+        self.authtask.add_done_callback(callback)
         
     async def begin_auth_task(self, evloop):
+        (slackurl, redirecturl, statestring) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
+
+        self.print('Visit this URL to authenticate with Slack:\n')
+        self.print(slackurl+'\n')
+
         future = asyncio.Future(loop=evloop)
         
         async def handler(request):
@@ -100,17 +116,19 @@ class ZlackClient:
         res = None
         try:
             res = await asyncio.wait_for(future, 5, loop=evloop)
+        except asyncio.TimeoutError:
+            self.print('URL redirect timed out.')
+        except asyncio.CancelledError:
+            self.print('URL redirect cancelled.')
         except Exception as ex:
-            self.print('wait_for failed: %s: %s' % (ex.__class__.__name__, ex))
-            pass
+            self.print_exception(ex, 'wait for URL redirect')
         self.print('### got result %s, %s' % (res, future))
 
         await server.shutdown()
         sockserv.close()
 
-        self.authtask = None
-        
-        self.print('### ending auth...')
+        if not res:
+            return
         
         
     

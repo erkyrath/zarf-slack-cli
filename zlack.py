@@ -20,7 +20,7 @@ env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
 popt = optparse.OptionParser(usage='slack-auth.py [ OPTIONS ] command...')
 
 popt.add_option('--authport',
-                action='store', type=int, dest='authport', default=8090,
+                action='store', type=int, dest='auth_port', default=8090,
                 help='localhost port to redirect authentication to (default: 8090)')
 popt.add_option('--clientid',
                 action='store', dest='client_id', default=env_client_id,

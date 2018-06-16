@@ -3,7 +3,7 @@ import urllib
 
 auth_url = 'https://slack.com/oauth/authorize'
 
-def construct_auth_url():
+def construct_auth_url(authport, clientid):
     """Construct the URL which the user will use for authentication.
     Returns (slackurl, redirecturl, statestring).
     - slackurl: the URL which the user should enter into a browser.
@@ -12,11 +12,11 @@ def construct_auth_url():
     - statestring: used to double-check the user's reply when it comes
       back.
     """
-    redirecturl = 'http://localhost:%d/' % (opts.port,)
+    redirecturl = 'http://localhost:%d/' % (authport,)
     statecheck = 'state_%d' % (random.randrange(1000000),)
 
     params = [
-        ('client_id', opts.client_id),
+        ('client_id', clientid),
         ('scope', 'client'),
         ('redirect_uri', redirecturl),
         ('state', statecheck),

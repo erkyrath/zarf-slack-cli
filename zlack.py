@@ -18,13 +18,6 @@ client = zlackcli.client.ZlackClient(path, debug_exceptions=debug_exceptions)
 
 async def main():
     await client.open()
-    (done, pending) = await asyncio.wait([ team.load_connection_data() for team in client.teams.values() ])
-    for res in done:
-        ex = res.exception()
-        if ex is not None:
-            print('could not load data: %s: %s' % (ex.__class__.__name__, ex))
-            if debug_exceptions:
-                traceback.print_tb(ex.__traceback__)
     await client.close()
 
 loop = asyncio.get_event_loop()

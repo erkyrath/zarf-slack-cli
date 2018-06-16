@@ -38,9 +38,17 @@ class ZlackClient:
         for team in self.teams.values():
             headers = {
                 'user-agent': useragent,
-                'Authorization': 'Bearer {}'.format(team.access_token),
+                'Authorization': 'Bearer '+team.access_token,
             }
             team.session = aiohttp.ClientSession(headers=headers)
+            
+        (done, pending) = await asyncio.wait([ team.load_connection_data() for team in self.teams.values() ])
+        for res in done:
+            ex = res.exception()
+            if ex is not None:
+                print('could not load data: %s: %s' % (ex.__class__.__name__, ex))
+                if self.debug_exceptions:
+                    traceback.print_tb(ex.__traceback__)
     
     async def close(self):
         for team in self.teams.values():

@@ -109,6 +109,7 @@ class Team:
             cursor = get_next_cursor(res)
             if not cursor:
                 break
+            
         #print(self.users)
     
         # Fetch public and private channels

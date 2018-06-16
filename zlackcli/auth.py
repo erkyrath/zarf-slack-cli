@@ -1,5 +1,7 @@
 import random
 import urllib
+import aiohttp
+import aiohttp.web
 
 auth_url = 'https://slack.com/oauth/authorize'
 
@@ -28,3 +30,28 @@ def construct_auth_url(authport, clientid):
     
     return (slackurl, redirecturl, statecheck)
 
+def construct_auth_handler(future, statecheck):
+    """Construct a handler for aiohttp.web.Server.
+    This handler accepts the web request on port 8090. When a valid
+    request is received, it sets a value in the passed-in future.
+    """
+    
+    async def handler(request):
+        print('### got request %s, query %s' % (request, request.query))
+        map = request.query
+        message = '???'
+
+        if 'code' not in map:
+            message = 'No code found.'
+        elif 'state' not in map:
+            message = 'No state field found.'
+        elif map['state'] != statecheck:
+            message = 'State field did not match.'
+        else:
+            code = map['code']
+            future.set_result(code)
+            message = 'Auth code received: %s\n' % (code,)
+        
+        return aiohttp.web.Response(text=message)
+    
+    return handler

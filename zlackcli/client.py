@@ -9,7 +9,7 @@ import aiohttp
 import aiohttp.web
 
 from .teamdat import Team
-from .auth import construct_auth_url
+from .auth import construct_auth_url, construct_auth_handler
 
 class ZlackClient:
     
@@ -97,25 +97,20 @@ class ZlackClient:
         self.authtask.add_done_callback(callback)
         
     async def begin_auth_task(self, evloop):
-        (slackurl, redirecturl, statestring) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
+        (slackurl, redirecturl, statecheck) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
 
         self.print('Visit this URL to authenticate with Slack:\n')
         self.print(slackurl+'\n')
 
         future = asyncio.Future(loop=evloop)
         
-        async def handler(request):
-            self.print('### got request %s' % (request,))
-            future.set_result('Hello')
-            return aiohttp.web.Response(text="Hello, world")
-        
         self.print('### launching server...')
-        server = aiohttp.web.Server(handler)
-        sockserv = await evloop.create_server(server, 'localhost', 8080)
+        server = aiohttp.web.Server(construct_auth_handler(future, statecheck))
+        sockserv = await evloop.create_server(server, 'localhost', self.opts.auth_port)
 
         res = None
         try:
-            res = await asyncio.wait_for(future, 5, loop=evloop)
+            res = await asyncio.wait_for(future, 60, loop=evloop)
         except asyncio.TimeoutError:
             self.print('URL redirect timed out.')
         except asyncio.CancelledError:

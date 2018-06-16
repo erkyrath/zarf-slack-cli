@@ -1,5 +1,4 @@
 import sys
-import platform
 import os
 import re
 import time
@@ -17,7 +16,9 @@ class Team:
     """
     domain = 'slack.com'
     
-    def __init__(self, map):
+    def __init__(self, client, map):
+        self.client = client
+        
         self.id = map['team_id']
         self.team_name = map.get('team_name', '???')
         self.user_id = map['user_id']
@@ -150,6 +151,7 @@ class Channel:
     """
     def __init__(self, team, id, name, private=False, member=True, im=None):
         self.team = team
+        self.client = team.client
         self.id = id
         self.name = name
         self.private = private
@@ -176,6 +178,7 @@ class User:
     """
     def __init__(self, team, id, name, real_name):
         self.team = team
+        self.client = team.client
         self.id = id
         self.name = name
         self.real_name = real_name
@@ -193,18 +196,3 @@ def get_next_cursor(res):
         return None
     return metadata.get('next_cursor', None)
     
-async def create_all_sessions(teams):
-    for team in teams.values():
-        headers = {
-            'user-agent': 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()), ### should include zlack version also
-            'Authorization': 'Bearer {}'.format(team.access_token)
-        }
-        team.session = aiohttp.ClientSession(headers=headers)
-
-async def shutdown_all(teams):
-    for team in teams.values():
-        if team.session:
-            await team.session.close()
-            team.session = None
-
-

@@ -13,7 +13,7 @@ import asyncio
 import aiohttp
 
 token_file = '.zlack-tokens'
-debug_exceptions = True
+debug_exceptions = True ###
 
 def read_teams():
     """Read the current token list from ~/.zlack-tokens.

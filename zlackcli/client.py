@@ -61,30 +61,26 @@ class ZlackClient:
         for (id, map) in dat.items():
             self.teams[id] = Team(self, map)
     
-    async def api_call_unauth(self, method, **kwargs):
-        """Make an unauthenticated Slack API call. This is only used
-        when authenticating to a new team.
+    async def api_call(self, method, **kwargs):
+        """Make a Slack API call. If kwargs contains a "token"
+        field, this is used; otherwise, the call is unauthenticated.
+        This is only used when authenticating to a new team.
         """
         url = 'https://{0}/api/{1}'.format(self.domain, method)
         
         data = {}
+        headers = {}
+
         for (key, val) in kwargs.items():
             if val is None:
                 continue
+            if key == 'token':
+                headers['Authorization'] = 'Bearer '+val
+                continue
             data[key] = val
 
-        # Create a temporary session, which is bad style, but we
-        # only do it on special occasions.
-        headers = {
-            'user-agent': self.get_useragent(),
-        }
-        session = aiohttp.ClientSession(headers=headers)
-            
-        async with session.post(url, data=data) as resp:
-            res = await resp.json()
-
-        await session.close()
-        return res
+        async with self.session.post(url, headers=headers, data=data) as resp:
+            return await resp.json()
 
     def get_useragent(self):
         """Construct a user-agent string for our web API requests.
@@ -93,12 +89,19 @@ class ZlackClient:
         return useragent
     
     async def open(self):
-        """Open web sessions for all the teams, and load their team data.
-        (This does not open the websocket.)
+        """Open web sessions for the client, and one for each team,
+        and then load the team data. (This does not open the websockets.)
         """
+        useragent = self.get_useragent()
+        
+        headers = {
+            'user-agent': useragent,
+        }
+        self.session = aiohttp.ClientSession(headers=headers)
+            
         for team in self.teams.values():
             headers = {
-                'user-agent': self.get_useragent(),
+                'user-agent': useragent,
                 'Authorization': 'Bearer '+team.access_token,
             }
             team.session = aiohttp.ClientSession(headers=headers)
@@ -119,6 +122,10 @@ class ZlackClient:
             if team.session:
                 await team.session.close()
                 team.session = None
+
+        if self.session:
+            await self.session.close()
+            self.session = None
 
     def begin_auth(self, evloop):
         """Launch the process of authenticating to a new Slack team.
@@ -185,7 +192,7 @@ class ZlackClient:
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call_unauth('oauth.access', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
+        res = await self.api_call('oauth.access', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
         
         if not res.get('ok'):
             self.print('oauth.access call failed: %s' % (res.get('error'),))
@@ -195,3 +202,5 @@ class ZlackClient:
             return
         teamid = res.get('team_id')
 
+        ### create a new Team entry and fill out its team data.
+        

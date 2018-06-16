@@ -34,7 +34,7 @@ async def main():
             input = input.rstrip()
             if input:
                 if input == '/auth':
-                    evloop.create_task(client.begin_auth(evloop))
+                    client.begin_auth_task(evloop)
                     continue
                 print('Got: "' + input + '"')
         except KeyboardInterrupt:

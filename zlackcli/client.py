@@ -17,6 +17,8 @@ class ZlackClient:
         self.tokenpath = tokenpath
         self.debug_exceptions = debug_exceptions
 
+        self.authserver = None
+
         self.read_teams()
         if not self.teams:
             self.print('You are not authorized in any Slack groups. Type /auth to join one.')
@@ -59,25 +61,47 @@ class ZlackClient:
                             self.print(ln.rstrip())
     
     async def close(self):
+        if self.authserver:
+            self.authserver[2].cancel() ###
+            
         for team in self.teams.values():
             if team.session:
                 await team.session.close()
                 team.session = None
-    
+
+    def begin_auth_task(self, evloop):
+        if self.authserver:
+            self.print('Already awaiting authentication callback!')
+            return
+            
+        evloop.create_task(self.begin_auth(evloop))
+        
     async def begin_auth(self, evloop):
         self.print('### beginning auth...')
 
+        future = asyncio.Future(loop=evloop)
+        
         async def handler(request):
             self.print('### got request %s' % (request,))
+            future.set_result('Hello')
             return aiohttp.web.Response(text="Hello, world")
         
         server = aiohttp.web.Server(handler)
         sockserv = await evloop.create_server(server, 'localhost', 8080)
-        await asyncio.sleep(5) ### wait for future or timeout
+        self.authserver = (server, sockserv, future)
+
+        res = None
+        try:
+            res = await asyncio.wait_for(future, 5, loop=evloop)
+        except Exception as ex:
+            self.print('wait_for failed: %s: %s' % (ex.__class__.__name__, ex))
+            pass
+        self.print('### got result %s, %s' % (res, future))
 
         await server.shutdown()
         sockserv.close()
-        
+
+        self.authserver = None
         
         self.print('### ending auth...')
         

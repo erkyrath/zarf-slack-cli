@@ -104,26 +104,37 @@ class ZlackClient:
 
         future = asyncio.Future(loop=evloop)
         
-        self.print('### launching server...')
         server = aiohttp.web.Server(construct_auth_handler(future, statecheck))
         sockserv = await evloop.create_server(server, 'localhost', self.opts.auth_port)
 
-        res = None
+        auth_code = None
         try:
-            res = await asyncio.wait_for(future, 60, loop=evloop)
+            auth_code = await asyncio.wait_for(future, 60, loop=evloop)
         except asyncio.TimeoutError:
             self.print('URL redirect timed out.')
         except asyncio.CancelledError:
             self.print('URL redirect cancelled.')
         except Exception as ex:
             self.print_exception(ex, 'wait for URL redirect')
-        self.print('### got result %s, %s' % (res, future))
 
         await server.shutdown()
         sockserv.close()
 
-        if not res:
+        if not auth_code:
             return
         
+        self.print('Slack authentication response received.')
         
-    
+        # We have the temporary authorization code. Now we exchange it for
+        # a permanent access token.
+
+        res = await self.api_call_check('oauth.access', client_id=opts.client_id, client_secret=opts.client_secret, code=auth_code)
+        
+        if not res.get('ok'):
+            self.print('oauth.access call failed: %s' % (res.get('error'),))
+            return
+        if not res.get('team_id'):
+            self.print('oauth.access response had no team_id')
+            return
+        teamid = res.get('team_id')
+

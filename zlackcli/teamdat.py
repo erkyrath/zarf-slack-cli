@@ -1,12 +1,10 @@
 import sys
 import os
 import re
-import time
 import json
 from collections import OrderedDict
 import traceback
 import asyncio
-import aiohttp
 
 class Team:
     """Represents one Slack group (team, workspace... I'm not all that
@@ -67,7 +65,7 @@ class Team:
             return res
         except Exception as ex:
             print('Slack exception (%s): %s: %s' % (method, ex.__class__.__name__, ex,))
-            if debug_exceptions:
+            if self.client.debug_exceptions:
                 traceback.print_exc()
             return None
         

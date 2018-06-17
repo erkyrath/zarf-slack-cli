@@ -131,17 +131,15 @@ class Team:
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
         self.print('<Connected: %s>' % (self.team_name,))
 
-        task = evloop.create_task(self.rtm_readloop_task(evloop))
+        task = evloop.create_task(self.rtm_readloop_task(self.rtm_socket))
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
 
-    async def rtm_readloop_task(self, evloop):
+    async def rtm_readloop_task(self, socket):
         while True:
-            if not self.rtm_socket:
-                return
             try:
-                msg = await self.rtm_socket.recv()
+                msg = await socket.recv()
                 self.print('### msg: %s' % (msg,))
             except websockets.ConnectionClosed:
                 print('<ConnectionClosed: %s>' % (self.team_name,))

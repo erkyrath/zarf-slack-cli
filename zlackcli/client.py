@@ -134,6 +134,12 @@ class ZlackClient:
             await self.session.close()
             self.session = None
 
+    def display_current_channel(self):
+        #if curchannel:
+        #    (teamid, chanid) = curchannel
+        #    prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
+        return ''
+
     def begin_auth(self, evloop):
         """Launch the process of authenticating to a new Slack team.
         (This returns immediately.)

@@ -46,10 +46,7 @@ async def main():
     done = False
     while not done:
         try:
-            prompt = '> '
-            #if curchannel:
-            #    (teamid, chanid) = curchannel
-            #    prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
+            prompt = client.display_current_channel() + '> '
             input = await prompt_toolkit.prompt_async(prompt, history=history, patch_stdout=True)
             input = input.rstrip()
             if input:

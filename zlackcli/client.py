@@ -207,7 +207,32 @@ class ZlackClient:
         if not res.get('team_id'):
             self.print('oauth.access response had no team_id')
             return
-        teamid = res.get('team_id')
+        if not res.get('access_token'):
+            self.print('oauth.access response had no access_token')
+            return
 
-        ### create a new Team entry and fill out its team data.
+        # Got the permanent token. Create a new entry for ~/.zlack-tokens.
+        teammap = OrderedDict()
+        for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
+            if key in res:
+                teammap[key] = res.get(key)
+
+        # Try fetching user info. (We want to include the user's name in the
+        # ~/.zlack-tokens entry.)
+        res = await self.api_call('users.info', token=teammap['access_token'], user=teammap['user_id'])
+        if not res.get('ok'):
+            print('users.info call failed: %s' % (res.get('error'),))
+            return
+        if not res.get('user'):
+            print('users.info response had no user')
+            return
+        user = res['user']
+
+        teammap['user_name'] = user['name']
+        teammap['user_real_name'] = user['real_name']
+            
+        # Create a new Team entry.
+        team = Team(self, teammap)
+        self.teams[team.id] = team
+        await team.open()
         

@@ -37,7 +37,6 @@ def construct_auth_handler(future, statecheck):
     """
     
     async def handler(request):
-        print('### got request %s, query %s' % (request, request.query))
         map = request.query
         message = '???'
 

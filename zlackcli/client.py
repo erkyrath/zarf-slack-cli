@@ -67,7 +67,7 @@ class ZlackClient:
         """
         # We use the origmap object which we saved when loading in the Team.
         teamobj = OrderedDict()
-        for key, team in teams.values():
+        for key, team in self.teams.items():
             teamobj[key] = team.origmap
             
         try:
@@ -149,14 +149,12 @@ class ZlackClient:
             self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
             return
             
-        self.print('### beginning auth...')
         self.authtask = evloop.create_task(self.begin_auth_task(evloop))
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
             self.authtask = None
             self.print_exception(future.exception(), 'Begin auth_task')
-            self.print('### ending auth...')
         self.authtask.add_done_callback(callback)
         
     async def begin_auth_task(self, evloop):
@@ -234,5 +232,7 @@ class ZlackClient:
         # Create a new Team entry.
         team = Team(self, teammap)
         self.teams[team.id] = team
+        self.write_teams()
+        
         await team.open()
         

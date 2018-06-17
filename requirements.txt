@@ -1,4 +1,5 @@
 # Zlack Python package requirements
+# Requires Python 3.6 or later
 
 prompt-toolkit>=1.0.15
 websockets>=5.0.1

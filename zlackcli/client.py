@@ -160,7 +160,7 @@ class ZlackClient:
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
             self.authtask = None
-            self.print_exception(future.exception(), 'Begin auth_task')
+            self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
     async def begin_auth_task(self, evloop):

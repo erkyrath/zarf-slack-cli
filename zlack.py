@@ -53,6 +53,12 @@ async def main():
                 if input == '/auth':
                     client.begin_auth(evloop)
                     continue
+                if input == '/connect':
+                    list(client.teams.values())[0].rtm_connect(evloop)
+                    continue
+                if input == '/disconnect':
+                    list(client.teams.values())[0].rtm_disconnect(evloop)
+                    continue
                 print('Got: "' + input + '"')
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')

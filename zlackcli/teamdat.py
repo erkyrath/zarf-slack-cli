@@ -39,6 +39,21 @@ class Team:
     def __repr__(self):
         return '<Team %s "%s">' % (self.id, self.team_name)
 
+    def print(self, msg):
+        """Output a line of text. (Or several lines, as it could contain
+        internal line breaks.) This is normally just print(), but you could
+        subclass this and customize it.
+        """
+        self.client.print(msg)
+
+    def print_exception(self, ex, label='zlack'):
+        """Convenience function to print an exception using self.print().
+        If ex is None, this does nothing (so you can conveniently use it
+        when you only *might* have an exception). If --debugexceptions is
+        set, this prints complete stack traces.
+        """
+        self.client.print_exception(ex, '%s (%s)' % (label, self.team_name)) ### alias?
+        
     async def open(self):
         """Create the web API session and load the team data.
         (This does not open the websocket.)
@@ -83,15 +98,24 @@ class Team:
         try:
             res = await self.api_call(method, **kwargs)
             if res is None or not res.get('ok'):
-                self.client.print('Slack error (%s): %s' % (method, res.get('error', '???'),))
+                self.client.print('Slack error (%s) (%s): %s' % (method, self.team_name, res.get('error', '???'),))
                 return None
             return res
         except Exception as ex:
-            self.client.print('Slack exception (%s): %s: %s' % (method, ex.__class__.__name__, ex,))
-            if self.client.debug_exceptions:
-                val = traceback.format_exc()
-                self.client.print(val)
+            self.print_exception(ex, 'Slack exception (%s)' % (method,))
             return None
+
+    def rtm_connect(self, evloop):
+        task = evloop.create_task(self.rtm_connect_task(evloop))
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM connect')
+        task.add_done_callback(callback)
+        
+    async def rtm_connect_task(self, evloop):
+        res = await self.api_call_check('rtm.connect')
+        if not res:
+            return
+        self.print(res) ###
         
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

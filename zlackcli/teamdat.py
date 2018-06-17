@@ -5,6 +5,7 @@ import json
 from collections import OrderedDict
 import traceback
 import asyncio
+import aiohttp
 
 class Team:
     """Represents one Slack group (team, workspace... I'm not all that
@@ -37,6 +38,25 @@ class Team:
 
     def __repr__(self):
         return '<Team %s "%s">' % (self.id, self.team_name)
+
+    async def open(self):
+        """Create the web API session and load the team data.
+        (This does not open the websocket.)
+        """
+        headers = {
+            'user-agent': self.client.get_useragent(),
+            'Authorization': 'Bearer '+self.access_token,
+        }
+        self.session = aiohttp.ClientSession(headers=headers)
+
+        await self.load_connection_data()
+
+    async def close(self):
+        """Shut down our session.
+        """
+        if self.session:
+            await self.session.close()
+            self.session = None
 
     async def api_call(self, method, **kwargs):
         """Make a web API call. Return the result.
@@ -77,7 +97,7 @@ class Team:
         """Load all the information we need for a connection: the channel
         and user lists.
         """
-        
+
         self.client.print('Fetching user information for %s' % (self.team_name,))
 
         self.muted_channels.clear()
@@ -114,7 +134,7 @@ class Team:
             if not cursor:
                 break
             
-        #self.client.print(self.users)
+        self.client.print('Users for %s: %s' % (self, self.users,))
     
         # Fetch public and private channels
         cursor = None
@@ -151,7 +171,7 @@ class Team:
             if not cursor:
                 break
 
-        #self.client.print(self.channels)
+        self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class Channel:
     """Simple object representing one channel in a group.

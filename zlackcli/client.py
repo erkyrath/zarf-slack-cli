@@ -77,7 +77,7 @@ class ZlackClient:
             fl.close()
             os.chmod(self.tokenpath, 0o700)
         except Exception as ex:
-            self.print_exception(ex, 'writing tokens')
+            self.print_exception(ex, 'Writing tokens')
     
     async def api_call(self, method, **kwargs):
         """Make a Slack API call. If kwargs contains a "token"
@@ -110,24 +110,15 @@ class ZlackClient:
         """Open web sessions for the client, and one for each team,
         and then load the team data. (This does not open the websockets.)
         """
-        useragent = self.get_useragent()
-        
         headers = {
-            'user-agent': useragent,
+            'user-agent': self.get_useragent(),
         }
         self.session = aiohttp.ClientSession(headers=headers)
             
-        for team in self.teams.values():
-            headers = {
-                'user-agent': useragent,
-                'Authorization': 'Bearer '+team.access_token,
-            }
-            team.session = aiohttp.ClientSession(headers=headers)
-
         if self.teams:
-            (done, pending) = await asyncio.wait([ team.load_connection_data() for team in self.teams.values() ])
+            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ])
             for res in done:
-                self.print_exception(res.exception(), 'could not load data')
+                self.print_exception(res.exception(), 'Could not set up team')
     
     async def close(self):
         """Shut down all our open sessions and whatnot, in preparation
@@ -137,9 +128,7 @@ class ZlackClient:
             self.authtask.cancel()
             
         for team in self.teams.values():
-            if team.session:
-                await team.session.close()
-                team.session = None
+            await team.close()
 
         if self.session:
             await self.session.close()
@@ -166,7 +155,7 @@ class ZlackClient:
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
             self.authtask = None
-            self.print_exception(future.exception(), 'begin_auth_task')
+            self.print_exception(future.exception(), 'Begin auth_task')
             self.print('### ending auth...')
         self.authtask.add_done_callback(callback)
         
@@ -195,7 +184,7 @@ class ZlackClient:
         except asyncio.CancelledError:
             self.print('URL redirect cancelled.')
         except Exception as ex:
-            self.print_exception(ex, 'wait for URL redirect')
+            self.print_exception(ex, 'Wait for URL redirect')
 
         # We're done with the local server.
         await server.shutdown()

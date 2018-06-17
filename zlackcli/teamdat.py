@@ -72,6 +72,9 @@ class Team:
     async def close(self):
         """Shut down our session.
         """
+        if self.rtm_socket:
+            await self.rtm_socket.close()
+            self.rtm_socket = None
         if self.session:
             await self.session.close()
             self.session = None
@@ -123,7 +126,7 @@ class Team:
         if not self.rtm_url:
             self.print('rtm.connect response had no url')
             return
-        self.print(self.rtm_url) ###
+        
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
         self.print('<Connected: %s>' % (self.team_name,))
@@ -135,9 +138,30 @@ class Team:
 
     async def rtm_readloop_task(self, evloop):
         while True:
-            msg = await self.rtm_socket.recv()
-            self.print('### msg: %s' % (msg,))
+            if not self.rtm_socket:
+                return
+            try:
+                msg = await self.rtm_socket.recv()
+                self.print('### msg: %s' % (msg,))
+            except websockets.ConnectionClosed:
+                print('<ConnectionClosed: %s>' % (self.team_name,))
+                ### reconnect? with back-off; unless quitting
+                return
         
+    def rtm_disconnect(self, evloop):
+        task = evloop.create_task(self.rtm_disconnect_task(evloop))
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM disconnect')
+        task.add_done_callback(callback)
+        
+    async def rtm_disconnect_task(self, evloop):
+        if not self.rtm_socket:
+            self.print('Team not connected: %s' % (self.team_name,))
+            return
+        await self.rtm_socket.close()
+        self.rtm_socket = None
+        self.print('Disconnected from %s' % (self.team_name,))
+    
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel
         and user lists.

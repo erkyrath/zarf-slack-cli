@@ -78,7 +78,9 @@ class Team:
 
         self.muted_channels.clear()
         self.channels.clear()
+        self.channels_by_name.clear()
         self.users.clear()
+        self.users_by_display_name.clear();
     
         # The muted_channels information is stored in your Slack preferences,
         # which are an undocumented (but I guess widely used) API call.

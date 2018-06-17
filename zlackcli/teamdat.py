@@ -118,7 +118,10 @@ class Team:
         task.add_done_callback(callback)
         
     async def rtm_connect_task(self, evloop):
-        ### if self.rtm_socket, disconnect first
+        if self.rtm_socket:
+            # Disconnect first
+            await self.rtm_disconnect_task(evloop)
+            
         res = await self.api_call_check('rtm.connect')
         if not res:
             return

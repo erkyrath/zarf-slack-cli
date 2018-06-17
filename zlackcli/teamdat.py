@@ -24,7 +24,7 @@ class Team:
             self.alias = list(map['alias'])
         else:
             self.alias = []
-        self.origmap = map
+        self.origmap = map  # save the OrderedDict for writing out
 
         self.users = {}
         self.users_by_display_name = {}
@@ -39,6 +39,10 @@ class Team:
         return '<Team %s "%s">' % (self.id, self.team_name)
 
     async def api_call(self, method, **kwargs):
+        """Make a web API call. Return the result.
+        This may raise an exception or return an object with
+        ok=False.
+        """
         url = 'https://{0}/api/{1}'.format(self.client.domain, method)
         
         data = {}

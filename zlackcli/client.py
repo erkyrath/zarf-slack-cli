@@ -34,7 +34,7 @@ class ZlackClient:
         """
         print(str(msg))
 
-    def print_exception(self, ex, label):
+    def print_exception(self, ex, label='zlack'):
         """Convenience function to print an exception using self.print().
         If ex is None, this does nothing (so you can conveniently use it
         when you only *might* have an exception). If --debugexceptions is
@@ -60,6 +60,24 @@ class ZlackClient:
             return
         for (id, map) in dat.items():
             self.teams[id] = Team(self, map)
+
+    def write_teams(self):
+        """Write out the current team list to ~/.zlack-tokens.
+        (Always chmods the file to 0700, for privacy.)
+        """
+        # We use the origmap object which we saved when loading in the Team.
+        teamobj = OrderedDict()
+        for key, team in teams.values():
+            teamobj[key] = team.origmap
+            
+        try:
+            fl = open(self.tokenpath, 'w')
+            json.dump(teamobj, fl, indent=1)
+            fl.write('\n')
+            fl.close()
+            os.chmod(self.tokenpath, 0o700)
+        except Exception as ex:
+            self.print_exception(ex, 'writing tokens')
     
     async def api_call(self, method, **kwargs):
         """Make a Slack API call. If kwargs contains a "token"

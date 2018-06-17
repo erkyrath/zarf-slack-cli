@@ -6,6 +6,7 @@ from collections import OrderedDict
 import traceback
 import asyncio
 import aiohttp
+import websockets
 
 class Team:
     """Represents one Slack group (team, workspace... I'm not all that
@@ -35,6 +36,8 @@ class Team:
         self.lastchannel = None
         
         self.session = None
+        self.rtm_url = None
+        self.rtm_socket = None
 
     def __repr__(self):
         return '<Team %s "%s">' % (self.id, self.team_name)
@@ -112,10 +115,28 @@ class Team:
         task.add_done_callback(callback)
         
     async def rtm_connect_task(self, evloop):
+        ### if self.rtm_socket, disconnect first
         res = await self.api_call_check('rtm.connect')
         if not res:
             return
-        self.print(res) ###
+        self.rtm_url = res.get('url')
+        if not self.rtm_url:
+            self.print('rtm.connect response had no url')
+            return
+        self.print(self.rtm_url) ###
+        is_ssl = self.rtm_url.startswith('wss:')
+        self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
+        self.print('<Connected: %s>' % (self.team_name,))
+
+        task = evloop.create_task(self.rtm_readloop_task(evloop))
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM read')
+        task.add_done_callback(callback)
+
+    async def rtm_readloop_task(self, evloop):
+        while True:
+            msg = await self.rtm_socket.recv()
+            self.print('### msg: %s' % (msg,))
         
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

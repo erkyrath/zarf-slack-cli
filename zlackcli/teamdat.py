@@ -14,11 +14,15 @@ class Team:
     carries the RTM protocol). It also includes information about the
     group's channels and users.
     """
+
+    # Someday we will support more than one protocol
+    protocol = 'slack'
     
     def __init__(self, client, map):
         self.client = client
         
         self.id = map['team_id']
+        self.key = (self.protocol, self.id)
         self.team_name = map.get('team_name', '???')
         self.user_id = map['user_id']
         self.access_token = map['access_token']
@@ -40,7 +44,7 @@ class Team:
         self.rtm_socket = None
 
     def __repr__(self):
-        return '<Team %s "%s">' % (self.id, self.team_name)
+        return '<Team %s:%s "%s">' % (self.protocol, self.id, self.team_name)
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain

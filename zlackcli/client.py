@@ -58,12 +58,13 @@ class ZlackClient:
             fl.close()
         except:
             return
+        ### if dat is an OrderedDict, rewhack it
         for map in dat:
             if map['_protocol'] != 'slack':
                 self.print('Protocol not recognized: %s' % (map['_protocol'],))
                 continue
             team = Team(self, map)
-            self.teams[team.id] = team
+            self.teams[team.key] = team
 
     def write_teams(self):
         """Write out the current team list to ~/.zlack-tokens.
@@ -242,7 +243,7 @@ class ZlackClient:
             
         # Create a new Team entry.
         team = Team(self, teammap)
-        self.teams[team.id] = team
+        self.teams[team.key] = team
         self.write_teams()
         
         await team.open()

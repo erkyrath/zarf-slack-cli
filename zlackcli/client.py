@@ -58,21 +58,25 @@ class ZlackClient:
             fl.close()
         except:
             return
-        for (id, map) in dat.items():
-            self.teams[id] = Team(self, map)
+        for map in dat:
+            if map['_protocol'] != 'slack':
+                self.print('Protocol not recognized: %s' % (map['_protocol'],))
+                continue
+            team = Team(self, map)
+            self.teams[team.id] = team
 
     def write_teams(self):
         """Write out the current team list to ~/.zlack-tokens.
         (Always chmods the file to 0700, for privacy.)
         """
         # We use the origmap object which we saved when loading in the Team.
-        teamobj = OrderedDict()
-        for key, team in self.teams.items():
-            teamobj[key] = team.origmap
+        teamlist = []
+        for team in self.teams.values():
+            teamlist.append(team.origmap)
             
         try:
             fl = open(self.tokenpath, 'w')
-            json.dump(teamobj, fl, indent=1)
+            json.dump(teamlist, fl, indent=1)
             fl.write('\n')
             fl.close()
             os.chmod(self.tokenpath, 0o700)
@@ -217,6 +221,7 @@ class ZlackClient:
 
         # Got the permanent token. Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
+        teammap['_protocol'] = 'slack'
         for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
             if key in res:
                 teammap[key] = res.get(key)

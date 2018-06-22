@@ -37,8 +37,7 @@ popt.add_option('--debugexceptions',
 
 (opts, args) = popt.parse_args()
 
-
-client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts)
+client = None
 
 async def main():
     await client.open()
@@ -54,13 +53,13 @@ async def main():
             input = input.rstrip()
             if input:
                 if input == '/auth':
-                    client.begin_auth(evloop)
+                    client.begin_auth()
                     continue
                 if input == '/connect':
-                    list(client.teams.values())[0].rtm_connect(evloop)
+                    list(client.teams.values())[0].rtm_connect()
                     continue
                 if input == '/disconnect':
-                    list(client.teams.values())[0].rtm_disconnect(evloop)
+                    list(client.teams.values())[0].rtm_disconnect()
                     continue
                 print('Got: "' + input + '"')
         except KeyboardInterrupt:
@@ -73,4 +72,5 @@ async def main():
     await client.close()
 
 evloop = asyncio.get_event_loop()
+client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
 evloop.run_until_complete(main())

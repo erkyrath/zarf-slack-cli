@@ -20,6 +20,7 @@ class Team:
     
     def __init__(self, client, map):
         self.client = client
+        self.evloop = client.evloop
         
         self.id = map['team_id']
         self.key = (self.protocol, self.id)
@@ -115,16 +116,16 @@ class Team:
             self.print_exception(ex, 'Slack exception (%s)' % (method,))
             return None
 
-    def rtm_connect(self, evloop):
-        task = evloop.create_task(self.rtm_connect_task(evloop))
+    def rtm_connect(self):
+        task = self.evloop.create_task(self.rtm_connect_task())
         def callback(future):
             self.print_exception(future.exception(), 'RTM connect')
         task.add_done_callback(callback)
         
-    async def rtm_connect_task(self, evloop):
+    async def rtm_connect_task(self):
         if self.rtm_socket:
             # Disconnect first
-            await self.rtm_disconnect_task(evloop)
+            await self.rtm_disconnect_task()
             
         res = await self.api_call_check('rtm.connect')
         if not res:
@@ -138,7 +139,7 @@ class Team:
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
         self.print('<Connected: %s>' % (self.team_name,))
 
-        task = evloop.create_task(self.rtm_readloop_task(self.rtm_socket))
+        task = self.evloop.create_task(self.rtm_readloop_task(self.rtm_socket))
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
@@ -153,13 +154,13 @@ class Team:
                 ### reconnect? with back-off; unless quitting
                 return
         
-    def rtm_disconnect(self, evloop):
-        task = evloop.create_task(self.rtm_disconnect_task(evloop))
+    def rtm_disconnect(self):
+        task = self.evloop.create_task(self.rtm_disconnect_task())
         def callback(future):
             self.print_exception(future.exception(), 'RTM disconnect')
         task.add_done_callback(callback)
         
-    async def rtm_disconnect_task(self, evloop):
+    async def rtm_disconnect_task(self):
         if not self.rtm_socket:
             self.print('Team not connected: %s' % (self.team_name,))
             return

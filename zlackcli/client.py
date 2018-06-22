@@ -16,7 +16,12 @@ class ZlackClient:
     
     domain = 'slack.com'
     
-    def __init__(self, tokenpath, prefspath=None, opts={}):
+    def __init__(self, tokenpath, prefspath=None, opts={}, loop=None):
+        if loop is None:
+            self.evloop = asyncio.get_event_loop()
+        else:
+            self.evloop = loop
+            
         self.tokenpath = tokenpath
         self.opts = opts
         self.debug_exceptions = opts.debug_exceptions
@@ -152,7 +157,7 @@ class ZlackClient:
         #    prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
         return ''
 
-    def begin_auth(self, evloop):
+    def begin_auth(self):
         """Launch the process of authenticating to a new Slack team.
         (This returns immediately.)
         """
@@ -167,7 +172,7 @@ class ZlackClient:
             self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
             return
             
-        self.authtask = evloop.create_task(self.begin_auth_task(evloop))
+        self.authtask = self.evloop.create_task(self.begin_auth_task())
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
@@ -175,7 +180,7 @@ class ZlackClient:
             self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
-    async def begin_auth_task(self, evloop):
+    async def begin_auth_task(self):
         """Do the work of authenticating to a new Slack teams.
         This is async.
         """
@@ -184,17 +189,17 @@ class ZlackClient:
         self.print('Visit this URL to authenticate with Slack:\n')
         self.print(slackurl+'\n')
 
-        future = asyncio.Future(loop=evloop)
+        future = asyncio.Future(loop=self.evloop)
 
         # Bring up a local web server to wait for the redirect callback.
         # When we get it, the future will be set.
         server = aiohttp.web.Server(construct_auth_handler(future, statecheck))
-        sockserv = await evloop.create_server(server, 'localhost', self.opts.auth_port)
+        sockserv = await self.evloop.create_server(server, 'localhost', self.opts.auth_port)
 
         # Wait for the callback. (With a timeout.)
         auth_code = None
         try:
-            auth_code = await asyncio.wait_for(future, 60, loop=evloop)
+            auth_code = await asyncio.wait_for(future, 60, loop=self.evloop)
         except asyncio.TimeoutError:
             self.print('URL redirect timed out.')
         except asyncio.CancelledError:

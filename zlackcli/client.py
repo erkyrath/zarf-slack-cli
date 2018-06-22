@@ -58,7 +58,12 @@ class ZlackClient:
             fl.close()
         except:
             return
-        ### if dat is an OrderedDict, rewhack it
+        if isinstance(dat, OrderedDict):
+            # This is an old-style tokens file from Zlack V1. Reform it
+            # into a list, assuming all entries are Slack entries.
+            dat = list(dat.values())
+            for map in dat:
+                map['_protocol'] = 'slack'
         for map in dat:
             if map['_protocol'] != 'slack':
                 self.print('Protocol not recognized: %s' % (map['_protocol'],))

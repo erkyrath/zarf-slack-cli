@@ -9,16 +9,18 @@ import aiohttp
 import aiohttp.web
 
 from .teamdat import Team
+from .prefs import Prefs
 from .auth import construct_auth_url, construct_auth_handler
 
 class ZlackClient:
     
     domain = 'slack.com'
     
-    def __init__(self, tokenpath, opts={}):
+    def __init__(self, tokenpath, prefspath=None, opts={}):
         self.tokenpath = tokenpath
         self.opts = opts
         self.debug_exceptions = opts.debug_exceptions
+        self.prefs = Prefs(prefspath)
 
         self.teams = OrderedDict()
         self.authtask = None

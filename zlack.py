@@ -10,9 +10,12 @@ import prompt_toolkit
 import zlackcli.client
 
 token_file = '.zlack-tokens'
+prefs_file = '.zlack-prefs'
 
-path = os.path.join(os.environ.get('HOME'), token_file)
-path = './zh-token' ### for testing
+token_path = os.path.join(os.environ.get('HOME'), token_file)
+token_path = './zh-token' ### for testing
+
+prefs_path = os.path.join(os.environ.get('HOME'), prefs_file)
 
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
 env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
@@ -35,7 +38,7 @@ popt.add_option('--debugexceptions',
 (opts, args) = popt.parse_args()
 
 
-client = zlackcli.client.ZlackClient(path, opts=opts)
+client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts)
 
 async def main():
     await client.open()

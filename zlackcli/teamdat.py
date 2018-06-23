@@ -139,16 +139,29 @@ class Team:
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
+        ### add five-second ping task? (to trigger socket timeout errors, if necessary)
 
     async def rtm_readloop_task(self, socket):
         while True:
+            msg = None
             try:
                 msg = await socket.recv()
-                self.print('### msg: %s' % (msg,))
             except websockets.ConnectionClosed:
                 print('<ConnectionClosed: %s>' % (self.team_name,))
                 ### reconnect? with back-off; unless quitting
                 return
+            if not msg:
+                continue
+            obj = None
+            try:
+                obj = json.loads(msg)
+            except Exception as ex:
+                self.print_exception(ex, 'JSON decode')
+                continue
+            try:
+                self.handle_message(obj)
+            except Exception as ex:
+                self.print_exception(ex, 'JSON decode')
         
     def rtm_disconnect(self):
         task = self.evloop.create_task(self.rtm_disconnect_task())
@@ -163,6 +176,9 @@ class Team:
         await self.rtm_socket.close()
         self.rtm_socket = None
         self.print('Disconnected from %s' % (self.team_name,))
+
+    def handle_message(self, obj):
+        self.print('### %s' % (obj,))
     
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

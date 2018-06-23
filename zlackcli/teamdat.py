@@ -23,7 +23,7 @@ class Team:
         self.evloop = client.evloop
         
         self.id = map['team_id']
-        self.key = (self.protocol, self.id)
+        self.key = '%s:%s' % (self.protocol, self.id)
         self.team_name = map.get('team_name', '???')
         self.user_id = map['user_id']
         self.access_token = map['access_token']

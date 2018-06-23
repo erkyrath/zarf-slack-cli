@@ -25,7 +25,7 @@ class ZlackClient:
         self.tokenpath = tokenpath
         self.opts = opts
         self.debug_exceptions = opts.debug_exceptions
-        self.prefs = Prefs(prefspath)
+        self.prefs = Prefs(self, prefspath)
 
         self.teams = OrderedDict()
         self.authtask = None

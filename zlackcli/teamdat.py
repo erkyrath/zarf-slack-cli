@@ -27,10 +27,6 @@ class Team:
         self.team_name = map.get('team_name', '???')
         self.user_id = map['user_id']
         self.access_token = map['access_token']
-        if 'alias' in map:
-            self.alias = list(map['alias'])
-        else:
-            self.alias = []
         self.origmap = map  # save the OrderedDict for writing out
 
         self.users = {}
@@ -109,7 +105,7 @@ class Team:
         try:
             res = await self.api_call(method, **kwargs)
             if res is None or not res.get('ok'):
-                self.client.print('Slack error (%s) (%s): %s' % (method, self.team_name, res.get('error', '???'),))
+                self.client.print('Slack error (%s) (%s): %s' % (method, self.team_name, res.get('error', '???'),)) ### alias?
                 return None
             return res
         except Exception as ex:

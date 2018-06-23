@@ -62,7 +62,7 @@ async def main():
                     list(client.teams.values())[0].rtm_disconnect()
                     continue
                 if input == '/pref':
-                    client.prefs.put('foo', True) ###
+                    client.prefs.teamput(list(client.teams.values())[0], 'alias', ['zh']) ###
                     continue
                 print('Got: "' + input + '"')
         except KeyboardInterrupt:

@@ -53,6 +53,7 @@ class Prefs:
         map = self.map['teams'].get(team)
         if map is None:
             map = OrderedDict()
+            self.map['teams'][team] = map
         map[key] = val
         self.mark_dirty()
 

@@ -61,6 +61,9 @@ async def main():
                 if input == '/disconnect':
                     list(client.teams.values())[0].rtm_disconnect()
                     continue
+                if input == '/pref':
+                    client.prefs.put('foo', True) ###
+                    continue
                 print('Got: "' + input + '"')
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')

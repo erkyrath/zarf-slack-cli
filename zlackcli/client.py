@@ -141,6 +141,9 @@ class ZlackClient:
         """Shut down all our open sessions and whatnot, in preparation
         for quitting.
         """
+        if self.prefs:
+            self.prefs.write_if_dirty()
+            
         if self.authtask:
             self.authtask.cancel()
             

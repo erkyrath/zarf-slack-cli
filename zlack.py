@@ -48,7 +48,7 @@ async def main():
     done = False
     while not done:
         try:
-            prompt = client.display_current_channel() + '> '
+            prompt = client.ui.display_current_channel() + '> '
             input = await prompt_toolkit.prompt_async(prompt, history=history, patch_stdout=True)
             input = input.rstrip()
             if input:

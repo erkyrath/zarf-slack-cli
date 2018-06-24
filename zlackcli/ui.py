@@ -18,6 +18,12 @@ class UI:
         """
         self.client.print_exception(ex, label)
         
+    def display_current_channel(self):
+        #if curchannel:
+        #    (teamid, chanid) = curchannel
+        #    prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
+        return ''
+
     def handle_message(self, obj):
         self.print('### %s' % (obj,))
 

@@ -39,6 +39,8 @@ class Team:
         self.session = None
         self.rtm_url = None
         self.rtm_socket = None
+        self.msg_counter = 0
+        self.msg_in_flight = {}
 
     def __repr__(self):
         return '<Team %s:%s "%s">' % (self.protocol, self.id, self.team_name)
@@ -178,6 +180,22 @@ class Team:
         self.rtm_socket = None
         self.print('Disconnected from %s' % (self.team_name,))
 
+    async def rtm_send(self, msg):
+        if not self.connected():
+            self.print('Cannot send: %s not connected' % (self.team_name,))
+            return
+        if 'id' in msg and msg['id'] is None:
+            self.msg_counter += 1
+            msg['id'] = self.msg_counter
+            self.msg_in_flight[msg['id']] = msg
+        #if debug_messages:
+        #    thread.add_output('Sending (%s): %s' % (team_name(self.teamref), msg,))
+        try:
+            await self.rtm_socket.send(json.dumps(msg))
+        except Exception as ex:
+            self.print_exception(ex, 'RTM send')
+            ### reconnect? backoff, etc
+        
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel
         and user lists.

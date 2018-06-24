@@ -1,5 +1,7 @@
 import re
 
+pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
+pat_dest_command = re.compile('#([^ ]+)')
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
@@ -88,10 +90,17 @@ class UI:
             self.lastchannel = (team.id, chanid)
             return
 
-    def handle_input(self, cmd):
+    def handle_input(self, val):
         """Handle one input line from the player.
         """
-        ### specials
+        match = pat_special_command.match(val)
+        if match:
+            cmd = match.group(1).lower()
+            val = val[ match.end() : ]
+            val = val.lstrip()
+            self.print('Special command not recognized: %s' % (cmd,))
+            return
+
         ### prefixes
         # Send a message to the current channel!
         if not self.curchannel:

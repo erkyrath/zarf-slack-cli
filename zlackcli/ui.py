@@ -336,6 +336,46 @@ class UI:
     
         return (team, chanid)
 
+    def parse_team(self, val):
+        """Parse a team name, ID, or alias. Returns the Team entry.
+        """
+        for team in self.client.teams.values():
+            if team.id == val:
+                return team
+            if team.team_name.startswith(val):
+                return team
+            #aliases = team.alias
+            #if aliases and val in aliases:
+            #    return team
+        return None
+    
+    def parse_channel(self, team, val):
+        """Parse a channel name (a bare channel, no # or team prefix)
+        for a given Team. Returns the channel ID.
+        """
+        if not val:
+            return team.lastchannel
+        for (id, chan) in team.channels.items():
+            if val == id or val == chan.name:
+                return id
+        for (id, chan) in team.channels.items():
+            if chan.name.startswith(val):
+                return id
+        return None
+    
+    def parse_channel_anyteam(self, val):
+        """Parse a channel name, checking all teams.
+        Returns (team, chanid).
+        """
+        for team in self.client.teams.values():
+            for (id, chan) in team.channels.items():
+                if val == id or val == chan.name:
+                    return (team, id)
+            for (id, chan) in team.channels.items():
+                if chan.name.startswith(val):
+                    return (team, id)
+        return (None, None)
+    
     def cmd_help(self, args):
         """Command: display the command list.
         """

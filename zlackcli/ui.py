@@ -1,3 +1,10 @@
+import re
+
+pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
+pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
+pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
+pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
+
 
 class UI:
     def __init__(self, client):
@@ -78,9 +85,39 @@ class UI:
             colon = (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.team_name(team), self.channel_name(team, chanid), subtypeflag, self.user_name(team, userid), colon, text)
             self.print(val)
-            self.lastchannel = (self.id, chanid)
+            self.lastchannel = (team.id, chanid)
             return
                 
+    def decode_message(self, teamid, val, attachments=None):
+        """Convert a plain-text message in standard Slack form into a printable
+        string. You can also pass a list of attachments from the message.
+        Slack message text has a few special features:
+        - User references look like <@USERID>
+        - URLs look like <URL> or <URL|SLUG>
+        - &, <, and > characters are &-encoded (as in HTML)
+        """
+        if val is None:
+            val = ''
+        else:
+            val = pat_encoded_user_id.sub(lambda match:'@'+self.user_name(teamid, match.group(1)), val)
+            val = pat_encoded_channel_id.sub(lambda match:'#'+self.channel_name(teamid, match.group(1))+(match.group(2) if match.group(2) else ''), val)
+            # We could translate <URL> and <URL|SLUG> here, but those look fine as is
+            if '\n' in val:
+                val = val.replace('\n', '\n... ')
+            if '&' in val:
+                val = val.replace('&lt;', '<')
+                val = val.replace('&gt;', '>')
+                val = val.replace('&amp;', '&')
+        if attachments:
+            for att in attachments:
+                fallback = att.get('fallback')
+                if fallback:
+                    if '\n' in fallback:
+                        fallback = fallback.replace('\n', '\n... ')
+                    ### & < > also?
+                    val += ('\n..> ' + fallback)
+        return val
+    
     def team_name(self, team):
         """Look up a team name, either as an alias (if available) or the
         full name. The argument can be a Team or team key string.

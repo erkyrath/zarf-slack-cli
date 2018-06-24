@@ -159,7 +159,7 @@ class Team:
                 self.print_exception(ex, 'JSON decode')
                 continue
             try:
-                self.handle_message(obj)
+                self.client.ui.handle_message(obj)
             except Exception as ex:
                 self.print_exception(ex, 'JSON decode')
         
@@ -177,9 +177,6 @@ class Team:
         self.rtm_socket = None
         self.print('Disconnected from %s' % (self.team_name,))
 
-    def handle_message(self, obj):
-        self.print('### %s' % (obj,))
-    
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel
         and user lists.

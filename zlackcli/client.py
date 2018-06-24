@@ -11,6 +11,7 @@ import aiohttp.web
 from .teamdat import Team
 from .prefs import Prefs
 from .auth import construct_auth_url, construct_auth_handler
+from .ui import UI
 
 class ZlackClient:
     
@@ -26,6 +27,7 @@ class ZlackClient:
         self.opts = opts
         self.debug_exceptions = opts.debug_exceptions
         self.prefs = Prefs(self, prefspath)
+        self.ui = UI(self)
 
         self.teams = OrderedDict()
         self.authtask = None

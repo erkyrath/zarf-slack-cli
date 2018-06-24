@@ -225,10 +225,9 @@ class UI:
             if team not in self.client.teams:
                 return '???%s' % (team,)
             team = self.client.teams[team]
-        ###
-        #aliases = team.alias
-        #if aliases:
-        #    return aliases[0]
+        aliases = team.get_alias()
+        if aliases:
+            return aliases[0]
         return team.team_name
     
     def channel_name(self, team, chanid):

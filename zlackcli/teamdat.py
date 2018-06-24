@@ -59,6 +59,14 @@ class Team:
         set, this prints complete stack traces.
         """
         self.client.print_exception(ex, '%s (%s)' % (label, self.team_name)) ### alias?
+
+    def get_aliases(self):
+        """Return a list of channel aliases or None.
+        """
+        ls = self.client.prefs.teamget(self, 'aliases')
+        if ls:
+            return ls
+        return None
         
     async def open(self):
         """Create the web API session, load the team data, and open

@@ -98,7 +98,15 @@ class UI:
             cmd = match.group(1).lower()
             val = val[ match.end() : ]
             val = val.lstrip()
-            self.print('Special command not recognized: %s' % (cmd,))
+            tup = self.handler_map.get(cmd)
+            if not tup:
+                self.print('Special command not recognized: /%s' % (cmd,))
+                return
+            (handler, isasync) = tup
+            if not isasync:
+                handler(val)
+            else:
+                pass ### launch a task
             return
 
         ### prefixes
@@ -211,7 +219,22 @@ class UI:
             return userid
         return team.users[userid].name
 
-            
+    def cmd_help(self, args):
+        """Command: display the command list.
+        """
+        self.print('/help -- this list')
+        self.print('/teams -- list all teams you are authorized with')
+        self.print('/connect [team] -- connect (or reconnect) to a team')
+        self.print('/disconnect [team] -- disconnect from a team')
+        self.print('/reload [team] -- reload users and channels for a team')
+        self.print('/channels [team] -- list all channels in the current team or a named team')
+        self.print('/users [team] -- list all users in the current team or a named team')
+        self.print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
+        self.print('/debug [bool] -- set stream debugging on/off or toggle')
+        
+    handler_map = {
+        'help': (cmd_help, false),
+    }
     
 
 from .teamdat import Team

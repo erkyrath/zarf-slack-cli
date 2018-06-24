@@ -253,6 +253,89 @@ class UI:
             return userid
         return team.users[userid].name
 
+    def parse_channelspec(self, val):
+        """Parse a channel specification, in any of its various forms:
+        TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
+        (No initial hash character, please.)
+    
+        Returns (team, channelid). On error, prints a message and
+        returns None.
+        """
+        match_chan = pat_channel_command.match(val)
+        match_im = pat_im_command.match(val)
+        match_def = pat_defaultchan_command.match(val)
+        
+        if match_chan:
+            match = match_chan
+            knownteam = False
+            if match.group(1) is not None:
+                # format: "TEAM/CHANNEL"
+                team = self.parse_team(match.group(1))
+                if not team:
+                    self.print('Team not recognized: %s' % (match.group(1),))
+                    return
+                knownteam = True
+            else:
+                # format: "CHANNEL"
+                if not curchannel:
+                    self.print('No current team.')
+                    return
+                team = self.client.teams.get(curchannel[0])
+                if not team:
+                    self.print('Team not recognized: %s' % (curchannel[0],))
+                    return
+            channame = match.group(2)
+            if not team:
+                self.print('Team not connected: %s' % (self.team_name(team),))
+                return
+            chanid = self.parse_channel(team, channame)
+            if (not chanid) and (not knownteam):
+                (team, chanid) = self.parse_channel_anyteam(channame)
+            if not chanid:
+                self.print('Channel not recognized: %s' % (channame,))
+                return
+        elif match_im:
+            match = match_im
+            if match.group(1) is not None:
+                # format: "TEAM/@USER"
+                team = self.parse_team(match.group(1))
+                if not team:
+                    self.print('Team not recognized: %s' % (match.group(1),))
+                    return
+            else:
+                # format: "@USER"
+                if not curchannel:
+                    self.print('No current team.')
+                    return
+                team = self.client.teams.get(curchannel[0])
+                if not team:
+                    self.print('Team not recognized: %s' % (curchannel[0],))
+                    return
+            username = match.group(2)
+            if username not in team.users_by_display_name:
+                self.print('User not recognized: %s' % (username,))
+                return
+            chanid = team.users_by_display_name[username].im_channel
+            if not chanid:
+                self.print('No IM channel with user: %s' % (username,))
+                return
+        elif match_def:
+            match = match_def
+            # format: "TEAM/"
+            team = self.parse_team(match.group(1))
+            if not team:
+                self.print('Team not recognized: %s' % (match.group(1),))
+                return
+            chanid = self.parse_channel(team, None)
+            if not chanid:
+                self.print('No default channel for team: %s' % (self.team_name(team),))
+                return
+        else:
+            self.print('Channel spec not recognized: %s' % (val,))
+            return
+    
+        return (team, chanid)
+
     def cmd_help(self, args):
         """Command: display the command list.
         """

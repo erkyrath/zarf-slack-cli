@@ -181,7 +181,7 @@ class Team:
         self.print('Disconnected from %s' % (self.team_name,))
 
     async def rtm_send(self, msg):
-        if not self.connected():
+        if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
         if 'id' in msg and msg['id'] is None:

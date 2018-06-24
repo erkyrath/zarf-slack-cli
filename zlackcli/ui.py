@@ -3,6 +3,7 @@ class UI:
     def __init__(self, client):
         self.client = client
 
+        self.lastchannel = None
         self.debug_messages = False
 
     def print(self, msg):
@@ -32,10 +33,52 @@ class UI:
             
         typ = msg.get('type')
 
+        if typ is None and msg.get('reply_to'):
+            # A reply to a message we sent.
+            ###
+            return
+        
         if typ == 'hello':
             # Websocket-connected message.
             self.print('<Connected: %s>' % (self.team_name(team)))
             ### add five-second ping task? (to trigger socket timeout errors, if necessary)
+            return
+        
+        if typ == 'message':
+            chanid = msg.get('channel', '')
+            userid = msg.get('user', '')
+            subtype = msg.get('subtype', '')
+            if chanid in team.muted_channels:
+                return
+            if subtype == 'message_deleted':
+                userid = msg.get('previous_message').get('user', '')
+                oldtext = msg.get('previous_message').get('text')
+                oldtext = self.decode_message(team.id, oldtext)
+                val = '[%s/%s] (del) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), oldtext)
+                self.print(val)
+                return
+            if subtype == 'message_changed':
+                oldtext = ''
+                if 'previous_message' in msg:
+                    oldtext = msg.get('previous_message').get('text')
+                    oldtext = self.decode_message(team.id, oldtext)
+                userid = msg.get('message').get('user', '')
+                newtext = msg.get('message').get('text')
+                newtext = self.decode_message(team.id, newtext, msg.get('attachments'))
+                if oldtext == newtext:
+                    # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
+                    return
+                text = oldtext + '\n -> ' + newtext
+                val = '[%s/%s] (edit) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
+                self.print(val)
+                self.lastchannel = (team.id, chanid)
+                return
+            text = self.decode_message(team.id, msg.get('text'), msg.get('attachments'))
+            subtypeflag = (' (%s)'%(subtype,) if subtype else '')
+            colon = (':' if subtype != 'me_message' else '')
+            val = '[%s/%s]%s %s%s %s' % (self.team_name(team), self.channel_name(team, chanid), subtypeflag, self.user_name(team, userid), colon, text)
+            self.print(val)
+            self.lastchannel = (self.id, chanid)
             return
                 
     def team_name(self, team):

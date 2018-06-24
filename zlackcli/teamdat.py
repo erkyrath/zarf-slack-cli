@@ -159,7 +159,7 @@ class Team:
                 self.print_exception(ex, 'JSON decode')
                 continue
             try:
-                self.client.ui.handle_message(obj)
+                self.client.ui.handle_message(obj, self)
             except Exception as ex:
                 self.print_exception(ex, 'JSON decode')
         

@@ -100,7 +100,7 @@ class UI:
         (teamkey, chanid) = self.curchannel
         team = self.client.teams[teamkey]
         text = encode_message(team, val)
-        thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':text }) )
+        team.rtm_send({ 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':text })
                 
     def encode_message(self, team, val):
         """Encode a human-typed message into standard Slack form.

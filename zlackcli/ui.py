@@ -32,6 +32,12 @@ class UI:
             
         typ = msg.get('type')
 
+        if typ == 'hello':
+            # Websocket-connected message.
+            self.print('<Connected: %s>' % (self.team_name(team)))
+            ### add five-second ping task? (to trigger socket timeout errors, if necessary)
+            return
+                
     def team_name(self, team):
         """Look up a team name, either as an alias (if available) or the
         full name. The argument can be a Team or team key string.

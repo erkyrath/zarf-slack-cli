@@ -59,8 +59,8 @@ class Team:
         self.client.print_exception(ex, '%s (%s)' % (label, self.team_name)) ### alias?
         
     async def open(self):
-        """Create the web API session and load the team data.
-        (This does not open the websocket.)
+        """Create the web API session, load the team data, and open
+        the RTM socket (if desired)
         """
         headers = {
             'user-agent': self.client.get_useragent(),
@@ -69,6 +69,9 @@ class Team:
         self.session = aiohttp.ClientSession(headers=headers)
 
         await self.load_connection_data()
+
+        if True:
+            await self.rtm_connect_task()
 
     async def close(self):
         """Shut down our session.
@@ -133,13 +136,11 @@ class Team:
         
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
-        self.print('<Connected: %s>' % (self.team_name,))
 
         task = self.evloop.create_task(self.rtm_readloop_task(self.rtm_socket))
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
-        ### add five-second ping task? (to trigger socket timeout errors, if necessary)
 
     async def rtm_readloop_task(self, socket):
         while True:

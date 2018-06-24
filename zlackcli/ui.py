@@ -109,14 +109,48 @@ class UI:
                 pass ### launch a task
             return
 
-        ### prefixes
+        match = pat_dest_command.match(val)
+        if match:
+            # The line starts with a channel prefix.
+            cmd = match.group(1)
+            val = val[ match.end() : ].lstrip()
+    
+            tup = self.parse_channelspec(cmd)
+            if not tup:
+                return
+            (team, chanid) = tup
+            # Set the current channel.
+            team.lastchannel = chanid
+            self.curchannel = (team.key, chanid)
+            self.lastchannel = self.curchannel
+    
+        # I habitually type lines starting with semicolon. Strip that out.
+        if val.startswith(';'):
+            val = val[1:].lstrip()
+            # Special case: a lone semicolon means "set to the last channel
+            # we saw."
+            if not val:
+                if not self.lastchannel:
+                    self.print('No recent channel.')
+                else:
+                    self.curchannel = self.lastchannel
+                return
+            
+        # TODO: A line starting with colon should generate a me_message.
+        # However, I don't seem to be able to send me_message -- that subtype
+        # is ignored. Maybe it needs to go via the web API?
+        
+        # If there's no line at all, this was just a channel prefix. Exit.
+        if not val:
+            return
+
         # Send a message to the current channel!
         if not self.curchannel:
             self.print('No current channel.')
             return
         (teamkey, chanid) = self.curchannel
         team = self.client.teams[teamkey]
-        text = encode_message(team, val)
+        text = self.encode_message(team, val)
         team.rtm_send({ 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':text })
                 
     def encode_message(self, team, val):

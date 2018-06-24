@@ -56,7 +56,13 @@ class ZlackClient:
             ls = traceback.format_tb(ex.__traceback__)
             for ln in ls:
                 self.print(ln.rstrip())
-        
+
+    def get_team(self, key):
+        """Fetch a team by key ("slack:T01235X") If not found,
+        return None.
+        """
+        return self.teams.get(key)
+    
     def read_teams(self):
         """Read the current token list from ~/.zlack-tokens.
         Fills out self.teams with Team objects.

@@ -280,7 +280,7 @@ class UI:
                 if not curchannel:
                     self.print('No current team.')
                     return
-                team = self.client.teams.get(curchannel[0])
+                team = self.client.get_team(curchannel[0])
                 if not team:
                     self.print('Team not recognized: %s' % (curchannel[0],))
                     return
@@ -307,7 +307,7 @@ class UI:
                 if not curchannel:
                     self.print('No current team.')
                     return
-                team = self.client.teams.get(curchannel[0])
+                team = self.client.get_team(curchannel[0])
                 if not team:
                     self.print('Team not recognized: %s' % (curchannel[0],))
                     return

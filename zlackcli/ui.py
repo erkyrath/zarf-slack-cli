@@ -87,6 +87,20 @@ class UI:
             self.print(val)
             self.lastchannel = (team.id, chanid)
             return
+
+    def handle_input(self, cmd):
+        """Handle one input line from the player.
+        """
+        ### specials
+        ### prefixes
+        # Send a message to the current channel!
+        if not self.curchannel:
+            self.print('No current channel.')
+            return
+        (teamkey, chanid) = self.curchannel
+        team = self.client.teams[teamkey]
+        text = encode_message(team, val)
+        thread.add_input( (teamid, { 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':text }) )
                 
     def encode_message(self, team, val):
         """Encode a human-typed message into standard Slack form.

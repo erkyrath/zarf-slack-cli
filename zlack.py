@@ -52,19 +52,7 @@ async def main():
             input = await prompt_toolkit.prompt_async(prompt, history=history, patch_stdout=True)
             input = input.rstrip()
             if input:
-                if input == '/auth':
-                    client.begin_auth()
-                    continue
-                if input == '/connect':
-                    list(client.teams.values())[0].rtm_connect()
-                    continue
-                if input == '/disconnect':
-                    list(client.teams.values())[0].rtm_disconnect()
-                    continue
-                if input == '/pref':
-                    client.prefs.teamput(list(client.teams.values())[0], 'alias', ['zh']) ###
-                    continue
-                print('Got: "' + input + '"')
+                client.ui.handle_input(input)
         except KeyboardInterrupt:
             print('<KeyboardInterrupt>')
             done = True

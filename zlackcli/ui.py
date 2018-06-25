@@ -38,7 +38,7 @@ class UI:
     def display_current_channel(self):
         if self.curchannel:
             (teamkey, chanid) = self.curchannel
-            prompt = '%s/%s> ' % (self.team_name(teamkey), self.channel_name(teamkey, chanid))
+            return '%s/%s' % (self.team_name(teamkey), self.channel_name(teamkey, chanid))
         return ''
 
     def handle_message(self, msg, team):

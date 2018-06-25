@@ -81,7 +81,7 @@ class Team:
         await self.load_connection_data()
 
         if True:
-            await self.rtm_connect_task()
+            await self.rtm_connect_async()
 
     async def close(self):
         """Shut down our session.
@@ -126,15 +126,15 @@ class Team:
             return None
 
     def rtm_connect(self):
-        task = self.evloop.create_task(self.rtm_connect_task())
+        task = self.evloop.create_task(self.rtm_connect_async())
         def callback(future):
             self.print_exception(future.exception(), 'RTM connect')
         task.add_done_callback(callback)
         
-    async def rtm_connect_task(self):
+    async def rtm_connect_async(self):
         if self.rtm_socket:
             # Disconnect first
-            await self.rtm_disconnect_task()
+            await self.rtm_disconnect_async()
             
         res = await self.api_call_check('rtm.connect')
         if not res:
@@ -175,12 +175,12 @@ class Team:
                 self.print_exception(ex, 'JSON decode')
         
     def rtm_disconnect(self):
-        task = self.evloop.create_task(self.rtm_disconnect_task())
+        task = self.evloop.create_task(self.rtm_disconnect_async())
         def callback(future):
             self.print_exception(future.exception(), 'RTM disconnect')
         task.add_done_callback(callback)
         
-    async def rtm_disconnect_task(self):
+    async def rtm_disconnect_async(self):
         if not self.rtm_socket:
             self.print('Team not connected: %s' % (self.team_name,))
             return

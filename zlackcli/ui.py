@@ -1,6 +1,6 @@
 import re
 
-pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
+pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
 
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
@@ -104,12 +104,15 @@ class UI:
             val = val[ match.end() : ]
             val = val.lstrip()
             tup = self.handler_map.get(cmd)
+            if tup and isinstance(tup, str):
+                # synonym
+                tup = self.handler_map.get(tup)
             if not tup:
-                self.print('Special command not recognized: /%s' % (cmd,))
+                self.print('Command not recognized: /%s' % (cmd,))
                 return
             (handler, isasync) = tup
             if not isasync:
-                handler(val)
+                handler(self, val)
             else:
                 pass ### launch a task
             return
@@ -395,6 +398,7 @@ class UI:
         
     handler_map = {
         'help': (cmd_help, False),
+        '?': 'help',
     }
     
 

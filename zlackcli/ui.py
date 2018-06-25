@@ -348,9 +348,9 @@ class UI:
                 return team
             if team.team_name.startswith(val):
                 return team
-            #aliases = team.alias
-            #if aliases and val in aliases:
-            #    return team
+            aliases = team.get_aliases()
+            if aliases and val in aliases:
+                return team
         return None
     
     def parse_channel(self, team, val):

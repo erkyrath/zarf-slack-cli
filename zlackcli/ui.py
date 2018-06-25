@@ -12,6 +12,7 @@ class UI:
     def __init__(self, client):
         self.client = client
 
+        self.curchannel = None
         self.lastchannel = None
         self.debug_messages = False
 
@@ -225,7 +226,7 @@ class UI:
             if team not in self.client.teams:
                 return '???%s' % (team,)
             team = self.client.teams[team]
-        aliases = team.get_alias()
+        aliases = team.get_aliases()
         if aliases:
             return aliases[0]
         return team.team_name
@@ -389,7 +390,7 @@ class UI:
         self.print('/debug [bool] -- set stream debugging on/off or toggle')
         
     handler_map = {
-        'help': (cmd_help, false),
+        'help': (cmd_help, False),
     }
     
 

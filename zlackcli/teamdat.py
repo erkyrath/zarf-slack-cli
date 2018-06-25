@@ -158,7 +158,7 @@ class Team:
             try:
                 msg = await socket.recv()
             except websockets.ConnectionClosed:
-                print('<ConnectionClosed: %s>' % (self.team_name,))
+                self.print('<ConnectionClosed: %s>' % (self.team_name,))
                 ### reconnect? with back-off; unless quitting
                 return
             if not msg:

@@ -38,8 +38,10 @@ class ZlackClient:
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
-        internal line breaks.) This is normally just print(), but you could
-        subclass this and customize it.
+        internal line breaks.) All client output funnels through this
+        call.
+        This is normally just print(), but you could subclass this and
+        customize it.
         """
         print(str(msg))
 
@@ -248,10 +250,10 @@ class ZlackClient:
         # ~/.zlack-tokens entry.)
         res = await self.api_call('users.info', token=teammap['access_token'], user=teammap['user_id'])
         if not res.get('ok'):
-            print('users.info call failed: %s' % (res.get('error'),))
+            self.print('users.info call failed: %s' % (res.get('error'),))
             return
         if not res.get('user'):
-            print('users.info response had no user')
+            self.print('users.info response had no user')
             return
         user = res['user']
 

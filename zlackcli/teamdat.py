@@ -126,12 +126,18 @@ class Team:
             return None
 
     def rtm_connect(self):
+        """Open the RTM (real-time) websocket.
+        (Fire-and-forget call.)
+        """
         task = self.evloop.create_task(self.rtm_connect_async())
         def callback(future):
             self.print_exception(future.exception(), 'RTM connect')
         task.add_done_callback(callback)
         
     async def rtm_connect_async(self):
+        """Open the RTM (real-time) websocket.
+        (Async call.)
+        """
         if self.rtm_socket:
             # Disconnect first
             await self.rtm_disconnect_async()
@@ -152,7 +158,29 @@ class Team:
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
 
+    def rtm_disconnect(self):
+        """Close the RTM (real-time) websocket.
+        (Fire-and-forget call.)
+        """
+        task = self.evloop.create_task(self.rtm_disconnect_async())
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM disconnect')
+        task.add_done_callback(callback)
+        
+    async def rtm_disconnect_async(self):
+        """Close the RTM (real-time) websocket.
+        (Async call.)
+        """
+        if not self.rtm_socket:
+            self.print('Team not connected: %s' % (self.team_name,))
+            return
+        await self.rtm_socket.close()
+        self.rtm_socket = None
+        self.print('Disconnected from %s' % (self.team_name,))
+
     async def rtm_readloop_task(self, socket):
+        """
+        """
         while True:
             msg = None
             try:
@@ -174,20 +202,6 @@ class Team:
             except Exception as ex:
                 self.print_exception(ex, 'JSON decode')
         
-    def rtm_disconnect(self):
-        task = self.evloop.create_task(self.rtm_disconnect_async())
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM disconnect')
-        task.add_done_callback(callback)
-        
-    async def rtm_disconnect_async(self):
-        if not self.rtm_socket:
-            self.print('Team not connected: %s' % (self.team_name,))
-            return
-        await self.rtm_socket.close()
-        self.rtm_socket = None
-        self.print('Disconnected from %s' % (self.team_name,))
-
     def rtm_send(self, msg):
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))

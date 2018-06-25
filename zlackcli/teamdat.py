@@ -188,7 +188,16 @@ class Team:
         self.rtm_socket = None
         self.print('Disconnected from %s' % (self.team_name,))
 
-    async def rtm_send(self, msg):
+    def rtm_send(self, msg):
+        if not self.rtm_socket:
+            self.print('Cannot send: %s not connected' % (self.team_name,))
+            return
+        task = self.evloop.create_task(self.rtm_send_async(msg))
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM send')
+        task.add_done_callback(callback)
+        
+    async def rtm_send_async(self, msg):
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return

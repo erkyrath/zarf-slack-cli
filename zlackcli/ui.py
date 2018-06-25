@@ -2,11 +2,15 @@ import re
 
 pat_special_command = re.compile('/([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
+
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
 
+pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
+pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
+pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
 
 class UI:
     def __init__(self, client):
@@ -32,9 +36,9 @@ class UI:
         self.client.print_exception(ex, label)
         
     def display_current_channel(self):
-        #if curchannel:
-        #    (teamid, chanid) = curchannel
-        #    prompt = '%s/%s> ' % (team_name(teamid), channel_name(teamid, chanid))
+        if self.curchannel:
+            (teamkey, chanid) = self.curchannel
+            prompt = '%s/%s> ' % (self.team_name(teamkey), self.channel_name(teamkey, chanid))
         return ''
 
     def handle_message(self, msg, team):
@@ -277,12 +281,12 @@ class UI:
                 knownteam = True
             else:
                 # format: "CHANNEL"
-                if not curchannel:
+                if not self.curchannel:
                     self.print('No current team.')
                     return
-                team = self.client.get_team(curchannel[0])
+                team = self.client.get_team(self.curchannel[0])
                 if not team:
-                    self.print('Team not recognized: %s' % (curchannel[0],))
+                    self.print('Team not recognized: %s' % (self.curchannel[0],))
                     return
             channame = match.group(2)
             if not team:
@@ -304,12 +308,12 @@ class UI:
                     return
             else:
                 # format: "@USER"
-                if not curchannel:
+                if not self.curchannel:
                     self.print('No current team.')
                     return
-                team = self.client.get_team(curchannel[0])
+                team = self.client.get_team(self.curchannel[0])
                 if not team:
-                    self.print('Team not recognized: %s' % (curchannel[0],))
+                    self.print('Team not recognized: %s' % (self.curchannel[0],))
                     return
             username = match.group(2)
             if username not in team.users_by_display_name:

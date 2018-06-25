@@ -245,7 +245,7 @@ class Team:
             if not cursor:
                 break
             
-        self.client.print('Users for %s: %s' % (self, self.users,))
+        #self.client.print('Users for %s: %s' % (self, self.users,))
     
         # Fetch public and private channels
         cursor = None
@@ -282,7 +282,7 @@ class Team:
             if not cursor:
                 break
 
-        self.client.print('Channels for %s: %s' % (self, self.channels,))
+        #self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class Channel:
     """Simple object representing one channel in a group.

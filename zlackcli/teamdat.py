@@ -70,7 +70,7 @@ class Team:
         
     async def open(self):
         """Create the web API session, load the team data, and open
-        the RTM socket (if desired)
+        the RTM socket (if desired).
         """
         headers = {
             'user-agent': self.client.get_useragent(),
@@ -179,7 +179,9 @@ class Team:
         self.print('Disconnected from %s' % (self.team_name,))
 
     async def rtm_readloop_task(self, socket):
-        """
+        """Begin reading messages from the RTM websocket. Continue until
+        the socket closes. (Async call, obviously.)
+        Each message is passed to the UI's handle_message call.
         """
         while True:
             msg = None
@@ -200,9 +202,12 @@ class Team:
             try:
                 self.client.ui.handle_message(obj, self)
             except Exception as ex:
-                self.print_exception(ex, 'JSON decode')
+                self.print_exception(ex, 'Message handler')
         
     def rtm_send(self, msg):
+        """Send a message via the RTM websocket.
+        (Fire-and-forget call.)
+        """
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
@@ -212,6 +217,9 @@ class Team:
         task.add_done_callback(callback)
         
     async def rtm_send_async(self, msg):
+        """Send a message via the RTM websocket.
+        (Async call.)
+        """
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
@@ -230,6 +238,7 @@ class Team:
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel
         and user lists.
+        (Async call.)
         """
 
         self.client.print('Fetching user information for %s' % (self.team_name,))

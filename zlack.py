@@ -13,8 +13,6 @@ token_file = '.zlack-tokens'
 prefs_file = '.zlack-prefs'
 
 token_path = os.path.join(os.environ.get('HOME'), token_file)
-token_path = './zh-token' ### for testing
-
 prefs_path = os.path.join(os.environ.get('HOME'), prefs_file)
 
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)

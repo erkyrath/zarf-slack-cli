@@ -89,14 +89,14 @@ class UI:
                 text = oldtext + '\n -> ' + newtext
                 val = '[%s/%s] (edit) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
                 self.print(val)
-                self.lastchannel = (team.id, chanid)
+                self.lastchannel = (team.key, chanid)
                 return
             text = self.decode_message(team.id, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             colon = (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.team_name(team), self.channel_name(team, chanid), subtypeflag, self.user_name(team, userid), colon, text)
             self.print(val)
-            self.lastchannel = (team.id, chanid)
+            self.lastchannel = (team.key, chanid)
             return
 
     def handle_input(self, val):

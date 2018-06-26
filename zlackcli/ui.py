@@ -406,6 +406,9 @@ class UI:
         raise ArgException('Interval unit not recognized: %s' % (unit,))
     
     def parse_bool(self, val):
+        """Convert a string to a boolean. Recognizes values like "true",
+        "yes", "1", "on".
+        """
         val = val.lower()
         if val.startswith('1') or val.startswith('y') or val.startswith('t') or val=='on':
             return True
@@ -414,6 +417,10 @@ class UI:
         raise ArgException('Boolean argument expected')
 
     def parse_team_or_current(self, args):
+        """Parse an argument list of the form: "[team]"
+        (Optional team name, or if none given, return the current
+        team.)
+        """
         if not args:
             if not self.curchannel:
                 raise ArgException('No current team.')

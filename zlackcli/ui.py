@@ -415,6 +415,23 @@ class UI:
             raise ArgException('Expected zero or one arguments')
         self.print('Message debugging now %s' % (self.debug_messages,))
 
+    def cmd_connect(self, args):
+        """Command: connect to a group. If we're already connected, disconnect
+        and then reconnect.
+        """
+        if not args:
+            if not self.curchannel:
+                self.print('No current team.')
+                return
+            team = self.client.get_team(self.curchannel[0])
+            if not team:
+                raise ArgException('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
+        elif len(args) == 1:
+            team = self.parse_team(args[0])
+        else:
+            raise ArgException('Expected zero or one arguments')
+        team.rtm_connect()
+
     def cmd_disconnect(self, args):
         """Command: disconnect from a group. This only applies to the RTM
         connection.
@@ -442,6 +459,7 @@ class UI:
         '?': 'help',
         'debug': (cmd_debug, False),
         'disconnect': (cmd_disconnect, False),
+        'connect': (cmd_connect, False),
     }
     
 

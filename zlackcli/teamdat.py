@@ -131,7 +131,8 @@ class Team:
         return bool(self.rtm_socket)
     
     def rtm_connect(self):
-        """Open the RTM (real-time) websocket.
+        """Open the RTM (real-time) websocket. If it's already connected,
+        disconnect and reconnect.
         (Fire-and-forget call.)
         """
         task = self.evloop.create_task(self.rtm_connect_async())
@@ -140,7 +141,8 @@ class Team:
         task.add_done_callback(callback)
         
     async def rtm_connect_async(self):
-        """Open the RTM (real-time) websocket.
+        """Open the RTM (real-time) websocket. If it's already connected,
+        disconnect and reconnect.
         (Async call.)
         """
         if self.rtm_socket:

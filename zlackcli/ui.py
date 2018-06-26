@@ -1,4 +1,5 @@
 import re
+import time
 
 pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
@@ -534,7 +535,7 @@ class UI:
         team = self.parse_team_or_current(args)
         await team.load_connection_data()
 
-    def cmd_recap(self, args):
+    async def cmd_recap(self, args):
         """Command: recap messages from a channel, going back a given
         interval. The interval can be a number like "10" (minutes), or
         terms like "20m", "2h", "1d". The default is five minutes.
@@ -559,6 +560,27 @@ class UI:
             if count < 1:
                 raise ArgException('Recap must be a (nonzero) amount of time.')
         self.print('### recap %s %s for %s' % (team, chanid, count,))
+
+        timestamp = str(int(time.time()) - count)
+        cursor = None
+        while True:
+            res = await team.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
+            if not res:
+                break
+            for msg in reversed(res.get('messages')):
+                userid = msg.get('user', '')
+                subtype = msg.get('subtype', '')
+                if subtype:
+                    continue  # don't recap subtype messages
+                ts = msg.get('ts')
+                ts = short_timestamp(ts)
+                text = self.decode_message(team.id, msg.get('text'), msg.get('attachments'))
+                val = '[%s/%s] (%s) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), ts, self.user_name(team, userid), text)
+                self.print(val)
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
+        self.print('### done')
         
     handler_map = {
         'help': (cmd_help, False),
@@ -571,9 +593,9 @@ class UI:
         'users': (cmd_users, False),
         'channels': (cmd_channels, False),
         'reload': (cmd_reload, True),
-        'recap': (cmd_recap, False),
+        'recap': (cmd_recap, True),
     }
     
 
-from .teamdat import Team
-    
+from .teamdat import Team, get_next_cursor
+

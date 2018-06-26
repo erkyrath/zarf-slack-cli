@@ -119,6 +119,8 @@ class UI:
                 except ArgException as ex:
                     self.print('Command /%s: %s' % (cmd, ex,))
                     return
+                except Exception as ex:
+                    self.print_exception(ex, '/'+cmd)
             else:
                 task = self.client.evloop.create_task(handler(self, args))
                 def callback(future):

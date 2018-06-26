@@ -143,8 +143,6 @@ class UI:
             except ArgException as ex:
                 self.print(ex)
                 return
-            if not tup:
-                return
             (team, chanid) = tup
             # Set the current channel.
             team.lastchannel = chanid
@@ -284,8 +282,7 @@ class UI:
         TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
         (No initial hash character, please.)
     
-        Returns (team, channelid). ###On error, prints a message and
-        returns None.
+        Returns (team, channelid).
         """
         match_chan = pat_channel_command.match(val)
         match_im = pat_im_command.match(val)
@@ -301,12 +298,10 @@ class UI:
             else:
                 # format: "CHANNEL"
                 if not self.curchannel:
-                    self.print('No current team.')
-                    return
+                    raise ArgException('No current team.')
                 team = self.client.get_team(self.curchannel[0])
                 if not team:
-                    self.print('Team not recognized: %s' % (self.curchannel[0],))
-                    return
+                    raise ArgException('Team not recognized: %s' % (self.curchannel[0],))
             channame = match.group(2)
             try:
                 chanid = self.parse_channel(team, channame)
@@ -323,31 +318,25 @@ class UI:
             else:
                 # format: "@USER"
                 if not self.curchannel:
-                    self.print('No current team.')
-                    return
+                    raise ArgException('No current team.')
                 team = self.client.get_team(self.curchannel[0])
                 if not team:
-                    self.print('Team not recognized: %s' % (self.curchannel[0],))
-                    return
+                    raise ArgException('Team not recognized: %s' % (self.curchannel[0],))
             username = match.group(2)
             if username not in team.users_by_display_name:
-                self.print('User not recognized: %s' % (username,))
-                return
+                raise ArgException('User not recognized: %s' % (username,))
             chanid = team.users_by_display_name[username].im_channel
             if not chanid:
-                self.print('No IM channel with user: %s' % (username,))
-                return
+                raise ArgException('No IM channel with user: %s' % (username,))
         elif match_def:
             match = match_def
             # format: "TEAM/"
             team = self.parse_team(match.group(1))
             chanid = team.lastchannel
             if not chanid:
-                self.print('No default channel for team: %s' % (self.team_name(team),))
-                return
+                raise ArgException('No default channel for team: %s' % (self.team_name(team),))
         else:
-            self.print('Channel spec not recognized: %s' % (val,))
-            return
+            raise ArgException('Channel spec not recognized: %s' % (val,))
     
         return (team, chanid)
 
@@ -546,8 +535,6 @@ class UI:
         if args and args[0].startswith('#'):
             arg = args.pop(0)
             tup = self.parse_channelspec(arg[1:])
-            if not tup:
-                return
             (team, chanid) = tup
         else:
             if not self.curchannel:

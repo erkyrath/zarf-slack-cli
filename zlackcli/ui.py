@@ -114,7 +114,11 @@ class UI:
                 return
             (handler, isasync) = tup
             if not isasync:
-                handler(self, args)
+                try:
+                    handler(self, args)
+                except ArgException as ex:
+                    self.print('Command /%s: %s' % (cmd, ex,))
+                    return
             else:
                 pass ### launch a task
             return
@@ -408,8 +412,7 @@ class UI:
         elif len(args) == 1:
             self.debug_messages = self.parse_bool(args[0])
         else:
-            self.print('Command /debug takes zero or one arguments')
-            return
+            raise ArgException('Expected zero or one arguments')
         self.print('Message debugging now %s' % (self.debug_messages,))
 
     handler_map = {

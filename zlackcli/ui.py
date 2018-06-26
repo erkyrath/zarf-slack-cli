@@ -425,8 +425,7 @@ class UI:
                 return
             team = self.client.get_team(self.curchannel[0])
             if not team:
-                self.print('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
-                return
+                raise ArgException('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
         elif len(args) == 1:
             team = self.parse_team(args[0])
         else:

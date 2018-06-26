@@ -480,8 +480,8 @@ class UI:
         ls = list(team.users.values())
         ls.sort(key = lambda user:user.name)
         for user in ls:
-            idstring = (' (id %s)' % (user.id,) if debug_messages else '')
-            print('  %s%s: %s' % (user.name, idstring, user.real_name))
+            idstring = (' (id %s)' % (user.id,) if self.debug_messages else '')
+            self.print('  %s%s: %s' % (user.name, idstring, user.real_name))
     
     def cmd_channels(self, args):
         """Command: display the list of channels. Asterisk marks channels
@@ -492,11 +492,11 @@ class UI:
         ls = [ chan for chan in ls if not chan.imuser ]
         ls.sort(key=lambda chan:(not chan.member, chan.muted(), chan.name))
         for chan in ls:
-            idstring = (' (id %s)' % (chan.id,) if debug_messages else '')
+            idstring = (' (id %s)' % (chan.id,) if self.debug_messages else '')
             memflag = ('*' if chan.member else ' ')
             privflag = (' (priv)' if chan.private else '')
             muteflag = (' (mute)' if chan.muted() else '')
-            print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
+            self.print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
     handler_map = {
         'help': (cmd_help, False),

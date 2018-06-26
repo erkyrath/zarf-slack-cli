@@ -243,6 +243,19 @@ class UI:
                     val += ('\n..> ' + fallback)
         return val
     
+    def short_timestamp(self, ts):
+        """Given a Slack-style timestamp (a string like "1526150036.000002"),
+        display it in a nice way.
+        """
+        tup = time.localtime(float(ts))
+        # If the timestamp is from today, we use a shorter form.
+        nowtup = time.localtime()
+        if tup.tm_year == nowtup.tm_year and tup.tm_yday == nowtup.tm_yday:
+            val = time.strftime('%H:%M', tup)
+        else:
+            val = time.strftime('%m/%d %H:%M', tup)
+        return val
+
     def team_name(self, team):
         """Look up a team name, either as an alias (if available) or the
         full name. The argument can be a Team or team key string.
@@ -559,7 +572,6 @@ class UI:
             count = self.parse_interval(args[0])
             if count < 1:
                 raise ArgException('Recap must be a (nonzero) amount of time.')
-        self.print('### recap %s %s for %s' % (team, chanid, count,))
 
         timestamp = str(int(time.time()) - count)
         cursor = None
@@ -573,14 +585,13 @@ class UI:
                 if subtype:
                     continue  # don't recap subtype messages
                 ts = msg.get('ts')
-                ts = short_timestamp(ts)
+                ts = self.short_timestamp(ts)
                 text = self.decode_message(team.id, msg.get('text'), msg.get('attachments'))
                 val = '[%s/%s] (%s) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), ts, self.user_name(team, userid), text)
                 self.print(val)
             cursor = get_next_cursor(res)
             if not cursor:
                 break
-        self.print('### done')
         
     handler_map = {
         'help': (cmd_help, False),

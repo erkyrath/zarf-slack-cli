@@ -12,6 +12,9 @@ pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
 pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
 
+class ArgException(Exception):
+    pass
+
 class UI:
     def __init__(self, client):
         self.client = client
@@ -101,8 +104,7 @@ class UI:
         match = pat_special_command.match(val)
         if match:
             cmd = match.group(1).lower()
-            val = val[ match.end() : ]
-            val = val.lstrip()
+            args = val[ match.end() : ].split()
             tup = self.handler_map.get(cmd)
             if tup and isinstance(tup, str):
                 # synonym
@@ -112,7 +114,7 @@ class UI:
                 return
             (handler, isasync) = tup
             if not isasync:
-                handler(self, val)
+                handler(self, args)
             else:
                 pass ### launch a task
             return
@@ -122,8 +124,12 @@ class UI:
             # The line starts with a channel prefix.
             cmd = match.group(1)
             val = val[ match.end() : ].lstrip()
-    
-            tup = self.parse_channelspec(cmd)
+
+            try:
+                tup = self.parse_channelspec(cmd)
+            except ArgException as ex:
+                self.print(ex)
+                return
             if not tup:
                 return
             (team, chanid) = tup
@@ -278,9 +284,6 @@ class UI:
             if match.group(1) is not None:
                 # format: "TEAM/CHANNEL"
                 team = self.parse_team(match.group(1))
-                if not team:
-                    self.print('Team not recognized: %s' % (match.group(1),))
-                    return
                 knownteam = True
             else:
                 # format: "CHANNEL"
@@ -292,23 +295,18 @@ class UI:
                     self.print('Team not recognized: %s' % (self.curchannel[0],))
                     return
             channame = match.group(2)
-            if not team:
-                self.print('Team not connected: %s' % (self.team_name(team),))
-                return
-            chanid = self.parse_channel(team, channame)
-            if (not chanid) and (not knownteam):
-                (team, chanid) = self.parse_channel_anyteam(channame)
-            if not chanid:
-                self.print('Channel not recognized: %s' % (channame,))
-                return
+            try:
+                chanid = self.parse_channel(team, channame)
+            except ArgException:
+                if not knownteam:
+                    (team, chanid) = self.parse_channel_anyteam(channame)
+                else:
+                    raise
         elif match_im:
             match = match_im
             if match.group(1) is not None:
                 # format: "TEAM/@USER"
                 team = self.parse_team(match.group(1))
-                if not team:
-                    self.print('Team not recognized: %s' % (match.group(1),))
-                    return
             else:
                 # format: "@USER"
                 if not self.curchannel:
@@ -330,10 +328,7 @@ class UI:
             match = match_def
             # format: "TEAM/"
             team = self.parse_team(match.group(1))
-            if not team:
-                self.print('Team not recognized: %s' % (match.group(1),))
-                return
-            chanid = self.parse_channel(team, None)
+            chanid = team.lastchannel
             if not chanid:
                 self.print('No default channel for team: %s' % (self.team_name(team),))
                 return
@@ -345,6 +340,7 @@ class UI:
 
     def parse_team(self, val):
         """Parse a team name, ID, or alias. Returns the Team entry.
+        Raises ArgException if not recognized.
         """
         for team in self.client.teams.values():
             if team.id == val:
@@ -354,21 +350,20 @@ class UI:
             aliases = team.get_aliases()
             if aliases and val in aliases:
                 return team
-        return None
+        raise ArgException('Team not recognized: %s' % (val,))
     
     def parse_channel(self, team, val):
         """Parse a channel name (a bare channel, no # or team prefix)
         for a given Team. Returns the channel ID.
+        Raises ArgException if not recognized.
         """
-        if not val:
-            return team.lastchannel
         for (id, chan) in team.channels.items():
             if val == id or val == chan.name:
                 return id
         for (id, chan) in team.channels.items():
             if chan.name.startswith(val):
                 return id
-        return None
+        raise ArgException('Channel not recognized: %s/%s' % (self.team_name(team), val,))
     
     def parse_channel_anyteam(self, val):
         """Parse a channel name, checking all teams.
@@ -381,7 +376,15 @@ class UI:
             for (id, chan) in team.channels.items():
                 if chan.name.startswith(val):
                     return (team, id)
-        return (None, None)
+        raise ArgException('Channel not recognized: %s' % (val,))
+
+    def parse_bool(self, val):
+        val = val.lower()
+        if val.startswith('1') or val.startswith('y') or val.startswith('t') or val=='on':
+            return True
+        if val.startswith('0') or val.startswith('n') or val.startswith('f') or val=='off':
+            return False
+        raise ArgException('Boolean argument expected')
     
     def cmd_help(self, args):
         """Command: display the command list.
@@ -396,9 +399,23 @@ class UI:
         self.print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
         self.print('/debug [bool] -- set stream debugging on/off or toggle')
         
+    def cmd_debug(self, args):
+        """Command: set or toggle the debug_messages flag, which shows all
+        commands that go to or from the Slack server.
+        """
+        if not args:
+            self.debug_messages = not self.debug_messages
+        elif len(args) == 1:
+            self.debug_messages = self.parse_bool(args[0])
+        else:
+            self.print('Command /debug takes zero or one arguments')
+            return
+        self.print('Message debugging now %s' % (self.debug_messages,))
+
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
+        'debug': (cmd_debug, False),
     }
     
 

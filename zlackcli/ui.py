@@ -120,7 +120,7 @@ class UI:
                     self.print('Command /%s: %s' % (cmd, ex,))
                     return
                 except Exception as ex:
-                    self.print_exception(ex, '/'+cmd)
+                    self.print_exception(ex, 'Command /%s' % (cmd,))
             else:
                 task = self.client.evloop.create_task(handler(self, args))
                 def callback(future):
@@ -128,7 +128,7 @@ class UI:
                     if ex and isinstance(ex, ArgException):
                         self.print('Command /%s: %s' % (cmd, ex,))
                     elif ex:
-                        self.print_exception(ex, '/'+cmd)
+                        self.print_exception(ex, 'Command /%s' % (cmd,))
                 task.add_done_callback(callback)
             return
 

@@ -284,7 +284,7 @@ class UI:
         TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
         (No initial hash character, please.)
     
-        Returns (team, channelid). On error, prints a message and
+        Returns (team, channelid). ###On error, prints a message and
         returns None.
         """
         match_chan = pat_channel_command.match(val)
@@ -391,6 +391,31 @@ class UI:
                     return (team, id)
         raise ArgException('Channel not recognized: %s' % (val,))
 
+    def parse_interval(self, val):
+        """Convert a string to a number of seconds. This accepts values like
+        "5" (default minutes), "10m", "2h", "1d".
+        """
+        pat_interval = re.compile('^([0-9]+)([a-z]*)$', flags=re.IGNORECASE)
+        match = pat_interval.match(val)
+        if not match:
+            raise ArgException('Interval not recognized: %s' % (val,))
+        try:
+            count = int(match.group(1))
+        except:
+            raise ArgException('Interval has no number: %s' % (val,))
+        unit = match.group(2).lower()
+        if not unit:
+            return count * 60  # minutes
+        if unit in ('s', 'sec'):
+            return count
+        if unit in ('m', 'min'):
+            return count * 60  # minutes
+        if unit in ('h', 'hr', 'hour'):
+            return count * 60 * 60  # hours
+        if unit in ('d', 'day'):
+            return count * 60 * 60 * 24  # days
+        raise ArgException('Interval unit not recognized: %s' % (unit,))
+    
     def parse_bool(self, val):
         val = val.lower()
         if val.startswith('1') or val.startswith('y') or val.startswith('t') or val=='on':
@@ -405,7 +430,7 @@ class UI:
                 raise ArgException('No current team.')
             team = self.client.get_team(self.curchannel[0])
             if not team:
-                raise ArgException('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
+                raise ArgException('Team not recognized: %s' % (self.curchannel[0],))
         elif len(args) == 1:
             team = self.parse_team(args[0])
         else:
@@ -513,6 +538,34 @@ class UI:
         team = self.parse_team_or_current(args)
         await team.load_connection_data()
 
+    def cmd_recap(self, args):
+        """Command: recap messages from a channel, going back a given
+        interval. The interval can be a number like "10" (minutes), or
+        terms like "20m", "2h", "1d". The default is five minutes.
+        """
+        if args and args[0].startswith('#'):
+            arg = args.pop(0)
+            tup = self.parse_channelspec(arg[1:])
+            if not tup:
+                return
+            (team, chanid) = tup
+        else:
+            if not self.curchannel:
+                raise ArgException('No current team.')
+            (teamid, chanid) = self.curchannel
+            team = self.client.get_team(teamid)
+            if not team:
+                raise ArgException('Team not recognized: %s' % (teamid,))
+        if not args:
+            count = 5 * 60  # five minutes
+        else:
+            if not args[0]:
+                raise ArgException('You must supply a number of minutes.')
+            count = self.parse_interval(args[0])
+            if count < 1:
+                raise ArgException('Recap must be a (nonzero) amount of time.')
+        self.print('### recap %s %s for %s' % (team, chanid, count,))
+        
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
@@ -524,6 +577,7 @@ class UI:
         'users': (cmd_users, False),
         'channels': (cmd_channels, False),
         'reload': (cmd_reload, True),
+        'recap': (cmd_recap, False),
     }
     
 

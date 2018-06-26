@@ -6,17 +6,19 @@
 [license]: ./LICENSE
 [slackpost]: http://blog.zarfhome.com/2018/03/open-letter-slack-should-not.html
 
-As you probably know, Slack is turning off their IRC and XMPP gateways on May 15th. (I have [written an objection to this][slackpost], but it didn't help.) This project is a replacement for those gateways.
+As you may know, Slack turned off their IRC and XMPP gateways on May 15th. (I [wrote an objection to this][slackpost], but it didn't help.) This project is a replacement for those gateways.
 
 This is *not* a full-on Slack client! It's a replacement for the way I used the XMPP gateway: a little window in the corner of my screen where I can keep an eye on a few important Slack groups and type quick replies. Plain text only. It doesn't try to handle every fancy new feature that Slack rolls out. If you want to do something fancy, you pull up the official Slack client or the web page.
 
 ## Installation
 
-This tool is written in Python3. You'll need a recent version of that. You'll also need two packages:
+This tool is written in Python3. You'll need a recent version of that. You'll also need some packages:
 
-> `pip3 install slackclient prompt-toolkit`
+> `pip3 install slackclient aiohttp aiodns websockets`
 
-(This is written to [slackclient 1.2.1][slackclient] and [prompt-toolkit 1.0.15][prompt-toolkit]. Both toolkits are undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
+(This is written to [prompt-toolkit 1.0.15][prompt-toolkit]. This toolkit is undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
+
+(Note that I am not using the official [Python slackclient][slackclient] library. It's crufty and doesn't support async code, so I wrote my own. Sorry! Feel free to borrow this one, folks...)
 
 [slackclient]: https://github.com/slackapi/python-slackclient
 [prompt-toolkit]: https://github.com/jonathanslenders/python-prompt-toolkit
@@ -33,33 +35,23 @@ Once you've done this, set the `ZLACK_CLIENT_ID` and `ZLACK_CLIENT_SECRET` envir
 
 ## Authentication
 
-Run `zlack-auth.py` to authenticate. (The environment variables must be set.)
+Run `zlack.py`, and then type `/auth` to authenticate. (The environment variables must be set for this command to work.)
 
-> `python3 zlack-auth.py login`
+> `python3 zlack.py`
 
 If you don't know what an environment variable is, you can type everything out on the command line:
 
-> `python3 zlack-auth.py --id CLIENT_ID --secret CLIENT_SECRET login`
+> `python3 zlack.py --id CLIENT_ID --secret CLIENT_SECRET`
 
 ...where *CLIENT_ID* and *CLIENT_SECRET* are the long hex strings you got off the developer page.
 
-The script will displays a Slack URL to visit. It also starts listening on localhost port 8090. Go to the Slack URL in your web browser, authorize the client, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
+When you type `/auth`, the script will display a Slack URL to visit. It also starts listening on localhost port 8090. Go to the Slack URL in your web browser, authorize the client, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
 
-## Setting aliases
-
-Slack team names can be long, so it's good to have some nicknames for them. Type something like
-
-> `python3 zlack-auth.py alias Zarfhome zh`
-
-Then "zh" will be treated as a synonym for the "Zarfhome" team.
-
-You can set several aliases for a team. The first will be used when printing messages.
+Since your tokens are saved, you will not need to authenticate again on the same machine. Unless you delete the `~/.zlack-tokens` file.
 
 ## Running the client
 
-Now you can run `zlack-client.py`. (This does not need the environment variables.) 
-
-> `python3 zlack-client.py`
+Once you're authenticated, you can Slack away! 
 
 At first you have no channel set. So to send a message, type
 
@@ -83,6 +75,7 @@ If you type a semicolon on a line by itself, it will switch your default channel
 There are a handful of special commands, which start with a slash.
 
 - */help* -- this list
+- */auth* -- request authentication to a Slack team
 - */teams* -- list all teams you are authorized with
 - */connect [team]* -- connect (or reconnect) to a team
 - */disconnect [team]* -- disconnect from a team

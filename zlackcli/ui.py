@@ -394,6 +394,7 @@ class UI:
         """Command: display the command list.
         """
         self.print('/help -- this list')
+        self.print('/auth -- request authentication to a Slack team')
         self.print('/teams -- list all teams you are authorized with')
         self.print('/connect [team] -- connect (or reconnect) to a team')
         self.print('/disconnect [team] -- disconnect from a team')
@@ -402,6 +403,11 @@ class UI:
         self.print('/users [team] -- list all users in the current team or a named team')
         self.print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
         self.print('/debug [bool] -- set stream debugging on/off or toggle')
+
+    def cmd_auth(self, args):
+        """Command: authenticate to a Slack team.
+        """
+        self.client.begin_auth()
         
     def cmd_debug(self, args):
         """Command: set or toggle the debug_messages flag, which shows all
@@ -477,6 +483,7 @@ class UI:
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
+        'auth': (cmd_auth, False),
         'debug': (cmd_debug, False),
         'disconnect': (cmd_disconnect, False),
         'connect': (cmd_connect, False),

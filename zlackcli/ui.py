@@ -120,7 +120,14 @@ class UI:
                     self.print('Command /%s: %s' % (cmd, ex,))
                     return
             else:
-                pass ### launch a task
+                task = self.client.evloop.create_task(handler(self, args))
+                def callback(future):
+                    ex = future.exception()
+                    if ex and isinstance(ex, ArgException):
+                        self.print('Command /%s: %s' % (cmd, ex,))
+                    elif ex:
+                        self.print_exception(ex, '/'+cmd)
+                task.add_done_callback(callback)
             return
 
         match = pat_dest_command.match(val)
@@ -498,6 +505,12 @@ class UI:
             muteflag = (' (mute)' if chan.muted() else '')
             self.print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
+    async def cmd_reload(self, args):
+        """Command: reload user and channel data from a group.
+        """
+        team = self.parse_team_or_current(args)
+        await team.load_connection_data()
+
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
@@ -508,6 +521,7 @@ class UI:
         'teams': (cmd_teams, False),
         'users': (cmd_users, False),
         'channels': (cmd_channels, False),
+        'reload': (cmd_reload, True),
     }
     
 

@@ -454,12 +454,33 @@ class UI:
         if self.curchannel and self.curchannel[0] == team.key:
             self.curchannel = None
 
+    def cmd_teams(self, args):
+        """Command: display the list of teams. Asterisk indicates an active
+        RTM connection.
+        """
+        if args:
+            raise ArgException('Expected no arguments')
+        ls = list(self.client.teams.values())
+        ls.sort(key = lambda team:team.team_name)
+        for team in ls:
+            teamname = team.team_name
+            memflag = ('*' if team.rtm_connected() else ' ')
+            idstring = (' (id %s)' % (team.id,) if self.debug_messages else '')
+            aliases = team.get_aliases()
+            if aliases:
+                aliases = ', '.join(aliases)
+                aliasstr = ' (%s)' % (aliases,)
+            else:
+                aliasstr = ''
+            self.print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
+    
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
         'debug': (cmd_debug, False),
         'disconnect': (cmd_disconnect, False),
         'connect': (cmd_connect, False),
+        'teams': (cmd_teams, False),
     }
     
 

@@ -415,10 +415,32 @@ class UI:
             raise ArgException('Expected zero or one arguments')
         self.print('Message debugging now %s' % (self.debug_messages,))
 
+    def cmd_disconnect(self, args):
+        """Command: disconnect from a group. This only applies to the RTM
+        connection.
+        """
+        if not args:
+            if not self.curchannel:
+                self.print('No current team.')
+                return
+            team = self.client.get_team(self.curchannel[0])
+            if not team:
+                self.print('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
+                return
+        else:
+            team = self.parse_team(args[0])
+        if not team.rtm_connected():
+            self.print('Team not connected: %s' % (self.team_name(team),))
+            return
+        team.rtm_disconnect()
+        if self.curchannel and self.curchannel[0] == team.key:
+            self.curchannel = None
+
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
         'debug': (cmd_debug, False),
+        'disconnect': (cmd_disconnect, False),
     }
     
 

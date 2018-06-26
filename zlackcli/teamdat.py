@@ -125,6 +125,11 @@ class Team:
             self.print_exception(ex, 'Slack exception (%s)' % (method,))
             return None
 
+    def rtm_connected(self):
+        """Check whether the RTM websocket is open.
+        """
+        return bool(self.rtm_socket)
+    
     def rtm_connect(self):
         """Open the RTM (real-time) websocket.
         (Fire-and-forget call.)

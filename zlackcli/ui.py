@@ -427,8 +427,10 @@ class UI:
             if not team:
                 self.print('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
                 return
-        else:
+        elif len(args) == 1:
             team = self.parse_team(args[0])
+        else:
+            raise ArgException('Expected zero or one arguments')
         if not team.rtm_connected():
             self.print('Team not connected: %s' % (self.team_name(team),))
             return

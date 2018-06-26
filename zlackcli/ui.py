@@ -389,6 +389,19 @@ class UI:
         if val.startswith('0') or val.startswith('n') or val.startswith('f') or val=='off':
             return False
         raise ArgException('Boolean argument expected')
+
+    def parse_team_or_current(self, args):
+        if not args:
+            if not self.curchannel:
+                raise ArgException('No current team.')
+            team = self.client.get_team(self.curchannel[0])
+            if not team:
+                raise ArgException('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
+        elif len(args) == 1:
+            team = self.parse_team(args[0])
+        else:
+            raise ArgException('Expected zero or one arguments')
+        return team
     
     def cmd_help(self, args):
         """Command: display the command list.
@@ -425,34 +438,14 @@ class UI:
         """Command: connect to a group. If we're already connected, disconnect
         and then reconnect.
         """
-        if not args:
-            if not self.curchannel:
-                self.print('No current team.')
-                return
-            team = self.client.get_team(self.curchannel[0])
-            if not team:
-                raise ArgException('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
-        elif len(args) == 1:
-            team = self.parse_team(args[0])
-        else:
-            raise ArgException('Expected zero or one arguments')
+        team = self.parse_team_or_current(args)
         team.rtm_connect()
 
     def cmd_disconnect(self, args):
         """Command: disconnect from a group. This only applies to the RTM
         connection.
         """
-        if not args:
-            if not self.curchannel:
-                self.print('No current team.')
-                return
-            team = self.client.get_team(self.curchannel[0])
-            if not team:
-                raise ArgException('Team not recognized: %s' % (self.team_name(self.curchannel[0]),))
-        elif len(args) == 1:
-            team = self.parse_team(args[0])
-        else:
-            raise ArgException('Expected zero or one arguments')
+        team = self.parse_team_or_current(args)
         if not team.rtm_connected():
             self.print('Team not connected: %s' % (self.team_name(team),))
             return
@@ -480,14 +473,41 @@ class UI:
                 aliasstr = ''
             self.print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
     
+    def cmd_users(self, args):
+        """Command: display the list of users.
+        """
+        team = self.parse_team_or_current(args)
+        ls = list(team.users.values())
+        ls.sort(key = lambda user:user.name)
+        for user in ls:
+            idstring = (' (id %s)' % (user.id,) if debug_messages else '')
+            print('  %s%s: %s' % (user.name, idstring, user.real_name))
+    
+    def cmd_channels(self, args):
+        """Command: display the list of channels. Asterisk marks channels
+        that we are members of. Muted and private channels are also flagged.
+        """
+        team = self.parse_team_or_current(args)
+        ls = list(team.channels.values())
+        ls = [ chan for chan in ls if not chan.imuser ]
+        ls.sort(key=lambda chan:(not chan.member, chan.muted(), chan.name))
+        for chan in ls:
+            idstring = (' (id %s)' % (chan.id,) if debug_messages else '')
+            memflag = ('*' if chan.member else ' ')
+            privflag = (' (priv)' if chan.private else '')
+            muteflag = (' (mute)' if chan.muted() else '')
+            print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
+
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
         'auth': (cmd_auth, False),
         'debug': (cmd_debug, False),
-        'disconnect': (cmd_disconnect, False),
         'connect': (cmd_connect, False),
+        'disconnect': (cmd_disconnect, False),
         'teams': (cmd_teams, False),
+        'users': (cmd_users, False),
+        'channels': (cmd_channels, False),
     }
     
 

@@ -16,6 +16,7 @@ from .ui import UI
 class ZlackClient:
     
     domain = 'slack.com'
+    version = '2.0.0'
     
     def __init__(self, tokenpath, prefspath=None, opts={}, loop=None):
         if loop is None:
@@ -130,7 +131,7 @@ class ZlackClient:
     def get_useragent(self):
         """Construct a user-agent string for our web API requests.
         """
-        useragent = 'zlack Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(v=sys.version_info, psys=platform.system(), pver=platform.release()) ### should include zlack version also
+        useragent = 'zlack {self.version} Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(self=self, v=sys.version_info, psys=platform.system(), pver=platform.release())
         return useragent
     
     async def open(self):

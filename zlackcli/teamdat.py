@@ -126,7 +126,10 @@ class Team:
         try:
             res = await self.api_call(method, **kwargs)
             if res is None or not res.get('ok'):
-                self.client.print('Slack error (%s) (%s): %s' % (method, self.short_name(), res.get('error', '???'),))
+                errmsg = '???'
+                if res and 'error' in res:
+                    errmsg = res.get('error')
+                self.client.print('Slack error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
                 return None
             return res
         except Exception as ex:

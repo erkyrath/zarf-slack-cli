@@ -58,7 +58,7 @@ class Team:
         when you only *might* have an exception). If --debugexceptions is
         set, this prints complete stack traces.
         """
-        self.client.print_exception(ex, '%s (%s)' % (label, self.team_name)) ### alias?
+        self.client.print_exception(ex, '%s (%s)' % (label, self.short_name()))
 
     def get_aliases(self):
         """Return a list of channel aliases or None.
@@ -67,6 +67,14 @@ class Team:
         if ls:
             return ls
         return None
+
+    def short_name(self):
+        """Return the team name or the first alias.
+        """
+        ls = self.client.prefs.teamget(self, 'aliases')
+        if ls:
+            return ls[0]
+        return self.team_name
         
     async def open(self):
         """Create the web API session, load the team data, and open
@@ -118,7 +126,7 @@ class Team:
         try:
             res = await self.api_call(method, **kwargs)
             if res is None or not res.get('ok'):
-                self.client.print('Slack error (%s) (%s): %s' % (method, self.team_name, res.get('error', '???'),)) ### alias?
+                self.client.print('Slack error (%s) (%s): %s' % (method, self.short_name(), res.get('error', '???'),))
                 return None
             return res
         except Exception as ex:
@@ -195,7 +203,7 @@ class Team:
             try:
                 msg = await socket.recv()
             except websockets.ConnectionClosed:
-                self.print('<ConnectionClosed: %s>' % (self.team_name,))
+                self.print('<ConnectionClosed: %s>' % (self.short_name(),))
                 ### reconnect? with back-off; unless quitting
                 return
             if not msg:

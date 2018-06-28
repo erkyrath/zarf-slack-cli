@@ -156,11 +156,15 @@ class Team:
             self.print_exception(future.exception(), 'RTM connect')
         task.add_done_callback(callback)
         
-    async def rtm_connect_async(self):
+    async def rtm_connect_async(self, from_reconnect=False):
         """Open the RTM (real-time) websocket. If it's already connected,
         disconnect and reconnect.
         (Async call.)
         """
+        if self.reconnect_task and not from_reconnect:
+            self.reconnect_task.cancel()
+            self.reconnect_task = None
+            
         if self.rtm_socket:
             # Disconnect first
             await self.rtm_disconnect_async()
@@ -191,17 +195,22 @@ class Team:
             self.print_exception(future.exception(), 'RTM disconnect')
         task.add_done_callback(callback)
         
-    async def rtm_disconnect_async(self):
+    async def rtm_disconnect_async(self, from_reconnect=False):
         """Close the RTM (real-time) websocket.
         (Async call.)
         """
+        if self.reconnect_task and not from_reconnect:
+            self.reconnect_task.cancel()
+            self.reconnect_task = None
+            
         self.want_connected = False
         if not self.rtm_socket:
             self.print('Team not connected: %s' % (self.team_name,))
             return
         await self.rtm_socket.close()
         self.rtm_socket = None
-        self.print('Disconnected from %s' % (self.team_name,))
+        if not from_reconnect:
+            self.print('Disconnected from %s' % (self.team_name,))
 
     def handle_disconnect(self):
         """This is called whenever a ConnectionClosed error turns up
@@ -221,7 +230,7 @@ class Team:
 
     async def handle_disconnect_task(self):
         reconnect = self.want_connected
-        await self.rtm_disconnect_async()
+        await self.rtm_disconnect_async(True)
         if not reconnect:
             return
 
@@ -230,7 +239,7 @@ class Team:
             # Politely wait a few seconds before trying to reconnect.
             await asyncio.sleep(3)
             self.print('### trying to reconnect, try %s...' % (tries,))
-            await self.rtm_connect_async()
+            await self.rtm_connect_async(True)
             if self.rtm_socket:
                 # Successfully reconnected
                 return

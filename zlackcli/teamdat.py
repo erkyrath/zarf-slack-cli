@@ -232,19 +232,24 @@ class Team:
         reconnect = self.want_connected
         await self.rtm_disconnect_async(True)
         if not reconnect:
+            # We're manually disconnected or the client is exiting.
             return
 
         tries = 0
         while tries < 5:
-            # Politely wait a few seconds before trying to reconnect.
-            await asyncio.sleep(3)
+            # Politely wait a moment before trying to reconnect. Succeeding
+            # tries will use longer delays.
+            delay = 1.0 + (tries * tries) * 2.0
+            await asyncio.sleep(delay)
             self.print('### trying to reconnect, try %s...' % (tries,))
             await self.rtm_connect_async(True)
             if self.rtm_socket:
                 # Successfully reconnected
                 return
+            # Next time, wait longer.
             tries += 1
 
+        # We've tried five times in 60 seconds (roughly).
         self.print('Too many retries, giving up.')
         self.want_connected = False
 

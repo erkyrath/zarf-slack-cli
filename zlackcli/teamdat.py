@@ -37,6 +37,7 @@ class Team:
         self.lastchannel = None
         
         self.session = None
+        self.reconnect_task = None
         self.rtm_want_connected = False
         self.rtm_url = None
         self.rtm_socket = None
@@ -93,8 +94,11 @@ class Team:
             await self.rtm_connect_async()
 
     async def close(self):
-        """Shut down our session.
+        """Shut down our session (and socket) for good.
         """
+        self.want_connected = False
+        if self.reconnect_task:
+            self.reconnect_task.cancel()
         if self.rtm_socket:
             await self.rtm_socket.close()
             self.rtm_socket = None
@@ -199,13 +203,35 @@ class Team:
         self.rtm_socket = None
         self.print('Disconnected from %s' % (self.team_name,))
 
-    def begin_reconnecting(self):
+    def handle_disconnect(self):
         """This is called whenever a ConnectionClosed error turns up
         on the websocket. We set up a task to close the socket and
         (if appropriate) try to reconnect.
         """
-        self.print('### begin_reconnecting')
-        pass
+        self.print('### handle_disconnect, want=%s' % self.want_connected)
+        self.reconnect_task = self.evloop.create_task(self.handle_disconnect_task())
+        def callback(future):
+            self.print('### reconnect_task callback')
+            self.reconnect_task = None
+            self.print_exception(future.exception(), 'Handle disconnect')
+        self.reconnect_task.add_done_callback(callback)
+
+    async def handle_disconnect_task(self):
+        reconnect = self.want_connected
+        await self.rtm_disconnect_async()
+        if not reconnect:
+            return
+
+        tries = 0
+        while tries < 1111:
+            # Politely wait a few seconds before trying to reconnect.
+            await asyncio.sleep(3)
+            self.print('### trying to reconnect...')
+            ###
+            tries += 1
+
+        self.print('Too many retries, giving up.')
+        self.want_connected = False
 
     async def rtm_readloop_task(self, socket):
         """Begin reading messages from the RTM websocket. Continue until
@@ -218,7 +244,7 @@ class Team:
                 msg = await socket.recv()
             except websockets.ConnectionClosed:
                 self.print('<ConnectionClosed: %s>' % (self.short_name(),))
-                self.begin_reconnecting()
+                self.handle_disconnect()
                 # This socket is done with; exit this loop.
                 return
             except Exception as ex:
@@ -266,7 +292,7 @@ class Team:
             await self.rtm_socket.send(json.dumps(msg))
         except websockets.ConnectionClosed:
             self.print('<ConnectionClosed: %s>' % (self.short_name(),))
-            self.begin_reconnecting()
+            self.handle_disconnect()
         except Exception as ex:
             self.print_exception(ex, 'RTM send')
         

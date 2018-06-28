@@ -217,13 +217,11 @@ class Team:
         on the websocket. We set up a task to close the socket and
         (if appropriate) try to reconnect.
         """
-        self.print('### handle_disconnect, want=%s' % self.want_connected)
         if self.reconnect_task:
             self.print('Already reconnecting!')
             return
         self.reconnect_task = self.evloop.create_task(self.handle_disconnect_task())
         def callback(future):
-            self.print('### reconnect_task callback')
             self.reconnect_task = None
             self.print_exception(future.exception(), 'Handle disconnect')
         self.reconnect_task.add_done_callback(callback)
@@ -241,7 +239,6 @@ class Team:
             # tries will use longer delays.
             delay = 1.0 + (tries * tries) * 2.0
             await asyncio.sleep(delay)
-            self.print('### trying to reconnect, try %s...' % (tries,))
             await self.rtm_connect_async(True)
             if self.rtm_socket:
                 # Successfully reconnected

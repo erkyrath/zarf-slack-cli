@@ -173,7 +173,7 @@ class Team:
         if not self.rtm_url:
             self.print('rtm.connect response had no url')
             return
-        
+
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
 
@@ -209,6 +209,9 @@ class Team:
         (if appropriate) try to reconnect.
         """
         self.print('### handle_disconnect, want=%s' % self.want_connected)
+        if self.reconnect_task:
+            self.print('Already reconnecting!')
+            return
         self.reconnect_task = self.evloop.create_task(self.handle_disconnect_task())
         def callback(future):
             self.print('### reconnect_task callback')
@@ -223,11 +226,14 @@ class Team:
             return
 
         tries = 0
-        while tries < 1111:
+        while tries < 5:
             # Politely wait a few seconds before trying to reconnect.
             await asyncio.sleep(3)
-            self.print('### trying to reconnect...')
-            ###
+            self.print('### trying to reconnect, try %s...' % (tries,))
+            await self.rtm_connect_async()
+            if self.rtm_socket:
+                # Successfully reconnected
+                return
             tries += 1
 
         self.print('Too many retries, giving up.')

@@ -37,6 +37,7 @@ class Team:
         self.lastchannel = None
         
         self.session = None
+        self.rtm_want_connected = False
         self.rtm_url = None
         self.rtm_socket = None
         self.msg_counter = 0
@@ -160,6 +161,7 @@ class Team:
             # Disconnect first
             await self.rtm_disconnect_async()
             
+        self.want_connected = True
         res = await self.api_call_check('rtm.connect')
         if not res:
             return
@@ -189,12 +191,21 @@ class Team:
         """Close the RTM (real-time) websocket.
         (Async call.)
         """
+        self.want_connected = False
         if not self.rtm_socket:
             self.print('Team not connected: %s' % (self.team_name,))
             return
         await self.rtm_socket.close()
         self.rtm_socket = None
         self.print('Disconnected from %s' % (self.team_name,))
+
+    def begin_reconnecting(self):
+        """This is called whenever a ConnectionClosed error turns up
+        on the websocket. We set up a task to close the socket and
+        (if appropriate) try to reconnect.
+        """
+        self.print('### begin_reconnecting')
+        pass
 
     async def rtm_readloop_task(self, socket):
         """Begin reading messages from the RTM websocket. Continue until
@@ -207,10 +218,14 @@ class Team:
                 msg = await socket.recv()
             except websockets.ConnectionClosed:
                 self.print('<ConnectionClosed: %s>' % (self.short_name(),))
-                ### reconnect? with back-off; unless quitting
+                self.begin_reconnecting()
+                # This socket is done with; exit this loop.
                 return
+            except Exception as ex:
+                self.print_exception(ex, 'RTM receive')
             if not msg:
                 continue
+                
             obj = None
             try:
                 obj = json.loads(msg)
@@ -249,9 +264,11 @@ class Team:
         #    thread.add_output('Sending (%s): %s' % (team_name(self.teamref), msg,))
         try:
             await self.rtm_socket.send(json.dumps(msg))
+        except websockets.ConnectionClosed:
+            self.print('<ConnectionClosed: %s>' % (self.short_name(),))
+            self.begin_reconnecting()
         except Exception as ex:
             self.print_exception(ex, 'RTM send')
-            ### reconnect? backoff, etc
         
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

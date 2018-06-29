@@ -220,13 +220,13 @@ class Team:
         if self.reconnect_task:
             self.print('Already reconnecting!')
             return
-        self.reconnect_task = self.evloop.create_task(self.handle_disconnect_task())
+        self.reconnect_task = self.evloop.create_task(self.do_reconnect_async())
         def callback(future):
             self.reconnect_task = None
             self.print_exception(future.exception(), 'Handle disconnect')
         self.reconnect_task.add_done_callback(callback)
 
-    async def handle_disconnect_task(self):
+    async def do_reconnect_async(self):
         reconnect = self.want_connected
         await self.rtm_disconnect_async(True)
         if not reconnect:

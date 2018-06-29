@@ -180,6 +180,11 @@ class Team:
 
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
+        if self.rtm_socket and not self.rtm_socket.open:
+            # This may not be a plausible failure state, but we'll cover it.
+            self.print('rtm.connect did not return an open socket')
+            self.rtm_socket = None
+            return
 
         task = self.evloop.create_task(self.rtm_readloop_task(self.rtm_socket))
         def callback(future):
@@ -227,6 +232,12 @@ class Team:
         self.reconnect_task.add_done_callback(callback)
 
     async def do_reconnect_async(self):
+        """Background task to attempt reconnecting after a disconnect.
+        This tries up to five times, with increasing delays, before
+        giving up.
+        """
+        # store the want_connected value, which will be squashed by the
+        # rtm_disconnect call.
         reconnect = self.want_connected
         await self.rtm_disconnect_async(True)
         if not reconnect:

@@ -141,6 +141,15 @@ class Team:
             self.print_exception(ex, 'Slack exception (%s)' % (method,))
             return None
 
+    def resolve_in_flight(self, val):
+        """Check an id value in a reply_to. If we've sent a message
+        with that value, return it (and remove it from our pool of sent
+        messages.)
+        """
+        if val in self.msg_in_flight:
+            return self.msg_in_flight.pop(val)
+        return None
+        
     def rtm_connected(self):
         """Check whether the RTM websocket is open.
         """

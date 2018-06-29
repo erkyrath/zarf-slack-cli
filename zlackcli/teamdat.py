@@ -38,6 +38,7 @@ class Team:
         
         self.session = None
         self.reconnect_task = None
+        self.ping_task = None
         self.rtm_want_connected = False
         self.rtm_url = None
         self.rtm_socket = None
@@ -173,6 +174,10 @@ class Team:
         if self.reconnect_task and not from_reconnect:
             self.reconnect_task.cancel()
             self.reconnect_task = None
+
+        if self.ping_task:
+            self.ping_task.cancel()
+            self.ping_task = None
             
         if self.rtm_socket:
             # Disconnect first
@@ -199,6 +204,13 @@ class Team:
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
+        
+        self.ping_task = self.evloop.create_task(self.rtm_ping_task(self.rtm_socket))
+        def callback2(future):
+            if future.cancelled():
+                return
+            self.print_exception(future.exception(), 'RTM ping')
+        self.ping_task.add_done_callback(callback2)
 
     def rtm_disconnect(self):
         """Close the RTM (real-time) websocket.
@@ -216,6 +228,10 @@ class Team:
         if self.reconnect_task and not from_reconnect:
             self.reconnect_task.cancel()
             self.reconnect_task = None
+            
+        if self.ping_task:
+            self.ping_task.cancel()
+            self.ping_task = None
             
         self.want_connected = False
         if not self.rtm_socket:
@@ -299,6 +315,23 @@ class Team:
                 self.client.ui.handle_message(obj, self)
             except Exception as ex:
                 self.print_exception(ex, 'Message handler')
+        
+    async def rtm_ping_task(self, socket):
+        """Begin sending pings to the RTM websocket. Continue until
+        the socket closes. (Async call.)
+        """
+        while True:
+            await asyncio.sleep(2.0)
+            try:
+                waiter = await socket.ping()
+                await waiter
+            except websockets.ConnectionClosed:
+                self.print('<ConnectionClosed: %s>' % (self.short_name(),))
+                self.handle_disconnect()
+                # This socket is done with; exit this loop.
+                return
+            except Exception as ex:
+                self.print_exception(ex, 'RTM ping')
         
     def rtm_send(self, msg):
         """Send a message via the RTM websocket.

@@ -182,7 +182,7 @@ class ZlackClient:
                 self.print('### detected sleep of %s seconds' % (elapsed,))
                 
                 async def reconnect_if_connected(team):
-                    if team.connected():
+                    if team.rtm_connected():
                         await team.rtm_connect_async()
                     
                 if self.teams:

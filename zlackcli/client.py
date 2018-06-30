@@ -1,6 +1,7 @@
 import sys
 import os
 import platform
+import time
 import traceback
 from collections import OrderedDict
 import json
@@ -32,6 +33,7 @@ class ZlackClient:
 
         self.teams = OrderedDict()
         self.authtask = None
+        self.waketask = None
 
         self.read_teams()
         if not self.teams:
@@ -147,6 +149,8 @@ class ZlackClient:
             (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ])
             for res in done:
                 self.print_exception(res.exception(), 'Could not set up team')
+
+        self.waketask = self.evloop.create_task(self.wakeloop_async())
     
     async def close(self):
         """Shut down all our open sessions and whatnot, in preparation
@@ -158,12 +162,26 @@ class ZlackClient:
         if self.authtask:
             self.authtask.cancel()
             
+        if self.waketask:
+            self.waketask.cancel()
+            
         for team in self.teams.values():
             await team.close()
 
         if self.session:
             await self.session.close()
             self.session = None
+
+    async def wakeloop_async(self):
+        curtime = time.monotonic()
+        while True:
+            await asyncio.sleep(5.0)
+            newtime = time.monotonic()
+            elapsed = newtime - curtime
+            curtime = newtime
+            if elapsed > 30.0:
+                self.print('### detected sleep of %s seconds' % (elapsed,))
+                
 
     def begin_auth(self):
         """Launch the process of authenticating to a new Slack team.

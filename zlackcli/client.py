@@ -176,12 +176,21 @@ class ZlackClient:
         curtime = time.monotonic()
         while True:
             await asyncio.sleep(5.0)
-            newtime = time.monotonic()
-            elapsed = newtime - curtime
-            curtime = newtime
+            self.print('### ping')
+            elapsed = time.monotonic() - curtime
             if elapsed > 30.0:
                 self.print('### detected sleep of %s seconds' % (elapsed,))
                 
+                async def reconnect_if_connected(team):
+                    if team.connected():
+                        await team.rtm_connect_async()
+                    
+                if self.teams:
+                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ])
+                    for res in done:
+                        self.print_exception(res.exception(), 'Could not reconnect team')
+                
+            curtime = time.monotonic()
 
     def begin_auth(self):
         """Launch the process of authenticating to a new Slack team.

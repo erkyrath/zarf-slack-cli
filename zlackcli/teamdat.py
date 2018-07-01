@@ -177,6 +177,7 @@ class Team:
         if self.rtm_socket:
             # Disconnect first
             await self.rtm_disconnect_async()
+            await asyncio.sleep(0.05)
             
         self.want_connected = True
         res = await self.api_call_check('rtm.connect')
@@ -237,6 +238,8 @@ class Team:
         self.reconnect_task = self.evloop.create_task(self.do_reconnect_async())
         def callback(future):
             self.reconnect_task = None
+            if future.cancelled():
+                return
             self.print_exception(future.exception(), 'Handle disconnect')
         self.reconnect_task.add_done_callback(callback)
 

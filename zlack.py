@@ -49,7 +49,7 @@ def exception_handler(loop, ctx):
         exstr = ' (%s: )' % (ex.__class__.__name__, ex)
     print('asyncio: %s%s' % (msg, exstr,))
 
-async def main():
+async def mainloop(client, evloop):
     """The main input loop. This prompts for user input and dispatches it
     to the client.
 
@@ -87,4 +87,4 @@ evloop.set_exception_handler(exception_handler)
 
 client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
 
-evloop.run_until_complete(main())
+evloop.run_until_complete(mainloop(client, evloop))

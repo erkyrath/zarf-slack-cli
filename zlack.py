@@ -37,7 +37,27 @@ popt.add_option('--debugexceptions',
 
 client = None
 
+def exception_handler(loop, ctx):
+    """This handles exceptions that turn up in the asyncio module.
+    That mostly means timeout errors on the web socket.
+    (Exceptions generated within zlackcli are handled within zlackcli.)
+    """
+    msg = ctx.get('message', 'Unhandled exception')
+    exstr = ''
+    ex = ctx.get('exception')
+    if ex is not None:
+        exstr = ' (%s: )' % (ex.__class__.__name__, ex)
+    print('asyncio: %s%s' % (msg, exstr,))
+
 async def main():
+    """The main input loop. This prompts for user input and dispatches it
+    to the client.
+
+    The client's Slack communication work happens in the background,
+    due to the magic of async tasks. (It's not a background *thread*;
+    rather, the prompt_toolkit module knows how to yield control back
+    to the event loop so that everything can happen cooperatively.)
+    """
     await client.open()
     
     # Create a history storage object for the command-line prompt.
@@ -60,6 +80,11 @@ async def main():
             
     await client.close()
 
+# Begin work.
+
 evloop = asyncio.get_event_loop()
+evloop.set_exception_handler(exception_handler)
+
 client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
+
 evloop.run_until_complete(main())

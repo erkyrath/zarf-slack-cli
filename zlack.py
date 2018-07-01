@@ -46,7 +46,7 @@ def exception_handler(loop, ctx):
     exstr = ''
     ex = ctx.get('exception')
     if ex is not None:
-        exstr = ' (%s: )' % (ex.__class__.__name__, ex)
+        exstr = ' (%s: %s)' % (ex.__class__.__name__, ex)
     print('asyncio: %s%s' % (msg, exstr,))
 
 async def mainloop(client, evloop):

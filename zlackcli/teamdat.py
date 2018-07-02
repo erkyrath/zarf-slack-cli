@@ -196,7 +196,7 @@ class Team:
             self.rtm_socket = None
             return
 
-        task = self.evloop.create_task(self.rtm_readloop_task(self.rtm_socket))
+        task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
         task.add_done_callback(callback)
@@ -273,7 +273,7 @@ class Team:
         self.print('Too many retries, giving up.')
         self.want_connected = False
 
-    async def rtm_readloop_task(self, socket):
+    async def rtm_readloop_async(self, socket):
         """Begin reading messages from the RTM websocket. Continue until
         the socket closes. (Async call, obviously.)
         Each message is passed to the UI's handle_message call.

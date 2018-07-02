@@ -208,7 +208,7 @@ class ZlackClient:
             self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
             return
             
-        self.authtask = self.evloop.create_task(self.begin_auth_task())
+        self.authtask = self.evloop.create_task(self.perform_auth_async())
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
@@ -216,9 +216,10 @@ class ZlackClient:
             self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
-    async def begin_auth_task(self):
-        """Do the work of authenticating to a new Slack teams.
-        This is async.
+    async def perform_auth_async(self):
+        """Do the work of authenticating to a new Slack team.
+        This is async, and it takes a while, because the user has to
+        authenticate through Slack's web site.
         """
         (slackurl, redirecturl, statecheck) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
 

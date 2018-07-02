@@ -37,6 +37,7 @@ class Team:
         self.lastchannel = None
         
         self.session = None
+        self.readloop_task = None
         self.reconnect_task = None
         self.rtm_want_connected = False
         self.rtm_url = None
@@ -99,6 +100,8 @@ class Team:
         self.want_connected = False
         if self.reconnect_task:
             self.reconnect_task.cancel()
+        if self.readloop_task:
+            self.readloop_task.cancel()
         if self.rtm_socket:
             await self.rtm_socket.close()
             self.rtm_socket = None
@@ -196,10 +199,10 @@ class Team:
             self.rtm_socket = None
             return
 
-        task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
+        self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
         def callback(future):
             self.print_exception(future.exception(), 'RTM read')
-        task.add_done_callback(callback)
+        self.readloop_task.add_done_callback(callback)
         
     def rtm_disconnect(self):
         """Close the RTM (real-time) websocket.
@@ -217,6 +220,10 @@ class Team:
         if self.reconnect_task and not from_reconnect:
             self.reconnect_task.cancel()
             self.reconnect_task = None
+            
+        if self.readloop_task:
+            self.readloop_task.cancel()
+            self.readloop_task = None
             
         self.want_connected = False
         if not self.rtm_socket:
@@ -282,13 +289,17 @@ class Team:
             msg = None
             try:
                 msg = await socket.recv()
+            except asyncio.CancelledError:
+                # The read was cancelled as part of disconnect.
+                self.print('### readloop recv cancelled!')
+                return
             except websockets.ConnectionClosed:
                 self.print('<ConnectionClosed: %s>' % (self.short_name(),))
                 self.handle_disconnect()
                 # This socket is done with; exit this loop.
                 return
             except Exception as ex:
-                self.print_exception(ex, 'RTM receive')
+                self.print_exception(ex, 'RTM readloop')
             if not msg:
                 continue
                 

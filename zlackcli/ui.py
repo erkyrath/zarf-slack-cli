@@ -16,6 +16,17 @@ pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
 class ArgException(Exception):
     pass
 
+class UICommand:
+    def __init__(self, name, aliases, async, help, func):
+        self.name = name
+        self.aliases = set(aliases)
+        self.async = async
+        self.help = help
+        self.func = func
+            
+def uicommand(name, *aliases, async=False, help='???'):
+    return lambda func: UICommand(name, aliases, async, help, func)
+
 class UI:
     def __init__(self, client):
         self.client = client
@@ -115,24 +126,20 @@ class UI:
         if match:
             cmd = match.group(1).lower()
             args = val[ match.end() : ].split()
-            tup = self.handler_map.get(cmd)
-            if tup and isinstance(tup, str):
-                # synonym
-                tup = self.handler_map.get(tup)
-            if not tup:
+            handler = self.handler_map.get(cmd)
+            if not handler:
                 self.print('Command not recognized: /%s' % (cmd,))
                 return
-            (handler, isasync) = tup
-            if not isasync:
+            if not handler.async:
                 try:
-                    handler(self, args)
+                    handler.func(self, args)
                 except ArgException as ex:
                     self.print('Command /%s: %s' % (cmd, ex,))
                     return
                 except Exception as ex:
                     self.print_exception(ex, 'Command /%s' % (cmd,))
             else:
-                task = self.client.evloop.create_task(handler(self, args))
+                task = self.client.evloop.create_task(handler.func(self, args))
                 def callback(future):
                     ex = future.exception()
                     if ex and isinstance(ex, ArgException):
@@ -455,7 +462,9 @@ class UI:
         else:
             raise ArgException('Expected zero or one arguments')
         return team
-    
+
+    @uicommand('help', '?',
+               help='/help -- this list')
     def cmd_help(self, args):
         """Command: display the command list.
         """
@@ -471,11 +480,15 @@ class UI:
         self.print('/alias [team] alias,alias,... -- set the aliases for a team')
         self.print('/debug [bool] -- set stream debugging on/off or toggle')
 
+    @uicommand('auth',
+               help='/auth -- request authentication to a Slack team')
     def cmd_auth(self, args):
         """Command: authenticate to a Slack team.
         """
         self.client.begin_auth()
         
+    @uicommand('debug',
+               help='/debug [bool] -- set stream debugging on/off or toggle')
     def cmd_debug(self, args):
         """Command: set or toggle the debug_messages flag, which shows all
         commands that go to or from the Slack server.
@@ -488,6 +501,8 @@ class UI:
             raise ArgException('Expected zero or one arguments')
         self.print('Message debugging now %s' % (self.debug_messages,))
 
+    @uicommand('connect',
+               help='/connect [team] -- connect (or reconnect) to a team')
     def cmd_connect(self, args):
         """Command: connect to a group. If we're already connected, disconnect
         and then reconnect.
@@ -495,6 +510,8 @@ class UI:
         team = self.parse_team_or_current(args)
         team.rtm_connect()
 
+    @uicommand('disconnect',
+               help='/disconnect [team] -- disconnect from a team')
     def cmd_disconnect(self, args):
         """Command: disconnect from a group. This only applies to the RTM
         connection.
@@ -507,6 +524,8 @@ class UI:
         if self.curchannel and self.curchannel[0] == team.key:
             self.curchannel = None
 
+    @uicommand('teams',
+               help='/teams -- list all teams you are authorized with')
     def cmd_teams(self, args):
         """Command: display the list of teams. Asterisk indicates an active
         RTM connection.
@@ -527,6 +546,8 @@ class UI:
                 aliasstr = ''
             self.print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
     
+    @uicommand('users',
+               help='/users [team] -- list all users in the current team or a named team')
     def cmd_users(self, args):
         """Command: display the list of users.
         """
@@ -537,6 +558,8 @@ class UI:
             idstring = (' (id %s)' % (user.id,) if self.debug_messages else '')
             self.print('  %s%s: %s' % (user.name, idstring, user.real_name))
     
+    @uicommand('channels',
+               help='/channels [team] -- list all channels in the current team or a named team')
     def cmd_channels(self, args):
         """Command: display the list of channels. Asterisk marks channels
         that we are members of. Muted and private channels are also flagged.
@@ -552,12 +575,16 @@ class UI:
             muteflag = (' (mute)' if chan.muted() else '')
             self.print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
+    @uicommand('reload', async=True,
+               help='/reload [team] -- reload users and channels for a team')
     async def cmd_reload(self, args):
         """Command: reload user and channel data from a group.
         """
         team = self.parse_team_or_current(args)
         await team.load_connection_data()
 
+    @uicommand('recap', async=True,
+               help='/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
     async def cmd_recap(self, args):
         """Command: recap messages from a channel, going back a given
         interval. The interval can be a number like "10" (minutes), or
@@ -603,6 +630,8 @@ class UI:
             if not cursor:
                 break
         
+    @uicommand('alias', 'aliases',
+               help='/alias [team] alias,alias,... -- set the aliases for a team')
     def cmd_alias(self, args):
         """Command: Set the aliases for a team.
         """
@@ -628,21 +657,26 @@ class UI:
         self.client.prefs.teamput(team, 'aliases', aliases)
         self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
 
-    handler_map = {
-        'help': (cmd_help, False),
-        '?': 'help',
-        'auth': (cmd_auth, False),
-        'debug': (cmd_debug, False),
-        'connect': (cmd_connect, False),
-        'disconnect': (cmd_disconnect, False),
-        'teams': (cmd_teams, False),
-        'users': (cmd_users, False),
-        'channels': (cmd_channels, False),
-        'reload': (cmd_reload, True),
-        'recap': (cmd_recap, True),
-        'alias': (cmd_alias, False),
-        'aliases': 'alias',
-    }
+    handler_list = [
+        cmd_help,
+        cmd_auth,
+        cmd_debug,
+        cmd_connect,
+        cmd_disconnect,
+        cmd_teams,
+        cmd_users,
+        cmd_channels,
+        cmd_reload,
+        cmd_recap,
+        cmd_alias,
+    ]
+    
+    handler_map = {}
+    for cmd in handler_list:
+        handler_map[cmd.name] = cmd
+        if cmd.aliases:
+            for alias in cmd.aliases:
+                handler_map[alias] = cmd
     
 
 from .teamdat import Team, get_next_cursor

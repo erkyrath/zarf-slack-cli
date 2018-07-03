@@ -468,6 +468,7 @@ class UI:
         self.print('/channels [team] -- list all channels in the current team or a named team')
         self.print('/users [team] -- list all users in the current team or a named team')
         self.print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
+        self.print('/alias [team] alias,alias,... -- set the aliases for a team')
         self.print('/debug [bool] -- set stream debugging on/off or toggle')
 
     def cmd_auth(self, args):
@@ -602,6 +603,31 @@ class UI:
             if not cursor:
                 break
         
+    def cmd_alias(self, args):
+        """Command: Set the aliases for a team.
+        """
+        if not args:
+            # Show the current aliases
+            if not self.curchannel:
+                raise ArgException('No current team.')
+            (teamid, chanid) = self.curchannel
+            team = self.client.get_team(teamid)
+            if not team:
+                raise ArgException('Team not recognized: %s' % (teamid,))
+            aliases = team.get_aliases()
+            if not aliases:
+                self.print('%s: no aliases set.' % (team.team_name,))
+            else:
+                self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
+            return
+        val = args.pop()
+        aliases = val.split(',')
+        aliases = [ val.strip() for val in aliases ]
+        aliases = [ val for val in aliases if val ]
+        team = self.parse_team_or_current(args)
+        self.client.prefs.teamput(team, 'aliases', aliases)
+        self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
+
     handler_map = {
         'help': (cmd_help, False),
         '?': 'help',
@@ -614,6 +640,8 @@ class UI:
         'channels': (cmd_channels, False),
         'reload': (cmd_reload, True),
         'recap': (cmd_recap, True),
+        'alias': (cmd_alias, False),
+        'aliases': 'alias',
     }
     
 

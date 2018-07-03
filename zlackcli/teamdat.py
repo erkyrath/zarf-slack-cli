@@ -291,7 +291,6 @@ class Team:
                 msg = await socket.recv()
             except asyncio.CancelledError:
                 # The read was cancelled as part of disconnect.
-                self.print('### readloop recv cancelled!')
                 return
             except websockets.ConnectionClosed:
                 self.print('<ConnectionClosed: %s>' % (self.short_name(),))

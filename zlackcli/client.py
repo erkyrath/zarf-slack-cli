@@ -176,11 +176,8 @@ class ZlackClient:
         curtime = time.time()
         while True:
             await asyncio.sleep(5.0)
-            self.print('### ping')
             elapsed = time.time() - curtime
             if elapsed > 30.0:
-                self.print('### detected sleep of %s seconds' % (elapsed,))
-                
                 async def reconnect_if_connected(team):
                     if team.rtm_connected():
                         await team.rtm_connect_async()
@@ -189,7 +186,6 @@ class ZlackClient:
                     (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ])
                     for res in done:
                         self.print_exception(res.exception(), 'Could not reconnect team')
-                self.print('### finished parallel reconnect')
                 
             curtime = time.time()
 

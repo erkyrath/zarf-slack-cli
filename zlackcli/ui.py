@@ -126,20 +126,20 @@ class UI:
         if match:
             cmd = match.group(1).lower()
             args = val[ match.end() : ].split()
-            handler = self.handler_map.get(cmd)
-            if not handler:
+            han = self.handler_map.get(cmd)
+            if not han:
                 self.print('Command not recognized: /%s' % (cmd,))
                 return
-            if not handler.async:
+            if not han.async:
                 try:
-                    handler.func(self, args)
+                    han.func(self, args)
                 except ArgException as ex:
                     self.print('Command /%s: %s' % (cmd, ex,))
                     return
                 except Exception as ex:
                     self.print_exception(ex, 'Command /%s' % (cmd,))
             else:
-                task = self.client.evloop.create_task(handler.func(self, args))
+                task = self.client.evloop.create_task(han.func(self, args))
                 def callback(future):
                     ex = future.exception()
                     if ex and isinstance(ex, ArgException):
@@ -672,11 +672,11 @@ class UI:
     ]
     
     handler_map = {}
-    for cmd in handler_list:
-        handler_map[cmd.name] = cmd
-        if cmd.aliases:
-            for alias in cmd.aliases:
-                handler_map[alias] = cmd
+    for han in handler_list:
+        handler_map[han.name] = han
+        if han.aliases:
+            for alias in han.aliases:
+                handler_map[alias] = han
     
 
 from .teamdat import Team, get_next_cursor

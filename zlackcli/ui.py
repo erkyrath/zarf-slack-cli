@@ -468,17 +468,8 @@ class UI:
     def cmd_help(self, args):
         """Command: display the command list.
         """
-        self.print('/help -- this list')
-        self.print('/auth -- request authentication to a Slack team')
-        self.print('/teams -- list all teams you are authorized with')
-        self.print('/connect [team] -- connect (or reconnect) to a team')
-        self.print('/disconnect [team] -- disconnect from a team')
-        self.print('/reload [team] -- reload users and channels for a team')
-        self.print('/channels [team] -- list all channels in the current team or a named team')
-        self.print('/users [team] -- list all users in the current team or a named team')
-        self.print('/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
-        self.print('/alias [team] alias,alias,... -- set the aliases for a team')
-        self.print('/debug [bool] -- set stream debugging on/off or toggle')
+        for han in self.handler_list:
+            self.print(han.help)
 
     @uicommand('auth',
                help='/auth -- request authentication to a Slack team')
@@ -660,7 +651,6 @@ class UI:
     handler_list = [
         cmd_help,
         cmd_auth,
-        cmd_debug,
         cmd_connect,
         cmd_disconnect,
         cmd_teams,
@@ -669,6 +659,7 @@ class UI:
         cmd_reload,
         cmd_recap,
         cmd_alias,
+        cmd_debug,
     ]
     
     handler_map = {}

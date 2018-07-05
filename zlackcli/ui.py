@@ -51,6 +51,10 @@ class UI:
         self.lastchannel = None
         self.debug_messages = False
 
+        tup = self.client.prefs.get('curchannel', None)
+        if tup:
+            self.curchannel = tuple(tup)
+
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.)  You typically won't want to customize this;
@@ -195,6 +199,7 @@ class UI:
             team.lastchannel = chanid
             self.curchannel = (team.key, chanid)
             self.lastchannel = self.curchannel
+            self.client.prefs.put('curchannel', self.curchannel)
     
         # I habitually type lines starting with semicolon. Strip that out.
         if val.startswith(';'):
@@ -206,6 +211,7 @@ class UI:
                     self.print('No recent channel.')
                 else:
                     self.curchannel = self.lastchannel
+                    self.client.prefs.put('curchannel', self.curchannel)
                 return
             
         # TODO: A line starting with colon should generate a me_message.
@@ -555,6 +561,7 @@ class UI:
         team.rtm_disconnect()
         if self.curchannel and self.curchannel[0] == team.key:
             self.curchannel = None
+            self.client.prefs.put('curchannel', self.curchannel)
 
     @uicommand('teams',
                help='list all teams you are authorized with')

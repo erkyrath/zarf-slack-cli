@@ -17,15 +17,16 @@ class ArgException(Exception):
     pass
 
 class UICommand:
-    def __init__(self, name, aliases, async, help, func):
+    def __init__(self, name, aliases, async, help, arghelp, func):
         self.name = name
         self.aliases = set(aliases)
         self.async = async
         self.help = help
+        self.arghelp = arghelp
         self.func = func
             
-def uicommand(name, *aliases, async=False, help='???'):
-    return lambda func: UICommand(name, aliases, async, help, func)
+def uicommand(name, *aliases, async=False, help='???', arghelp=None):
+    return lambda func: UICommand(name, aliases, async, help, arghelp, func)
 
 class UI:
     def __init__(self, client):
@@ -479,6 +480,7 @@ class UI:
         self.client.begin_auth()
         
     @uicommand('debug',
+               arghelp='[bool]',
                help='/debug [bool] -- set stream debugging on/off or toggle')
     def cmd_debug(self, args):
         """Command: set or toggle the debug_messages flag, which shows all
@@ -493,6 +495,7 @@ class UI:
         self.print('Message debugging now %s' % (self.debug_messages,))
 
     @uicommand('connect',
+               arghelp='[team]',
                help='/connect [team] -- connect (or reconnect) to a team')
     def cmd_connect(self, args):
         """Command: connect to a group. If we're already connected, disconnect
@@ -502,6 +505,7 @@ class UI:
         team.rtm_connect()
 
     @uicommand('disconnect',
+               arghelp='[team]',
                help='/disconnect [team] -- disconnect from a team')
     def cmd_disconnect(self, args):
         """Command: disconnect from a group. This only applies to the RTM
@@ -538,6 +542,7 @@ class UI:
             self.print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
     
     @uicommand('users',
+               arghelp='[team]',
                help='/users [team] -- list all users in the current team or a named team')
     def cmd_users(self, args):
         """Command: display the list of users.
@@ -550,6 +555,7 @@ class UI:
             self.print('  %s%s: %s' % (user.name, idstring, user.real_name))
     
     @uicommand('channels',
+               arghelp='[team]',
                help='/channels [team] -- list all channels in the current team or a named team')
     def cmd_channels(self, args):
         """Command: display the list of channels. Asterisk marks channels
@@ -567,6 +573,7 @@ class UI:
             self.print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
     @uicommand('reload', async=True,
+               arghelp='[team]',
                help='/reload [team] -- reload users and channels for a team')
     async def cmd_reload(self, args):
         """Command: reload user and channel data from a group.
@@ -575,6 +582,7 @@ class UI:
         await team.load_connection_data()
 
     @uicommand('recap', async=True,
+               arghelp='[channel] [minutes]',
                help='/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
     async def cmd_recap(self, args):
         """Command: recap messages from a channel, going back a given
@@ -622,6 +630,7 @@ class UI:
                 break
         
     @uicommand('alias', 'aliases',
+               arghelp='[team] alias,alias,...',
                help='/alias [team] alias,alias,... -- set the aliases for a team')
     def cmd_alias(self, args):
         """Command: Set the aliases for a team.

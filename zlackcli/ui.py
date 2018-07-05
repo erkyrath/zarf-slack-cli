@@ -67,20 +67,30 @@ class UI:
         self.client.print_exception(ex, label)
         
     def display_current_channel(self):
+        """Return a human-readable string representing the current channel.
+        This is used as the input prompt.
+        """
         if self.curchannel:
             (teamkey, chanid) = self.curchannel
             return '%s/%s' % (self.team_name(teamkey), self.channel_name(teamkey, chanid))
         return ''
 
     def note_send_message(self, msg, team):
+        """Display a raw message if debugging is on.
+        """
         if self.debug_messages:
             self.print('Sent (%s): %s' % (self.team_name(team), msg,))
         
     def note_receive_message(self, msg, team):
+        """Display a raw message if debugging is on.
+        """
         if self.debug_messages:
             self.print('Received (%s): %s' % (self.team_name(team), msg,))
         
     def handle_message(self, msg, team):
+        """Handle one message received from the Slack server (over the
+        RTM websocket).
+        """
         typ = msg.get('type')
 
         if typ is None and msg.get('reply_to'):

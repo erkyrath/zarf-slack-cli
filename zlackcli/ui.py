@@ -485,6 +485,9 @@ class UI:
             raise ArgException('Expected zero or one arguments')
         return team
 
+    # The user (slash) commands begin here. Each uses the @uicommand
+    # decorator, and also must be listed in the handler_list array.
+    
     @uicommand('help', '?',
                help='this list')
     def cmd_help(self, args):
@@ -681,6 +684,8 @@ class UI:
         self.client.prefs.teamput(team, 'aliases', aliases)
         self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
 
+    # This lists all the slash commands we recognize. The /help command
+    # lists commands in this order.
     handler_list = [
         cmd_help,
         cmd_auth,
@@ -694,7 +699,9 @@ class UI:
         cmd_alias,
         cmd_debug,
     ]
-    
+
+    # Construct the map of slash command strings to UICommand objects.
+    # Both command names and command aliases are recognized as keys.
     handler_map = {}
     for han in handler_list:
         handler_map[han.name] = han

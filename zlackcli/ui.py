@@ -465,15 +465,18 @@ class UI:
         return team
 
     @uicommand('help', '?',
-               help='/help -- this list')
+               help='this list')
     def cmd_help(self, args):
         """Command: display the command list.
         """
         for han in self.handler_list:
-            self.print(han.help)
+            prefix = ''
+            if han.arghelp:
+                prefix = ' ' + han.arghelp
+            self.print('/%s%s -- %s' % (han.name, prefix, han.help),)
 
     @uicommand('auth',
-               help='/auth -- request authentication to a Slack team')
+               help='request authentication to a Slack team')
     def cmd_auth(self, args):
         """Command: authenticate to a Slack team.
         """
@@ -481,7 +484,7 @@ class UI:
         
     @uicommand('debug',
                arghelp='[bool]',
-               help='/debug [bool] -- set stream debugging on/off or toggle')
+               help='set stream debugging on/off or toggle')
     def cmd_debug(self, args):
         """Command: set or toggle the debug_messages flag, which shows all
         commands that go to or from the Slack server.
@@ -496,7 +499,7 @@ class UI:
 
     @uicommand('connect',
                arghelp='[team]',
-               help='/connect [team] -- connect (or reconnect) to a team')
+               help='connect (or reconnect) to a team')
     def cmd_connect(self, args):
         """Command: connect to a group. If we're already connected, disconnect
         and then reconnect.
@@ -506,7 +509,7 @@ class UI:
 
     @uicommand('disconnect',
                arghelp='[team]',
-               help='/disconnect [team] -- disconnect from a team')
+               help='disconnect from a team')
     def cmd_disconnect(self, args):
         """Command: disconnect from a group. This only applies to the RTM
         connection.
@@ -520,7 +523,7 @@ class UI:
             self.curchannel = None
 
     @uicommand('teams',
-               help='/teams -- list all teams you are authorized with')
+               help='list all teams you are authorized with')
     def cmd_teams(self, args):
         """Command: display the list of teams. Asterisk indicates an active
         RTM connection.
@@ -543,7 +546,7 @@ class UI:
     
     @uicommand('users',
                arghelp='[team]',
-               help='/users [team] -- list all users in the current team or a named team')
+               help='list all users in the current team or a named team')
     def cmd_users(self, args):
         """Command: display the list of users.
         """
@@ -556,7 +559,7 @@ class UI:
     
     @uicommand('channels',
                arghelp='[team]',
-               help='/channels [team] -- list all channels in the current team or a named team')
+               help='list all channels in the current team or a named team')
     def cmd_channels(self, args):
         """Command: display the list of channels. Asterisk marks channels
         that we are members of. Muted and private channels are also flagged.
@@ -574,7 +577,7 @@ class UI:
 
     @uicommand('reload', async=True,
                arghelp='[team]',
-               help='/reload [team] -- reload users and channels for a team')
+               help='reload users and channels for a team')
     async def cmd_reload(self, args):
         """Command: reload user and channel data from a group.
         """
@@ -583,7 +586,7 @@ class UI:
 
     @uicommand('recap', async=True,
                arghelp='[channel] [minutes]',
-               help='/recap [channel] [minutes] -- recap an amount of time (default five minutes) on the current channel or a named channel')
+               help='recap an amount of time (default five minutes) on the current channel or a named channel')
     async def cmd_recap(self, args):
         """Command: recap messages from a channel, going back a given
         interval. The interval can be a number like "10" (minutes), or
@@ -631,7 +634,7 @@ class UI:
         
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',
-               help='/alias [team] alias,alias,... -- set the aliases for a team')
+               help='set the aliases for a team')
     def cmd_alias(self, args):
         """Command: Set the aliases for a team.
         """

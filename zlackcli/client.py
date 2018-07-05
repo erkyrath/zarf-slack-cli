@@ -173,6 +173,20 @@ class ZlackClient:
             self.session = None
 
     async def wakeloop_async(self):
+        """This task runs in the background and watches the system clock.
+        If the clock jumps more than thirty seconds, then the machine was
+        put to sleep for a while and we need to reconnect all our websockets.
+
+        (Or the user changed the clock time, in which case we don't need to
+        reconnect all our websockets but we do it anyway. Oops.)
+
+        (This exists because the async websockets library isn't real
+        good at announcing timeout errors. If we just wait for
+        ConnectionClosed exceptions to appear, we could be staring at
+        a failed socket connection for a long time -- a minute or more.
+        So we proactively kick everything on any apparent sleep/wake
+        cycle.)
+        """
         curtime = time.time()
         while True:
             await asyncio.sleep(5.0)

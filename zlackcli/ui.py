@@ -14,9 +14,15 @@ pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.I
 pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
 
 class ArgException(Exception):
+    """ArgException: Raised whenever a user command doesn't conform to the
+    command syntax.
+    """
     pass
 
 class UICommand:
+    """UICommand: Represents a user (slash) command. These objects
+    are the result of the @uicommand decorator.
+    """
     def __init__(self, name, aliases, async, help, arghelp, func):
         self.name = name
         self.aliases = set(aliases)
@@ -26,9 +32,18 @@ class UICommand:
         self.func = func
             
 def uicommand(name, *aliases, async=False, help='???', arghelp=None):
+    """The @uicommand decorator appears on UI methods which implement
+    user (slash) commands.
+    """
     return lambda func: UICommand(name, aliases, async, help, arghelp, func)
 
 class UI:
+    """UI: This object handles the user-interface side of the client.
+    When the user types a command, it is handed to the handle_input()
+    method; when a message arrives from Slack, it is handed to the
+    handle_message() method. The class deals with all the input parsing
+    and output formatting.
+    """
     def __init__(self, client):
         self.client = client
 
@@ -38,8 +53,8 @@ class UI:
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
-        internal line breaks.) This is normally just print(), but you could
-        subclass this and customize it.
+        internal line breaks.)  You typically won't want to customize this;
+        instead, replace the Client.print() method.
         """
         self.client.print(msg)
 

@@ -50,8 +50,8 @@ class Team:
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
-        internal line breaks.) This is normally just print(), but you could
-        subclass this and customize it.
+        internal line breaks.) You typically won't want to customize this;
+        instead, replace the Client.print() method.
         """
         self.client.print(msg)
 

@@ -76,13 +76,14 @@ There are a handful of special commands, which start with a slash.
 
 - */help* -- this list
 - */auth* -- request authentication to a Slack team
-- */teams* -- list all teams you are authorized with
 - */connect [team]* -- connect (or reconnect) to a team
 - */disconnect [team]* -- disconnect from a team
-- */reload [team]* -- reload users and channels for a team
-- */channels [team]* -- list all channels in the current team or a named team
+- */teams* -- list all teams you are authorized with
 - */users [team]* -- list all users in the current team or a named team
+- */channels [team]* -- list all channels in the current team or a named team
+- */reload [team]* -- reload users and channels for a team
 - */recap \[channel] \[interval]* -- recap an amount of time (default five minutes) on the current channel or a named channel
+- */alias [team] alias,alias,...* -- set the aliases for a team
 - */debug [bool]* -- set stream debugging on/off or toggle
 
 

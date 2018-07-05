@@ -626,7 +626,7 @@ class UI:
         await team.load_connection_data()
 
     @uicommand('recap', async=True,
-               arghelp='[channel] [minutes]',
+               arghelp='[channel] [interval]',
                help='recap an amount of time (default five minutes) on the current channel or a named channel')
     async def cmd_recap(self, args):
         """Command: recap messages from a channel, going back a given

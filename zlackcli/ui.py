@@ -85,7 +85,6 @@ class UI:
         if typ == 'hello':
             # Websocket-connected message.
             self.print('<Connected: %s>' % (self.team_name(team)))
-            ### add five-second ping task? (to trigger socket timeout errors, if necessary)
             return
         
         if typ == 'message':

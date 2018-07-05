@@ -123,9 +123,12 @@ class Team:
             ### channels, users, types: convert list to comma-separated string
             ### other lists/dicts: convert to json.dumps()
             data[key] = val
-            
+        self.client.ui.note_send_message(data, self)
+        
         async with self.session.post(url, data=data) as resp:
-            return await resp.json()
+            res = await resp.json()
+            self.client.ui.note_receive_message(res, self)
+            return res
     
     async def api_call_check(self, method, **kwargs):
         """Make a web API call. Return the result.

@@ -311,6 +311,7 @@ class Team:
             except Exception as ex:
                 self.print_exception(ex, 'JSON decode')
                 continue
+            self.client.ui.note_receive_message(msg, self)
             try:
                 self.client.ui.handle_message(obj, self)
             except Exception as ex:

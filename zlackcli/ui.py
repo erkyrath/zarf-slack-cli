@@ -66,8 +66,6 @@ class UI:
             self.print('Received (%s): %s' % (self.team_name(team), msg,))
         
     def handle_message(self, msg, team):
-        self.note_receive_message(msg, team)
-            
         typ = msg.get('type')
 
         if typ is None and msg.get('reply_to'):

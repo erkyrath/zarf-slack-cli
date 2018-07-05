@@ -87,6 +87,12 @@ There are a handful of special commands, which start with a slash.
 - */debug [bool]* -- set stream debugging on/off or toggle
 
 
+## Version history
+
+- 2.0.0: Completely rewritten client library, fully async, no multithreading.
+- 1.0.0: Original release. Used the [Python slackclient][slackclient] library. Had questionable thread-safety logic.
+
+
 ## Work in progress
 
 The client is usable, but -- of course -- not complete in any sense.

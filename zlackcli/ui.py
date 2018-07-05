@@ -57,6 +57,10 @@ class UI:
             return '%s/%s' % (self.team_name(teamkey), self.channel_name(teamkey, chanid))
         return ''
 
+    def note_send_message(self, msg, team):
+        if self.debug_messages:
+            self.print('Sent (%s): %s' % (self.team_name(team), msg,))
+        
     def handle_message(self, msg, team):
         if self.debug_messages:
             self.print('Received (%s): %s' % (self.team_name(team), msg,))
@@ -277,6 +281,8 @@ class UI:
         """Look up a team name, either as an alias (if available) or the
         full name. The argument can be a Team or team key string.
         """
+        if team is None:
+            return '<no team>'
         if not isinstance(team, Team):
             if team not in self.client.teams:
                 return '???%s' % (team,)

@@ -336,8 +336,7 @@ class Team:
             self.msg_counter += 1
             msg['id'] = self.msg_counter
             self.msg_in_flight[msg['id']] = msg
-        #if debug_messages:
-        #    thread.add_output('Sending (%s): %s' % (team_name(self.teamref), msg,))
+        self.client.ui.note_send_message(msg, self)
         try:
             await self.rtm_socket.send(json.dumps(msg))
         except websockets.ConnectionClosed:

@@ -21,6 +21,7 @@ class ZlackClient:
     
     def __init__(self, tokenpath, prefspath=None, opts={}, loop=None):
         if loop is None:
+            # Py3.7: should call get_running_loop() instead
             self.evloop = asyncio.get_event_loop()
         else:
             self.evloop = loop

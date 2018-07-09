@@ -181,12 +181,15 @@ class ZlackClient:
         (Or the user changed the clock time, in which case we don't need to
         reconnect all our websockets but we do it anyway. Oops.)
 
+        We also ping the server(s).
+
         (This exists because the async websockets library isn't real
         good at announcing timeout errors. If we just wait for
         ConnectionClosed exceptions to appear, we could be staring at
         a failed socket connection for a long time -- a minute or more.
         So we proactively kick everything on any apparent sleep/wake
-        cycle.)
+        cycle. The server ping should make any other timeout errors
+        visible.)
         """
         curtime = time.time()
         while True:
@@ -202,6 +205,16 @@ class ZlackClient:
                     for res in done:
                         self.print_exception(res.exception(), 'Could not reconnect team')
                 
+            # Server pings. We do this right after the time check because
+            # that is a better way to avoid timeout errors. Now we've got
+            # all the sockets restabilized, but timeout errors are still
+            # possible; the pings will root them out.
+            for team in self.teams.values():
+                if team.rtm_connected():
+                    await team.rtm_send_async({ 'type':'ping', 'id':None })
+
+            # Note the time for next go-around. (Should be exactly five
+            # seconds, but if the machine sleeps, it'll be more.)
             curtime = time.time()
 
     def begin_auth(self):

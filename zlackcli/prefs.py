@@ -93,6 +93,17 @@ class Prefs:
         submap[key] = val
         self.mark_dirty()
 
+    def tree_get(self, key, team=None, chan=None, defval=None):
+        if team is not None and chan is not None:
+            val = self.channel_get(team, chan, key)
+            if val is not None:
+                return val
+        if team is not None:
+            val = self.team_get(team, key)
+            if val is not None:
+                return val
+        return self.get(key, defval)
+
     def mark_dirty(self):
         if self.write_handle:
             self.write_handle.cancel()

@@ -39,7 +39,7 @@ class Prefs:
         self.map[key] = val
         self.mark_dirty()
 
-    def team_get(self, team, key, defval=None):
+    def team_get(self, key, team, defval=None):
         if isinstance(team, Team):
             team = team.key
         map = self.map['teams'].get(team)
@@ -47,7 +47,7 @@ class Prefs:
             return defval
         return map.get(key, defval)
 
-    def team_put(self, team, key, val):
+    def team_put(self, key, val, team):
         if isinstance(team, Team):
             team = team.key
         map = self.map['teams'].get(team)
@@ -57,7 +57,7 @@ class Prefs:
         map[key] = val
         self.mark_dirty()
 
-    def channel_get(self, team, chan, key, defval=None):
+    def channel_get(self, key, team, chan, defval=None):
         if isinstance(team, Team):
             team = team.key
         if isinstance(chan, Channel):
@@ -73,7 +73,7 @@ class Prefs:
             return defval
         return submap.get(key, defval)
 
-    def channel_put(self, team, chan, key, val):
+    def channel_put(self, key, val, team, chan):
         if isinstance(team, Team):
             team = team.key
         if isinstance(chan, Channel):

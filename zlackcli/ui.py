@@ -702,7 +702,7 @@ class UI:
         aliases = [ val.strip() for val in aliases ]
         aliases = [ val for val in aliases if val ]
         team = self.parse_team_or_current(args)
-        self.client.prefs.team_put(team, 'aliases', aliases)
+        self.client.prefs.team_put('aliases', aliases, team)
         self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
 
     # This lists all the slash commands we recognize. The /help command

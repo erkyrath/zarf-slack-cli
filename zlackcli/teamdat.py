@@ -66,7 +66,7 @@ class Team:
     def get_aliases(self):
         """Return a list of channel aliases or None.
         """
-        ls = self.client.prefs.team_get(self, 'aliases')
+        ls = self.client.prefs.team_get('aliases', self)
         if ls:
             return ls
         return None
@@ -74,7 +74,7 @@ class Team:
     def short_name(self):
         """Return the team name or the first alias.
         """
-        ls = self.client.prefs.team_get(self, 'aliases')
+        ls = self.client.prefs.team_get('aliases', self)
         if ls:
             return ls[0]
         return self.team_name

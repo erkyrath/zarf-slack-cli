@@ -39,7 +39,7 @@ class Prefs:
         self.map[key] = val
         self.mark_dirty()
 
-    def teamget(self, team, key, defval=None):
+    def team_get(self, team, key, defval=None):
         if isinstance(team, Team):
             team = team.key
         map = self.map['teams'].get(team)
@@ -47,7 +47,7 @@ class Prefs:
             return defval
         return map.get(key, defval)
 
-    def teamput(self, team, key, val):
+    def team_put(self, team, key, val):
         if isinstance(team, Team):
             team = team.key
         map = self.map['teams'].get(team)

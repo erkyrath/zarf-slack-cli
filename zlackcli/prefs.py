@@ -95,11 +95,11 @@ class Prefs:
 
     def tree_get(self, key, team=None, chan=None, defval=None):
         if team is not None and chan is not None:
-            val = self.channel_get(team, chan, key)
+            val = self.channel_get(key, team, chan)
             if val is not None:
                 return val
         if team is not None:
-            val = self.team_get(team, key)
+            val = self.team_get(key, team)
             if val is not None:
                 return val
         return self.get(key, defval)

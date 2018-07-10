@@ -145,10 +145,10 @@ class UI:
                 self.print(val)
                 self.lastchannel = (team.key, chanid)
                 return
-            if subtype == 'slackbot_response' and True:
-                # Mute Slackbot responses!
-                ### This should be per-channel, or per-team, or global. Hm. Need more prefs flexibility.
-                return
+            if subtype == 'slackbot_response':
+                val = self.client.prefs.tree_get('slackbot_mute', team, chanid)
+                if val:
+                    return
             text = self.decode_message(team, msg.get('text'), msg.get('attachments'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             colon = (':' if subtype != 'me_message' else '')

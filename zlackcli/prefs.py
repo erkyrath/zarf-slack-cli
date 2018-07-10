@@ -57,6 +57,42 @@ class Prefs:
         map[key] = val
         self.mark_dirty()
 
+    def channel_get(self, team, chan, key, defval=None):
+        if isinstance(team, Team):
+            team = team.key
+        if isinstance(chan, Channel):
+            chan = chan.id
+        map = self.map['teams'].get(team)
+        if map is None:
+            return defval
+        chanmap = map.get('channels')
+        if chanmap is None:
+            return defval
+        submap = chanmap.get(chan)
+        if submap is None:
+            return defval
+        return submap.get(key, defval)
+
+    def channel_put(self, team, chan, key, val):
+        if isinstance(team, Team):
+            team = team.key
+        if isinstance(chan, Channel):
+            chan = chan.id
+        map = self.map['teams'].get(team)
+        if map is None:
+            map = OrderedDict()
+            self.map['teams'][team] = map
+        chanmap = map.get('channels')
+        if chanmap is None:
+            chanmap = OrderedDict()
+            map['channels'] = chanmap
+        submap = chanmap.get(chan)
+        if submap is None:
+            submap = OrderedDict()
+            chanmap[chan] = submap
+        submap[key] = val
+        self.mark_dirty()
+
     def mark_dirty(self):
         if self.write_handle:
             self.write_handle.cancel()
@@ -69,4 +105,4 @@ class Prefs:
             self.write_file()
             
 
-from .teamdat import Team
+from .teamdat import Team, Channel

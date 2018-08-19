@@ -104,6 +104,8 @@ class UI:
                 self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
                 return
             # We should already have received (and printed) the sent message.
+            # (Although if the channel was muted, it *wasn't* printed, so
+            # maybe we should print it now.)
             return
         
         if typ == 'hello':

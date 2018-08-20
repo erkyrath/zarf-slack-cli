@@ -103,9 +103,12 @@ class UI:
             if not origmsg:
                 self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
                 return
-            # We should already have received (and printed) the sent message.
-            # (Although if the channel was muted, it *wasn't* printed, so
-            # maybe we should print it now.)
+            chanid = origmsg.get('channel', '')
+            userid = origmsg.get('user', '')
+            # Print our successful messages even on muted channels
+            text = self.decode_message(team, msg.get('text'), msg.get('attachments'))
+            val = '[%s/%s] %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
+            self.print(val)
             return
         
         if typ == 'hello':

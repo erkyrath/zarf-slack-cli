@@ -23,19 +23,19 @@ class UICommand:
     """UICommand: Represents a user (slash) command. These objects
     are the result of the @uicommand decorator.
     """
-    def __init__(self, name, aliases, async, help, arghelp, func):
+    def __init__(self, name, aliases, isasync, help, arghelp, func):
         self.name = name
         self.aliases = set(aliases)
-        self.async = async
+        self.isasync = isasync
         self.help = help
         self.arghelp = arghelp
         self.func = func
             
-def uicommand(name, *aliases, async=False, help='???', arghelp=None):
+def uicommand(name, *aliases, isasync=False, help='???', arghelp=None):
     """The @uicommand decorator appears on UI methods which implement
     user (slash) commands.
     """
-    return lambda func: UICommand(name, aliases, async, help, arghelp, func)
+    return lambda func: UICommand(name, aliases, isasync, help, arghelp, func)
 
 class UI:
     """UI: This object handles the user-interface side of the client.
@@ -168,7 +168,7 @@ class UI:
             if not han:
                 self.print('Command not recognized: /%s' % (cmd,))
                 return
-            if not han.async:
+            if not han.isasync:
                 try:
                     han.func(self, args)
                 except ArgException as ex:
@@ -620,7 +620,7 @@ class UI:
             muteflag = (' (mute)' if chan.muted() else '')
             self.print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
 
-    @uicommand('reload', async=True,
+    @uicommand('reload', isasync=True,
                arghelp='[team]',
                help='reload users and channels for a team')
     async def cmd_reload(self, args):
@@ -629,7 +629,7 @@ class UI:
         team = self.parse_team_or_current(args)
         await team.load_connection_data()
 
-    @uicommand('recap', async=True,
+    @uicommand('recap', isasync=True,
                arghelp='[channel] [interval]',
                help='recap an amount of time (default five minutes) on the current channel or a named channel')
     async def cmd_recap(self, args):

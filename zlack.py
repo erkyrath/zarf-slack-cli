@@ -6,6 +6,8 @@ import optparse
 import traceback
 import asyncio
 import prompt_toolkit
+import prompt_toolkit.patch_stdout
+import prompt_toolkit.eventloop
 
 import zlackcli.client
 
@@ -67,7 +69,8 @@ async def mainloop(client, evloop):
     while not done:
         try:
             prompt = client.ui.display_current_channel() + '> '
-            input = await prompt_toolkit.prompt_async(prompt, history=history, eventloop=evloop, patch_stdout=True)
+            with prompt_toolkit.patch_stdout.patch_stdout():
+                input = await prompt_toolkit.prompt(prompt, history=history, async_=True)
             input = input.rstrip()
             if input:
                 client.ui.handle_input(input)
@@ -84,6 +87,8 @@ async def mainloop(client, evloop):
 
 evloop = asyncio.get_event_loop()
 evloop.set_exception_handler(exception_handler)
+
+prompt_toolkit.eventloop.use_asyncio_event_loop()
 
 client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
 

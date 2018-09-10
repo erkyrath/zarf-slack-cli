@@ -16,7 +16,7 @@ This tool is written in Python3. You'll need a recent version of that. You'll al
 
 > `pip3 install slackclient aiohttp aiodns websockets`
 
-(This is written to [prompt-toolkit 1.0.15][prompt-toolkit]. This toolkit is undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
+(This is written to [prompt-toolkit 2.0.4][prompt-toolkit]. This toolkit is undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
 
 (Note that I am not using the official [Python slackclient][slackclient] library. It's crufty and doesn't support async code, so I wrote my own. Sorry! Feel free to borrow this one, folks...)
 

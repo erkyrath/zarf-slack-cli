@@ -49,6 +49,7 @@ class UI:
 
         self.curchannel = None
         self.lastchannel = None
+        self.presumedchannel = None
         self.debug_messages = False
 
         tup = self.client.prefs.get('curchannel', None)
@@ -78,6 +79,29 @@ class UI:
             (teamkey, chanid) = self.curchannel
             return '%s/%s' % (self.team_name(teamkey), self.channel_name(teamkey, chanid))
         return ''
+
+    def display_rprompt(self, session):
+        """Return the text to display on the right-hand side of the
+        input line. We use this to display a warning flag if we think
+        the user is mischannelling.
+        """
+        curtext = session.default_buffer.text
+        # The presumedchannel is the last channel seen when the user started
+        # typing. This is the one we assume they're replying to.
+        if not curtext:
+            self.presumedchannel = None
+            return ''
+        if self.presumedchannel is None:
+            self.presumedchannel = self.lastchannel
+        if curtext.startswith('#'):
+            # Explicit channel destination, so no need for a warning.
+            return ''
+        if self.curchannel != self.presumedchannel:
+            if self.presumedchannel is None:
+                return '*?'
+            else:
+                (teamkey, chanid) = self.presumedchannel
+                return '*%s?' % (self.channel_name(teamkey, chanid),)
 
     def note_send_message(self, msg, team):
         """Display a raw message if debugging is on.

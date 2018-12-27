@@ -65,13 +65,18 @@ async def mainloop(client, evloop):
     # Create a history storage object for the command-line prompt.
     history = prompt_toolkit.history.InMemoryHistory()
 
+    # Set up the prompt session.
     psession = prompt_toolkit.PromptSession(history=history)
+    
+    # And a callback for generating the right-hand prompt flag
+    rprompt_func = lambda:client.ui.display_rprompt(psession)
+    
     done = False
     while not done:
         try:
             prompt = client.ui.display_current_channel() + '> '
             with prompt_toolkit.patch_stdout.patch_stdout():
-                input = await psession.prompt(prompt, async_=True)
+                input = await psession.prompt(prompt, rprompt=rprompt_func, async_=True)
             input = input.rstrip()
             if input:
                 client.ui.handle_input(input)

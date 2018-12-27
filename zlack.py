@@ -65,12 +65,13 @@ async def mainloop(client, evloop):
     # Create a history storage object for the command-line prompt.
     history = prompt_toolkit.history.InMemoryHistory()
 
+    psession = prompt_toolkit.PromptSession(history=history)
     done = False
     while not done:
         try:
             prompt = client.ui.display_current_channel() + '> '
             with prompt_toolkit.patch_stdout.patch_stdout():
-                input = await prompt_toolkit.prompt(prompt, history=history, async_=True)
+                input = await psession.prompt(prompt, async_=True)
             input = input.rstrip()
             if input:
                 client.ui.handle_input(input)

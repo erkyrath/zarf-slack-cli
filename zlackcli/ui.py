@@ -130,7 +130,7 @@ class UI:
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
             # Print our successful messages even on muted channels
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'))
+            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
             val = '[%s/%s] %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
             self.print(val)
             return
@@ -160,7 +160,7 @@ class UI:
                     oldtext = self.decode_message(team, oldtext)
                 userid = msg.get('message').get('user', '')
                 newtext = msg.get('message').get('text')
-                newtext = self.decode_message(team, newtext, attachments=msg.get('attachments'))
+                newtext = self.decode_message(team, newtext, attachments=msg.get('attachments'), files=msg.get('files'))
                 if oldtext == newtext:
                     # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
                     return
@@ -173,7 +173,7 @@ class UI:
                 val = self.client.prefs.tree_get('slackbot_mute', team, chanid)
                 if val:
                     return
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'))
+            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             colon = (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.team_name(team), self.channel_name(team, chanid), subtypeflag, self.user_name(team, userid), colon, text)
@@ -697,7 +697,7 @@ class UI:
                     continue  # don't recap subtype messages
                 ts = msg.get('ts')
                 ts = self.short_timestamp(ts)
-                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'))
+                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
                 val = '[%s/%s] (%s) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), ts, self.user_name(team, userid), text)
                 self.print(val)
             cursor = get_next_cursor(res)

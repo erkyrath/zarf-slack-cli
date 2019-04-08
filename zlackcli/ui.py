@@ -293,7 +293,7 @@ class UI:
             return orig
         return '<#' + team.channels_by_name[val].id + '>'
 
-    def decode_message(self, team, val, attachments=None):
+    def decode_message(self, team, val, attachments=None, files=None):
         """Convert a plain-text message in standard Slack form into a printable
         string. You can also pass a list of attachments from the message.
         Slack message text has a few special features:
@@ -321,6 +321,9 @@ class UI:
                         fallback = fallback.replace('\n', '\n... ')
                     ### & < > also?
                     val += ('\n..> ' + fallback)
+        if files:
+            for fil in files:
+                val += ('\n..file (%s, %s bytes): %s' % (fil.get('pretty_type'), fil.get('size'), fil.get('url_private'), ))
         return val
     
     def short_timestamp(self, ts):

@@ -55,7 +55,8 @@ class UI:
         self.presumedchannel = None
         self.debug_messages = False
 
-        # Both of these map to (index, teamname, url) tuples.
+        self.file_counter = 0
+        # Both of these map to (index, teamkey, url) tuples.
         self.files_by_index = {}
         self.files_by_url = {}
 
@@ -121,12 +122,27 @@ class UI:
         """
         if self.debug_messages:
             self.print('Received (%s): %s' % (self.team_name(team), msg,))
+
+    def note_file_urls(self, team, files):
+        """Record URLs if they are not yet known.
+        """
+        for fil in files:
+            url = fil.get('url_private')
+            if url not in self.files_by_url:
+                self.file_counter += 1
+                tup = (self.file_counter, team.key, url)
+                self.files_by_url[url] = tup
+                self.files_by_index[self.file_counter] = tup
         
     def handle_message(self, msg, team):
         """Handle one message received from the Slack server (over the
         RTM websocket).
         """
         typ = msg.get('type')
+
+        files = msg.get('files')
+        if files:
+            self.note_file_urls(team, files)
 
         if typ is None and msg.get('reply_to'):
             # A reply to a message we sent.

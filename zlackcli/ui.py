@@ -4,6 +4,9 @@ import time
 pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
 
+pat_integer = re.compile('[0-9]+')
+pat_url = re.compile('http[s]?:.*', flags=re.IGNORECASE)
+
 pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
 pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
@@ -51,6 +54,10 @@ class UI:
         self.lastchannel = None
         self.presumedchannel = None
         self.debug_messages = False
+
+        # Both of these map to (index, teamname, url) tuples.
+        self.files_by_index = {}
+        self.files_by_url = {}
 
         tup = self.client.prefs.get('curchannel', None)
         if tup:
@@ -714,7 +721,23 @@ class UI:
             raise ArgException('You must supply an index or URL')
         target = args.pop()
         team = self.parse_team_or_current(args)
-        self.print('### %s %s' % (team, target,))
+
+        match = pat_integer.match(target)
+        if match:
+            index = int(target)
+            tup = self.files_by_index.get(index, None)
+            if tup is None:
+                raise ArgException('Team %s has no file index %d' % (team.short_name(), index,))
+            url = tup[2]
+            team = self.client.get_team(tup[1])
+            if not team:
+                raise ArgException('Team not recognized: %s' % (tup[1],))
+        else:
+            match = pat_url.match(target)
+            if not match:
+                raise ArgException('Not an index or URL: %s' % (target,))
+            url = target
+        self.print('### %s %s' % (team, url,))
         
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',

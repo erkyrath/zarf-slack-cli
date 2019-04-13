@@ -704,6 +704,18 @@ class UI:
             if not cursor:
                 break
         
+    @uicommand('fetch',
+               arghelp='[team] index|url',
+               help='fetch a file from Slack given its name or index')
+    def cmd_fetch(self, args):
+        """Command: Fetch a URL from the server
+        """
+        if not args:
+            raise ArgException('You must supply an index or URL')
+        target = args.pop()
+        team = self.parse_team_or_current(args)
+        self.print('### %s %s' % (team, target,))
+        
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',
                help='set the aliases for a team')
@@ -744,6 +756,7 @@ class UI:
         cmd_channels,
         cmd_reload,
         cmd_recap,
+        cmd_fetch,
         cmd_alias,
         cmd_debug,
     ]

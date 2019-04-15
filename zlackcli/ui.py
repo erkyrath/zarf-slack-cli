@@ -1,5 +1,8 @@
 import re
 import time
+import os.path
+import tempfile
+import urllib.parse
 
 pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
@@ -753,11 +756,24 @@ class UI:
             if not match:
                 raise ArgException('Not an index or URL: %s' % (target,))
             url = target
+
+        tup = urllib.parse.urlparse(url)
+        if not tup.netloc.lower().endswith('.slack.com'):
+            self.print('URL does not appear to be a Slack URL: %s' % (url,))
+            return
             
         self.print('Fetching %s...' % (url,))
-        async with team.session.get(url) as resp:
+        async with team.session.get(url, max_redirects=4) as resp:
             dat = await resp.read()
-            self.print('### got %s %s' % (type(dat), len(dat),))
+            if resp.status != 200:
+                self.print('Got HTTP error %s' % (resp.status,))
+                return
+            filename = os.path.basename(tup.path)
+            pathname = os.path.join(tempfile.gettempdir(), filename)
+            fl = open(pathname, 'wb')
+            fl.write(dat)
+            fl.close()
+            self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
         
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',

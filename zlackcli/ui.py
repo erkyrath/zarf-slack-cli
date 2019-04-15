@@ -753,7 +753,11 @@ class UI:
             if not match:
                 raise ArgException('Not an index or URL: %s' % (target,))
             url = target
-        self.print('### %s %s' % (team, url,))
+            
+        self.print('Fetching %s...' % (url,))
+        async with team.session.get(url) as resp:
+            dat = await resp.read()
+            self.print('### got %s %s' % (type(dat), len(dat),))
         
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',

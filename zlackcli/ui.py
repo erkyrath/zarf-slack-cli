@@ -727,10 +727,10 @@ class UI:
             if not cursor:
                 break
         
-    @uicommand('fetch',
+    @uicommand('fetch', isasync=True,
                arghelp='[team] index|url',
                help='fetch a file from Slack given its name or index')
-    def cmd_fetch(self, args):
+    async def cmd_fetch(self, args):
         """Command: Fetch a URL from the server
         """
         if not args:

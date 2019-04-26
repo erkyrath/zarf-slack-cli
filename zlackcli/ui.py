@@ -352,7 +352,7 @@ class UI:
                 url = fil.get('url_private')
                 tup = self.files_by_url.get(url, None)
                 index = tup[0] if tup else '?'
-                val += ('\n..file [%s] (%s, %s bytes): %s' % (index, fil.get('pretty_type'), fil.get('size'), url, ))
+                val += ('\n..file [%s] %s (%s, %s bytes): %s' % (index, fil.get('title'), fil.get('pretty_type'), fil.get('size'), url, ))
         return val
     
     def short_timestamp(self, ts):

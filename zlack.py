@@ -51,7 +51,7 @@ def exception_handler(loop, ctx):
         exstr = ' (%s: %s)' % (ex.__class__.__name__, ex)
     print('asyncio: %s%s' % (msg, exstr,))
 
-async def mainloop(client, evloop):
+async def mainloop(client):
     """The main input loop. This prompts for user input and dispatches it
     to the client.
 
@@ -76,7 +76,7 @@ async def mainloop(client, evloop):
         try:
             prompt = client.ui.display_current_channel() + '> '
             with prompt_toolkit.patch_stdout.patch_stdout():
-                input = await psession.prompt(prompt, rprompt=rprompt_func, async_=True)
+                input = await psession.prompt_async(prompt, rprompt=rprompt_func)
             input = input.rstrip()
             if input:
                 client.ui.handle_input(input)
@@ -94,8 +94,6 @@ async def mainloop(client, evloop):
 evloop = asyncio.get_event_loop()
 evloop.set_exception_handler(exception_handler)
 
-prompt_toolkit.eventloop.use_asyncio_event_loop()
-
 client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
 
-evloop.run_until_complete(mainloop(client, evloop))
+evloop.run_until_complete(mainloop(client))

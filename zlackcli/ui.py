@@ -3,6 +3,8 @@ import time
 import os.path
 import tempfile
 import urllib.parse
+import asyncio
+import subprocess
 
 pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
@@ -777,6 +779,9 @@ class UI:
             fl.write(dat)
             fl.close()
             self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
+            proc = subprocess.Popen(['open', pathname])
+            while proc.poll() is None:
+                await asyncio.sleep(1)
         
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',

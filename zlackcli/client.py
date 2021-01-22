@@ -115,7 +115,7 @@ class ZlackClient:
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
         """
-        url = 'https://{0}/api/v6/{1}'.format(self.domain, method)
+        url = 'https://{0}/api/v8/{1}'.format(self.domain, method)
         print('### api_call (%s) url: %s' % (httpmethod, url,))
         
         data = {}

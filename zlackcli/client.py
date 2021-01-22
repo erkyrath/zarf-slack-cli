@@ -16,7 +16,7 @@ from .ui import UI
 
 class ZlackClient:
     
-    domain = 'slack.com'
+    domain = 'discord.com'
     version = '2.0.0'
     
     def __init__(self, tokenpath, prefspath=None, opts={}, loop=None):
@@ -110,12 +110,13 @@ class ZlackClient:
         except Exception as ex:
             self.print_exception(ex, 'Writing tokens')
     
-    async def api_call(self, method, **kwargs):
-        """Make a Slack API call. If kwargs contains a "token"
+    async def api_call(self, method, httpmethod='post', **kwargs):
+        """Make a Discord API call. If kwargs contains a "token"
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
         """
-        url = 'https://{0}/api/{1}'.format(self.domain, method)
+        url = 'https://{0}/api/v6/{1}'.format(self.domain, method)
+        print('### api_call (%s) url: %s' % (httpmethod, url,))
         
         data = {}
         headers = {}
@@ -128,7 +129,8 @@ class ZlackClient:
                 continue
             data[key] = val
 
-        async with self.session.post(url, headers=headers, data=data) as resp:
+        func = getattr(self.session, httpmethod)
+        async with func(url, headers=headers, data=data) as resp:
             return await resp.json()
 
     def get_useragent(self):
@@ -247,7 +249,7 @@ class ZlackClient:
         """
         (slackurl, redirecturl, statecheck) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
 
-        self.print('Visit this URL to authenticate with Slack:\n')
+        self.print('Visit this URL to authenticate with Discord:\n')
         self.print(slackurl+'\n')
 
         future = asyncio.Future(loop=self.evloop)
@@ -276,48 +278,37 @@ class ZlackClient:
             # We were cancelled or something.
             return
         
-        self.print('Slack authentication response received.')
+        self.print('Discord authentication response received.')
         
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth.access', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
+        res = await self.api_call('oauth2/token', client_id=self.opts.client_id, client_secret=self.opts.client_secret, grant_type='authorization_code', code=auth_code, redirect_uri=redirecturl, scope='identify guilds')
+        print('### res', res)
+        ### refresh timer using res.expires_in, res.refresh_token
         
-        if not res.get('ok'):
-            self.print('oauth.access call failed: %s' % (res.get('error'),))
-            return
-        if not res.get('team_id'):
-            self.print('oauth.access response had no team_id')
-            return
         if not res.get('access_token'):
-            self.print('oauth.access response had no access_token')
+            self.print('oauth2/token response had no access_token')
             return
 
         # Got the permanent token. Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
-        teammap['_protocol'] = 'slack'
+        teammap['_protocol'] = 'discord'
         for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
             if key in res:
                 teammap[key] = res.get(key)
 
-        # Try fetching user info. (We want to include the user's name in the
-        # ~/.zlack-tokens entry.)
-        res = await self.api_call('users.info', token=teammap['access_token'], user=teammap['user_id'])
-        if not res.get('ok'):
-            self.print('users.info call failed: %s' % (res.get('error'),))
-            return
-        if not res.get('user'):
-            self.print('users.info response had no user')
-            return
-        user = res['user']
+        print('### teammap', teammap)
 
-        teammap['user_name'] = user['name']
-        teammap['user_real_name'] = user['real_name']
+        res = await self.api_call('users/@me/guilds', httpmethod='get', token=teammap['access_token'])
+        print('### res', res)
+        return ###
+        
             
         # Create a new Team entry.
         team = Team(self, teammap)
         self.teams[team.key] = team
         self.write_teams()
         
-        await team.open()
+        ###await team.open()
         

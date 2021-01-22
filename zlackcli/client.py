@@ -38,7 +38,7 @@ class ZlackClient:
 
         self.read_teams()
         if not self.teams:
-            self.print('You are not authorized in any Slack groups. Type /auth to join one.')
+            self.print('You are not authorized in any groups. Type /auth to join one.')
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain

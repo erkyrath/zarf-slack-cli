@@ -17,6 +17,9 @@ prefs_file = '.zlack-prefs'
 token_path = os.path.join(os.environ.get('HOME'), token_file)
 prefs_path = os.path.join(os.environ.get('HOME'), prefs_file)
 
+token_path = token_file ###testing
+prefs_path = prefs_file ###testing
+
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
 env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
 

@@ -3,7 +3,7 @@ import urllib
 import aiohttp
 import aiohttp.web
 
-auth_url = 'https://slack.com/oauth/authorize'
+auth_url = 'https://discord.com/api/oauth2/authorize'
 
 def construct_auth_url(authport, clientid):
     """Construct the URL which the user will use for authentication.
@@ -19,8 +19,9 @@ def construct_auth_url(authport, clientid):
 
     params = [
         ('client_id', clientid),
-        ('scope', 'client'),
+        ('scope', 'identify guilds'),
         ('redirect_uri', redirecturl),
+        ('response_type', 'code'),
         ('state', statecheck),
     ]
     queryls = [ '%s=%s' % (key, urllib.parse.quote(val)) for (key, val) in params ]

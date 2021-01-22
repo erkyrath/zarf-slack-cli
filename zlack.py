@@ -20,7 +20,7 @@ prefs_path = os.path.join(os.environ.get('HOME'), prefs_file)
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
 env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
 
-popt = optparse.OptionParser(usage='slack-auth.py [ OPTIONS ] command...')
+popt = optparse.OptionParser(usage='zlack.py [ OPTIONS ] command...')
 
 popt.add_option('--authport',
                 action='store', type=int, dest='auth_port', default=8090,

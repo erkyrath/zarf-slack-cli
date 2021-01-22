@@ -779,9 +779,13 @@ class UI:
             fl.write(dat)
             fl.close()
             self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
-            proc = subprocess.Popen(['open', pathname])
-            while proc.poll() is None:
-                await asyncio.sleep(1)
+            opencmd = self.client.prefs.get('viewfile', None)
+            if opencmd:
+                args = opencmd.split(' ')
+                args.append(pathname)
+                proc = subprocess.Popen(args)
+                while proc.poll() is None:
+                    await asyncio.sleep(1)
         
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',

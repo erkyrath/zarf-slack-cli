@@ -143,14 +143,13 @@ class UI:
         """Handle one message received from the Slack server (over the
         RTM websocket).
         """
-        typ = msg.get('type')
+        typ = msg.get('op')
+        dat = msg.get('d', {})
 
-        files = msg.get('files')
-        if files:
-            self.note_file_urls(team, files)
-
-        if typ == 'hello':
-            # Websocket-connected message. ###?
+        if typ == 10:  # Hello
+            # Websocket-connected message.
+            team.rtm_heartbeat = dat.get('heartbeat_interval', None)
+            ### start heartbeat?
             self.print('<Connected: %s>' % (self.team_name(team)))
             return
         

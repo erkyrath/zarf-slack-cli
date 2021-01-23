@@ -43,8 +43,7 @@ class Team:
         self.rtm_want_connected = False
         self.rtm_url = None
         self.rtm_socket = None
-        self.msg_counter = 0
-        self.msg_in_flight = {}
+        self.heartbeat_interval = None
 
     def __repr__(self):
         return '<Team %s:%s "%s">' % (self.protocol, self.id, self.team_name)
@@ -103,6 +102,7 @@ class Team:
             self.reconnect_task.cancel()
         if self.readloop_task:
             self.readloop_task.cancel()
+        ### stop heartbeat?
         if self.rtm_socket:
             await self.rtm_socket.close()
             self.rtm_socket = None
@@ -161,6 +161,7 @@ class Team:
             await asyncio.sleep(0.05)
 
         self.rtm_socket = None
+        self.heartbeat_interval = None
         self.want_connected = True
         self.rtm_url = self.client.prefs.get('discord_gateway_url', '')
 
@@ -222,6 +223,8 @@ class Team:
             self.readloop_task.cancel()
             self.readloop_task = None
             
+        ### stop heartbeat?
+        
         self.want_connected = False
         if not self.rtm_socket:
             self.print('Team not connected: %s' % (self.team_name,))
@@ -330,10 +333,6 @@ class Team:
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
-        if 'id' in msg and msg['id'] is None:
-            self.msg_counter += 1
-            msg['id'] = self.msg_counter
-            self.msg_in_flight[msg['id']] = msg
         self.client.ui.note_send_message(msg, self)
         try:
             await self.rtm_socket.send(json.dumps(msg))

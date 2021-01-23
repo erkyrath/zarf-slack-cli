@@ -24,8 +24,8 @@ class Team:
         
         self.id = map['id']
         self.key = '%s:%s' % (self.protocol, self.id)
-        self.team_name = map.get('username', '???')
-        self.user_id = map['id']
+        self.team_name = map.get('team_name', '???')
+        self.user_id = map['id']  # same as id
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out
 
@@ -89,9 +89,7 @@ class Team:
         }
         self.session = aiohttp.ClientSession(headers=headers)
 
-        ###await self.load_connection_data()
-        res = await self.api_call('users/@me', httpmethod='get') ###
-        self.print('### %s' % (res,)) ###
+        await self.load_connection_data()
 
         if False:
             await self.rtm_connect_async()
@@ -365,72 +363,6 @@ class Team:
         self.users.clear()
         self.users_by_display_name.clear();
     
-        # The muted_channels information is stored in your Slack preferences,
-        # which are an undocumented (but I guess widely used) API call.
-        # See: https://github.com/ErikKalkoken/slackApiDoc
-        res = await self.api_call_check('users.prefs.get')
-        if res:
-            prefs = res.get('prefs')
-            mutels = prefs.get('muted_channels')
-            if mutels:
-                self.muted_channels = set(mutels.split(','))
-
-        # Fetch user lists
-        cursor = None
-        while True:
-            res = await self.api_call_check('users.list', cursor=cursor)
-            if not res:
-                break
-            for user in res.get('members'):
-                userid = user['id']
-                username = user['profile']['display_name']
-                if not username:
-                    username = user['name']    # legacy data field
-                userrealname = user['profile']['real_name']
-                self.users[userid] = User(self, userid, username, userrealname)
-                self.users_by_display_name[username] = self.users[userid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-            
-        #self.client.print('Users for %s: %s' % (self, self.users,))
-    
-        # Fetch public and private channels
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                channame = chan['name']
-                priv = chan['is_private']
-                member = chan['is_member']
-                self.channels[chanid] = Channel(self, chanid, channame, private=priv, member=member)
-                self.channels_by_name[channame] = self.channels[chanid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-            
-        # Fetch IM (person-to-person) channels
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                chanuser = chan['user']
-                if chanuser in self.users:
-                    self.users[chanuser].im_channel = chanid
-                    channame = '@'+self.users[chanuser].name
-                    self.channels[chanid] = Channel(self, chanid, channame, private=True, member=True, im=chanuser)
-                    # But not channels_by_name.
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-
-        #self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class Channel:
     """Simple object representing one channel in a group.

@@ -284,8 +284,7 @@ class ZlackClient:
         # a permanent access token.
 
         res = await self.api_call('oauth2/token', client_id=self.opts.client_id, client_secret=self.opts.client_secret, grant_type='authorization_code', code=auth_code, redirect_uri=redirecturl, scope='identify guilds messages.read')
-        print('### res', res)
-        ### refresh timer using res.expires_in, res.refresh_token
+        ### refresh timer using res.expires_in, res.refresh_token -- in prefs?
         
         if not res.get('access_token'):
             self.print('oauth2/token response had no access_token')
@@ -300,12 +299,14 @@ class ZlackClient:
 
         # Fetch user info too.
         res = await self.api_call('users/@me', httpmethod='get', token=teammap['access_token'])
-        print('### res', res)
         for key in ('id', 'username', 'discriminator'):
             if key in res:
                 teammap[key] = res.get(key)
-        
-        print('### teammap', teammap)
+
+        # Discord isn't organized in teams. We'll file this "Team" under
+        # "discord" plus the username (so you can log into multiple Discord
+        # accounts if you really want to).
+        teammap['team_name'] = 'discord_%s_%s' % (map.get('username', '???'), map.get('discriminator', ''),)
 
         # Create a new Team entry.
         team = Team(self, teammap)

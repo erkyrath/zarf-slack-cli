@@ -149,22 +149,8 @@ class UI:
         if files:
             self.note_file_urls(team, files)
 
-        if typ is None and msg.get('reply_to'):
-            # A reply to a message we sent.
-            origmsg = team.resolve_in_flight(msg.get('reply_to'))
-            if not origmsg:
-                self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
-                return
-            chanid = origmsg.get('channel', '')
-            userid = origmsg.get('user', '')
-            # Print our successful messages even on muted channels
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-            val = '[%s/%s] %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
-            self.print(val)
-            return
-        
         if typ == 'hello':
-            # Websocket-connected message.
+            # Websocket-connected message. ###?
             self.print('<Connected: %s>' % (self.team_name(team)))
             return
         

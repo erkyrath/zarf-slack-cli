@@ -19,7 +19,7 @@ def construct_auth_url(authport, clientid):
 
     params = [
         ('client_id', clientid),
-        ('scope', 'identify guilds'),
+        ('scope', 'identify guilds messages.read'),
         ('redirect_uri', redirecturl),
         ('response_type', 'code'),
         ('state', statecheck),

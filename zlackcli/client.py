@@ -86,7 +86,7 @@ class ZlackClient:
             for map in dat:
                 map['_protocol'] = 'slack'
         for map in dat:
-            if map['_protocol'] != 'slack':
+            if map['_protocol'] != 'discord':
                 self.print('Protocol not recognized: %s' % (map['_protocol'],))
                 continue
             team = Team(self, map)
@@ -283,7 +283,7 @@ class ZlackClient:
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth2/token', client_id=self.opts.client_id, client_secret=self.opts.client_secret, grant_type='authorization_code', code=auth_code, redirect_uri=redirecturl, scope='identify guilds')
+        res = await self.api_call('oauth2/token', client_id=self.opts.client_id, client_secret=self.opts.client_secret, grant_type='authorization_code', code=auth_code, redirect_uri=redirecturl, scope='identify guilds messages.read')
         print('### res', res)
         ### refresh timer using res.expires_in, res.refresh_token
         
@@ -294,21 +294,23 @@ class ZlackClient:
         # Got the permanent token. Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
         teammap['_protocol'] = 'discord'
-        for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
+        for key in ('scope', 'access_token'):
             if key in res:
                 teammap[key] = res.get(key)
 
+        # Fetch user info too.
+        res = await self.api_call('users/@me', httpmethod='get', token=teammap['access_token'])
+        print('### res', res)
+        for key in ('id', 'username', 'discriminator'):
+            if key in res:
+                teammap[key] = res.get(key)
+        
         print('### teammap', teammap)
 
-        res = await self.api_call('users/@me/guilds', httpmethod='get', token=teammap['access_token'])
-        print('### res', res)
-        return ###
-        
-            
         # Create a new Team entry.
         team = Team(self, teammap)
         self.teams[team.key] = team
         self.write_teams()
         
-        ###await team.open()
+        await team.open()
         

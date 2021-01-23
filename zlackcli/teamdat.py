@@ -22,10 +22,10 @@ class Team:
         self.client = client
         self.evloop = client.evloop
         
-        self.id = map['team_id']
+        self.id = map['id']
         self.key = '%s:%s' % (self.protocol, self.id)
-        self.team_name = map.get('team_name', '???')
-        self.user_id = map['user_id']
+        self.team_name = map.get('username', '???')
+        self.user_id = map['id']
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out
 
@@ -89,9 +89,11 @@ class Team:
         }
         self.session = aiohttp.ClientSession(headers=headers)
 
-        await self.load_connection_data()
+        ###await self.load_connection_data()
+        res = await self.api_call('users/@me', httpmethod='get') ###
+        self.print('### %s' % (res,)) ###
 
-        if True:
+        if False:
             await self.rtm_connect_async()
 
     async def close(self):
@@ -109,23 +111,23 @@ class Team:
             await self.session.close()
             self.session = None
 
-    async def api_call(self, method, **kwargs):
+    async def api_call(self, method, httpmethod='post', **kwargs):
         """Make a web API call. Return the result.
         This may raise an exception or return an object with
         ok=False.
         """
-        url = 'https://{0}/api/{1}'.format(self.client.domain, method)
+        url = 'https://{0}/api/v8/{1}'.format(self.client.domain, method)
+        print('### api_call (%s) url: %s' % (httpmethod, url,))
         
         data = {}
         for (key, val) in kwargs.items():
             if val is None:
                 continue
-            ### channels, users, types: convert list to comma-separated string
-            ### other lists/dicts: convert to json.dumps()
             data[key] = val
         self.client.ui.note_send_message(data, self)
         
-        async with self.session.post(url, data=data) as resp:
+        func = getattr(self.session, httpmethod)
+        async with func(url, data=data) as resp:
             res = await resp.json()
             self.client.ui.note_receive_message(res, self)
             return res
@@ -136,15 +138,15 @@ class Team:
         """
         try:
             res = await self.api_call(method, **kwargs)
-            if res is None or not res.get('ok'):
+            if res is None or res.get('message'):
                 errmsg = '???'
-                if res and 'error' in res:
-                    errmsg = res.get('error')
-                self.client.print('Slack error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
+                if res and 'message' in res:
+                    errmsg = res.get('message')
+                self.client.print('Discord error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
                 return None
             return res
         except Exception as ex:
-            self.print_exception(ex, 'Slack exception (%s)' % (method,))
+            self.print_exception(ex, 'Discord exception (%s)' % (method,))
             return None
 
     def resolve_in_flight(self, val):

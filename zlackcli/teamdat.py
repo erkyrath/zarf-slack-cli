@@ -92,7 +92,7 @@ class Team:
 
         await self.load_connection_data()
 
-        if False:
+        if False: ### turn off autoconnect for the moment
             await self.rtm_connect_async()
 
     async def close(self):
@@ -159,23 +159,42 @@ class Team:
             # Disconnect first
             await self.rtm_disconnect_async()
             await asyncio.sleep(0.05)
-            
-        self.want_connected = True
-        res = await self.api_call_check('rtm.connect')
-        if not res:
-            return
-        self.rtm_url = res.get('url')
-        if not self.rtm_url:
-            self.print('rtm.connect response had no url')
-            return
 
-        is_ssl = self.rtm_url.startswith('wss:')
-        self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
-        if self.rtm_socket and not self.rtm_socket.open:
-            # This may not be a plausible failure state, but we'll cover it.
-            self.print('rtm.connect did not return an open socket')
-            self.rtm_socket = None
+        self.rtm_socket = None
+        self.want_connected = True
+        self.rtm_url = self.client.prefs.get('discord_gateway_url', '')
+
+        tries = 0
+        while tries < 2 and not self.rtm_socket:
+            if not self.rtm_url:
+                res = await self.api_call('gateway', httpmethod='get')
+                if res:
+                    self.rtm_url = res.get('url')
+                if not self.rtm_url:
+                    self.print('gateway response had no url')
+                    return
+                self.print('### gateway response: ' + self.rtm_url)
+
+            try:
+                is_ssl = self.rtm_url.startswith('wss:')
+                self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
+                if self.rtm_socket and not self.rtm_socket.open:
+                    # This may not be a plausible failure state, but we'll cover it.
+                    raise Exception('gateway did not return an open socket')
+                # Success
+                self.client.prefs.put('discord_gateway_url', self.rtm_url)
+                
+            except Exception as ex:
+                self.print_exception(ex, 'Discord connection failure')
+                self.rtm_socket = None
+                self.rtm_url = ''
+                tries += 1
+                continue
+
+        if not self.rtm_socket:
+            self.print('Unable to connect to Discord gateway')
             return
+        self.print('### success')
 
         self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
         def callback(future):

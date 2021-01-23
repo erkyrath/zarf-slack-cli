@@ -31,6 +31,7 @@ class Team:
 
         self.users = {}
         self.users_by_display_name = {}
+        self.servers = {}
         self.channels = {}
         self.channels_by_name = {}
         self.muted_channels = set()
@@ -130,32 +131,6 @@ class Team:
             self.client.ui.note_receive_message(res, self)
             return res
     
-    async def api_call_check(self, method, **kwargs):
-        """Make a web API call. Return the result.
-        On error, print an error message and return None.
-        """
-        try:
-            res = await self.api_call(method, **kwargs)
-            if res is None or res.get('message'):
-                errmsg = '???'
-                if res and 'message' in res:
-                    errmsg = res.get('message')
-                self.client.print('Discord error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
-                return None
-            return res
-        except Exception as ex:
-            self.print_exception(ex, 'Discord exception (%s)' % (method,))
-            return None
-
-    def resolve_in_flight(self, val):
-        """Check an id value in a reply_to. If we've sent a message
-        with that value, return it (and remove it from our pool of sent
-        messages.)
-        """
-        if val in self.msg_in_flight:
-            return self.msg_in_flight.pop(val)
-        return None
-        
     def rtm_connected(self):
         """Check whether the RTM websocket is open.
         """
@@ -363,7 +338,24 @@ class Team:
         self.users.clear()
         self.users_by_display_name.clear();
     
+        res = await self.api_call('users/@me/guilds', httpmethod='get')
+        if not isinstance(res, list):
+            self.print('Unable to get Discord server list')
+            return
+        
+        for obj in res:
+            serv = DiscordServer(self, obj['id'], obj['name'])
+            self.servers[serv.id] = serv
 
+class DiscordServer:
+    def __init__(self, team, id, name):
+        self.team = team
+        self.id = id
+        self.name = name
+        
+    def __repr__(self):
+        return '<DiscordServer %s: "%s">' % (self.id, self.name)
+        
 class Channel:
     """Simple object representing one channel in a group.
     """

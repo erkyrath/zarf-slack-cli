@@ -295,8 +295,8 @@ class Team:
             except asyncio.CancelledError:
                 # The read was cancelled as part of disconnect.
                 return
-            except websockets.ConnectionClosed:
-                self.print('<ConnectionClosed: %s>' % (self.short_name(),))
+            except websockets.ConnectionClosed as ex:
+                self.print('<ConnectionClosed(%s, %s): %s>' % (ex.code, ex.reason, self.short_name(),))
                 self.handle_disconnect()
                 # This socket is done with; exit this loop.
                 return
@@ -343,8 +343,8 @@ class Team:
         self.client.ui.note_send_message(msg, self)
         try:
             await self.rtm_socket.send(json.dumps(msg))
-        except websockets.ConnectionClosed:
-            self.print('<ConnectionClosed: %s>' % (self.short_name(),))
+        except websockets.ConnectionClosed as ex:
+            self.print('<ConnectionClosed(%s, %s): %s>' % (ex.code, ex.reason, self.short_name(),))
             self.handle_disconnect()
         except Exception as ex:
             self.print_exception(ex, 'RTM send')

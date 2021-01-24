@@ -178,7 +178,8 @@ class Team:
 
             try:
                 is_ssl = self.rtm_url.startswith('wss:')
-                self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
+                # Gateway protocol version may not be the same as the web protocol version!
+                self.rtm_socket = await websockets.connect(self.rtm_url+'?v=8&encoding=json', ssl=is_ssl)
                 if self.rtm_socket and not self.rtm_socket.open:
                     # This may not be a plausible failure state, but we'll cover it.
                     raise Exception('gateway did not return an open socket')

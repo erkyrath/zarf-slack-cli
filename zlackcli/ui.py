@@ -151,6 +151,8 @@ class UI:
             team.rtm_heartbeat = dat.get('heartbeat_interval', None)
             ### start heartbeat?
             self.print('<Connected: %s>' % (self.team_name(team)))
+            if not team.rtm_heartbeat:
+                self.print('No heartbeat_interval found')
             return
         
         if typ == 'message':

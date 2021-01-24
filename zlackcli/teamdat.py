@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 import re
 import time
 import json
@@ -218,7 +219,16 @@ class Team:
         self.readloop_task.add_done_callback(callback1)
 
         # Send the identification with intent
-        ###self.rtm_send({ 'op': 1, 'd': None })
+        self.rtm_send({ 'op': 2, 'd': {
+            'token': self.access_token,
+            'properties': {
+                '$os': platform.system(),
+                '$browser': 'zlack',
+                '$device': 'zlack'
+                },
+            'guild_subscriptions': False,
+            'intents': 0x1203   # GUILDS | GUILD_MEMBERS | GUILD_MESSAGES | DIRECT_MESSAGES
+        }})
         
     def rtm_disconnect(self):
         """Close the RTM (real-time) websocket.

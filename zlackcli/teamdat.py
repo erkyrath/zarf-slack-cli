@@ -207,6 +207,8 @@ class Team:
 
         self.heartbeat_task = self.evloop.create_task(self.rtm_heartbeat_async())
         def callback2(future):
+            if future.cancelled():
+                return
             self.print_exception(future.exception(), 'RTM heartbeat')
         self.heartbeat_task.add_done_callback(callback2)
         

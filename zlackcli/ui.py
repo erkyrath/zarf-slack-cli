@@ -52,13 +52,16 @@ class UI:
     handle_message() method. The class deals with all the input parsing
     and output formatting.
     """
-    def __init__(self, client):
+    def __init__(self, client, opts=None):
         self.client = client
 
         self.curchannel = None
         self.lastchannel = None
         self.presumedchannel = None
         self.debug_messages = False
+
+        if opts and opts.debug_messages:
+            self.debug_messages = True
 
         self.file_counter = 0
         # Both of these map to (index, teamkey, url) tuples.

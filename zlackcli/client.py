@@ -30,7 +30,7 @@ class ZlackClient:
         self.opts = opts
         self.debug_exceptions = opts.debug_exceptions
         self.prefs = Prefs(self, prefspath)
-        self.ui = UI(self)
+        self.ui = UI(self, opts=opts)
 
         self.teams = OrderedDict()
         self.authtask = None

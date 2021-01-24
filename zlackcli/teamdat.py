@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import time
 import json
 from collections import OrderedDict
 import traceback
@@ -40,10 +41,13 @@ class Team:
         self.session = None
         self.readloop_task = None
         self.reconnect_task = None
+        self.heartbeat_task = None
         self.rtm_want_connected = False
         self.rtm_url = None
         self.rtm_socket = None
-        self.heartbeat_interval = None
+        self.heartbeat_interval = None   # milliseconds
+        self.heartbeat_acked = False
+        self.rtm_sequence_num = None
 
     def __repr__(self):
         return '<Team %s:%s "%s">' % (self.protocol, self.id, self.team_name)
@@ -102,7 +106,8 @@ class Team:
             self.reconnect_task.cancel()
         if self.readloop_task:
             self.readloop_task.cancel()
-        ### stop heartbeat?
+        if self.heartbeat_task:
+            self.heartbeat_task.cancel()
         if self.rtm_socket:
             await self.rtm_socket.close()
             self.rtm_socket = None
@@ -162,6 +167,8 @@ class Team:
 
         self.rtm_socket = None
         self.heartbeat_interval = None
+        self.rtm_sequence_num = None
+        self.heartbeat_acked = False
         self.want_connected = True
         self.rtm_url = self.client.prefs.get('discord_gateway_url', '')
 
@@ -198,10 +205,18 @@ class Team:
             return
         self.print('### success')
 
+        self.heartbeat_task = self.evloop.create_task(self.rtm_heartbeat_async())
+        def callback2(future):
+            self.print_exception(future.exception(), 'RTM heartbeat')
+        self.heartbeat_task.add_done_callback(callback2)
+        
         self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
-        def callback(future):
+        def callback1(future):
             self.print_exception(future.exception(), 'RTM read')
-        self.readloop_task.add_done_callback(callback)
+        self.readloop_task.add_done_callback(callback1)
+
+        # Send the identification with intent
+        ###self.rtm_send({ 'op': 1, 'd': None })
         
     def rtm_disconnect(self):
         """Close the RTM (real-time) websocket.
@@ -224,7 +239,9 @@ class Team:
             self.readloop_task.cancel()
             self.readloop_task = None
             
-        ### stop heartbeat?
+        if self.heartbeat_task:
+            self.heartbeat_task.cancel()
+            self.heartbeat_task = None
         
         self.want_connected = False
         if not self.rtm_socket:
@@ -281,6 +298,29 @@ class Team:
         self.print('Too many retries, giving up.')
         self.want_connected = False
 
+    async def rtm_heartbeat_async(self):
+        lasttick = None
+        
+        # Don't expect an ACK before the first heartbeat.
+        self.heartbeat_acked = True
+        
+        while True:
+            self.print('### tick')
+            curtime = time.time()
+            if self.heartbeat_interval is None:
+                # Heartbeat is not yet set.
+                pass
+            elif lasttick is None or (curtime - lasttick + 5 > self.heartbeat_interval / 1000):
+                if not self.heartbeat_acked:
+                    self.print('Heartbeat lost!')
+                    ### reconnect?
+                else:
+                    lasttick = curtime
+                    self.heartbeat_acked = False
+                    self.rtm_send({ 'op': 1, 'd': self.rtm_sequence_num })
+            await asyncio.sleep(5.0)
+        
+        
     async def rtm_readloop_async(self, socket):
         """Begin reading messages from the RTM websocket. Continue until
         the socket closes. (Async call, obviously.)

@@ -145,14 +145,23 @@ class UI:
         """
         typ = msg.get('op')
         dat = msg.get('d', {})
+        seqnum = msg.get('s', None)
+        if seqnum is not None:
+            team.rtm_sequence_number = seqnum
 
         if typ == 10:  # Hello
             # Websocket-connected message.
-            team.rtm_heartbeat = dat.get('heartbeat_interval', None)
-            ### start heartbeat?
+            team.heartbeat_interval = dat.get('heartbeat_interval', None)
             self.print('<Connected: %s>' % (self.team_name(team)))
-            if not team.rtm_heartbeat:
+            if not team.heartbeat_interval:
                 self.print('No heartbeat_interval found')
+            elif team.heartbeat_interval < 10000:
+                # We check heartbeat every five seconds, so if the interval is under ten seconds, this won't work.
+                self.print('heartbeat_interval is too short (%s)' % (team.heartbeat_interval,))
+            return
+
+        if typ == 11:  # Heartbeat ACK
+            team.heartbeat_acked = True
             return
         
         if typ == 'message':

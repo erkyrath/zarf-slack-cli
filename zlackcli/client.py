@@ -176,6 +176,7 @@ class ZlackClient:
             self.session = None
 
     async def wakeloop_async(self):
+        ### needed?
         """This task runs in the background and watches the system clock.
         If the clock jumps more than thirty seconds, then the machine was
         put to sleep for a while and we need to reconnect all our websockets.

@@ -34,6 +34,9 @@ popt.add_option('--clientsecret',
 popt.add_option('--debugexceptions',
                 action='store_true', dest='debug_exceptions',
                 help='Display complete stack traces of exceptions')
+popt.add_option('--debugmessages',
+                action='store_true', dest='debug_messages',
+                help='Show all command to and from the server')
 
 (opts, args) = popt.parse_args()
 

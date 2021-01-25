@@ -296,7 +296,7 @@ class Team:
                 # The read was cancelled as part of disconnect.
                 return
             except websockets.ConnectionClosed as ex:
-                self.print('<ConnectionClosed(%s, %s): %s>' % (ex.code, ex.reason, self.short_name(),))
+                self.print('<ConnectionClosed: %s (%s "%s")>' % (self.short_name(), ex.code, ex.reason,))
                 self.handle_disconnect()
                 # This socket is done with; exit this loop.
                 return
@@ -344,7 +344,7 @@ class Team:
         try:
             await self.rtm_socket.send(json.dumps(msg))
         except websockets.ConnectionClosed as ex:
-            self.print('<ConnectionClosed(%s, %s): %s>' % (ex.code, ex.reason, self.short_name(),))
+            self.print('<ConnectionClosed: %s (%s "%s")>' % (self.short_name(), ex.code, ex.reason,))
             self.handle_disconnect()
         except Exception as ex:
             self.print_exception(ex, 'RTM send')

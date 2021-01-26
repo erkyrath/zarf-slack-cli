@@ -299,17 +299,16 @@ class ZlackClient:
 
         # Try fetching user info. (We want to include the user's name in the
         # ~/.zlack-tokens entry.)
-        res = await self.api_call('users.info', token=teammap['access_token'], user=teammap['user_id'])
-        if not res.get('ok'):
-            self.print('users.info call failed: %s' % (res.get('error'),))
+        # (Note that the client-level api_call() method doesn't add the api/v4 for us.)
+        res = await self.api_call('api/v4/users/me', httpmethod='get', token=teammap['access_token'])
+        print('### users/me', res)
+        if not (res.get('id') and res.get('username')):
+            self.print('users/me call failed: %s' % (res.get('message'),))
             return
-        if not res.get('user'):
-            self.print('users.info response had no user')
-            return
-        user = res['user']
 
-        teammap['user_name'] = user['name']
-        teammap['user_real_name'] = user['real_name']
+        teammap['user_id'] = res['id']
+        teammap['user_name'] = res['username']
+        teammap['user_real_name'] = (res.get('first_name') + ' ' + res.get('last_name')).strip()
         print('### teammap', teammap)
         
         # Create a new Team entry.

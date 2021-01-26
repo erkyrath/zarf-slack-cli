@@ -109,23 +109,22 @@ class Team:
             await self.session.close()
             self.session = None
 
-    async def api_call(self, method, **kwargs):
+    async def api_call(self, method, httpmethod='post', **kwargs):
         """Make a web API call. Return the result.
         This may raise an exception or return an object with
         ok=False.
         """
-        url = 'https://{0}/api/{1}'.format(self.client.domain, method)
+        url = 'https://{0}/api/v4/{1}'.format(self.client.domain, method)
         
         data = {}
         for (key, val) in kwargs.items():
             if val is None:
                 continue
-            ### channels, users, types: convert list to comma-separated string
-            ### other lists/dicts: convert to json.dumps()
             data[key] = val
         self.client.ui.note_send_message(data, self)
         
-        async with self.session.post(url, data=data) as resp:
+        httpfunc = getattr(self.session, httpmethod)
+        async with httpfunc(url, data=data) as resp:
             res = await resp.json()
             self.client.ui.note_receive_message(res, self)
             return res

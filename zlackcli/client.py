@@ -109,8 +109,7 @@ class ZlackClient:
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
         """
-        url = 'https://{0}/api/v4/{1}'.format(self.domain, method)
-        print('### api_call(%s): %s' % (httpmethod, url))
+        url = 'https://{0}/{1}'.format(self.domain, method)
         
         data = {}
         headers = {}
@@ -128,9 +127,9 @@ class ZlackClient:
             try:
                 # Disable content-type check; Mattermost seems to send text/plain even for JSON
                 return await resp.json(content_type=None)
-            except aiohttp.ContentTypeError:
+            except json.JSONDecodeError:
                 val = await resp.text()
-                raise Exception('Non-JSON response: %s' % (val,))
+                raise Exception('Non-JSON response: %s' % (val[:80],))
 
     def get_useragent(self):
         """Construct a user-agent string for our web API requests.
@@ -282,23 +281,19 @@ class ZlackClient:
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth/access', httpmethod='get', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
+        res = await self.api_call('oauth/access_token', grant_type='authorization_code', redirect_uri=redirecturl, client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
         print('### res', res)
         
-        if not res.get('ok'):
-            self.print('oauth.access call failed: %s' % (res.get('error'),))
-            return
-        if not res.get('team_id'):
-            self.print('oauth.access response had no team_id')
-            return
         if not res.get('access_token'):
-            self.print('oauth.access response had no access_token')
+            self.print('oauth/access_token response had no access_token')
             return
+
+        ### stash expires_in, refresh_token somewhere
 
         # Got the permanent token. Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
         teammap['_protocol'] = 'mattermost'
-        for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
+        for key in ('scope', 'access_token'):
             if key in res:
                 teammap[key] = res.get(key)
 

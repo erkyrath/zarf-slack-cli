@@ -16,7 +16,7 @@ class Team:
     """
 
     # Someday we will support more than one protocol
-    protocol = 'slack'
+    protocol = 'mattermost'
     
     def __init__(self, client, map):
         self.client = client

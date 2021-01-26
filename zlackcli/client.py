@@ -16,7 +16,7 @@ from .ui import UI
 
 class ZlackClient:
     
-    domain = 'slack.com'
+    domain = 'zarfhome.cloud.mattermost.com' ### variable
     version = '2.0.0'
     
     def __init__(self, tokenpath, prefspath=None, opts={}, loop=None):
@@ -38,7 +38,7 @@ class ZlackClient:
 
         self.read_teams()
         if not self.teams:
-            self.print('You are not authorized in any Slack groups. Type /auth to join one.')
+            self.print('You are not authorized in any Mattermost servers. Type /auth to join one.')
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
@@ -79,14 +79,8 @@ class ZlackClient:
             fl.close()
         except:
             return
-        if isinstance(dat, OrderedDict):
-            # This is an old-style tokens file from Zlack V1. Reform it
-            # into a list, assuming all entries are Slack entries.
-            dat = list(dat.values())
-            for map in dat:
-                map['_protocol'] = 'slack'
         for map in dat:
-            if map['_protocol'] != 'slack':
+            if map['_protocol'] != 'mattermost':
                 self.print('Protocol not recognized: %s' % (map['_protocol'],))
                 continue
             team = Team(self, map)
@@ -217,7 +211,7 @@ class ZlackClient:
             # seconds, but if the machine sleeps, it'll be more.)
             curtime = time.time()
 
-    def begin_auth(self):
+    def begin_auth(self, mhost):
         """Launch the process of authenticating to a new Slack team.
         (This returns immediately.)
         """
@@ -232,7 +226,7 @@ class ZlackClient:
             self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
             return
             
-        self.authtask = self.evloop.create_task(self.perform_auth_async())
+        self.authtask = self.evloop.create_task(self.perform_auth_async(mhost))
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
@@ -240,12 +234,12 @@ class ZlackClient:
             self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
-    async def perform_auth_async(self):
-        """Do the work of authenticating to a new Slack team.
+    async def perform_auth_async(self, mhost):
+        """Do the work of authenticating to a new Mattermost server.
         This is async, and it takes a while, because the user has to
         authenticate through Slack's web site.
         """
-        (slackurl, redirecturl, statecheck) = construct_auth_url(self.opts.auth_port, self.opts.client_id)
+        (slackurl, redirecturl, statecheck) = construct_auth_url(mhost, self.opts.auth_port, self.opts.client_id)
 
         self.print('Visit this URL to authenticate with Slack:\n')
         self.print(slackurl+'\n')
@@ -276,7 +270,7 @@ class ZlackClient:
             # We were cancelled or something.
             return
         
-        self.print('Slack authentication response received.')
+        self.print('Mattermost authentication response received.')
         
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
@@ -295,7 +289,7 @@ class ZlackClient:
 
         # Got the permanent token. Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
-        teammap['_protocol'] = 'slack'
+        teammap['_protocol'] = 'mattermost'
         for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
             if key in res:
                 teammap[key] = res.get(key)

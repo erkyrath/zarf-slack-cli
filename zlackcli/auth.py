@@ -3,9 +3,9 @@ import urllib
 import aiohttp
 import aiohttp.web
 
-auth_url = 'https://slack.com/oauth/authorize'
+auth_url = 'https://MHOST/oauth/authorize'
 
-def construct_auth_url(authport, clientid):
+def construct_auth_url(mhost, authport, clientid):
     """Construct the URL which the user will use for authentication.
     Returns (slackurl, redirecturl, statestring).
     - slackurl: the URL which the user should enter into a browser.
@@ -25,6 +25,7 @@ def construct_auth_url(authport, clientid):
     ]
     queryls = [ '%s=%s' % (key, urllib.parse.quote(val)) for (key, val) in params ]
     tup = list(urllib.parse.urlparse(auth_url))
+    tup[1] = mhost
     tup[4] = '&'.join(queryls)
     slackurl = urllib.parse.urlunparse(tup)
     

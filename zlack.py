@@ -17,6 +17,9 @@ prefs_file = '.zlack-prefs'
 token_path = os.path.join(os.environ.get('HOME'), token_file)
 prefs_path = os.path.join(os.environ.get('HOME'), prefs_file)
 
+token_path = './test-zlack-tokens' ###
+prefs_path = './test-zlack-prefs' ###
+
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
 env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
 
@@ -27,10 +30,10 @@ popt.add_option('--authport',
                 help='localhost port to redirect authentication to (default: 8090)')
 popt.add_option('--clientid',
                 action='store', dest='client_id', default=env_client_id,
-                help='Slack client id (default: $ZLACK_CLIENT_ID)')
+                help='Mattermost client id (default: $ZLACK_CLIENT_ID)')
 popt.add_option('--clientsecret',
                 action='store', dest='client_secret', default=env_client_secret,
-                help='Slack client secret (default: $ZLACK_CLIENT_SECRET)')
+                help='Mattermost client secret (default: $ZLACK_CLIENT_SECRET)')
 popt.add_option('--debugexceptions',
                 action='store_true', dest='debug_exceptions',
                 help='Display complete stack traces of exceptions')

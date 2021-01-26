@@ -19,7 +19,7 @@ def construct_auth_url(mhost, authport, clientid):
 
     params = [
         ('client_id', clientid),
-        ('scope', 'client'),
+        ('response_type', 'code'),
         ('redirect_uri', redirecturl),
         ('state', statecheck),
     ]

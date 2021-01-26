@@ -104,12 +104,13 @@ class ZlackClient:
         except Exception as ex:
             self.print_exception(ex, 'Writing tokens')
     
-    async def api_call(self, method, **kwargs):
+    async def api_call(self, method, httpmethod='post', **kwargs):
         """Make a Slack API call. If kwargs contains a "token"
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
         """
-        url = 'https://{0}/api/{1}'.format(self.domain, method)
+        url = 'https://{0}/api/v4/{1}'.format(self.domain, method)
+        print('### api_call(%s): %s' % (httpmethod, url))
         
         data = {}
         headers = {}
@@ -122,8 +123,14 @@ class ZlackClient:
                 continue
             data[key] = val
 
-        async with self.session.post(url, headers=headers, data=data) as resp:
-            return await resp.json()
+        httpfunc = getattr(self.session, httpmethod)
+        async with httpfunc(url, headers=headers, data=data) as resp:
+            try:
+                # Disable content-type check; Mattermost seems to send text/plain even for JSON
+                return await resp.json(content_type=None)
+            except aiohttp.ContentTypeError:
+                val = await resp.text()
+                raise Exception('Non-JSON response: %s' % (val,))
 
     def get_useragent(self):
         """Construct a user-agent string for our web API requests.
@@ -275,7 +282,8 @@ class ZlackClient:
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth.access', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
+        res = await self.api_call('oauth/access', httpmethod='get', client_id=self.opts.client_id, client_secret=self.opts.client_secret, code=auth_code)
+        print('### res', res)
         
         if not res.get('ok'):
             self.print('oauth.access call failed: %s' % (res.get('error'),))
@@ -307,11 +315,12 @@ class ZlackClient:
 
         teammap['user_name'] = user['name']
         teammap['user_real_name'] = user['real_name']
-            
+        print('### teammap', teammap)
+        
         # Create a new Team entry.
         team = Team(self, teammap)
         self.teams[team.key] = team
         self.write_teams()
         
-        await team.open()
+        ###await team.open()
         

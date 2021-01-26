@@ -125,7 +125,7 @@ class ZlackClient:
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, headers=headers, data=data) as resp:
             try:
-                # Disable content-type check; Mattermost seems to send text/plain even for JSON
+                # Disable content-type check; Mattermost seems to send text/plain for errors, even JSON errors
                 return await resp.json(content_type=None)
             except json.JSONDecodeError:
                 val = await resp.text()

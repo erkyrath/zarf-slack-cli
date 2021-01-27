@@ -392,9 +392,8 @@ class Team:
                 userid = user['id']
                 username = user['username']
                 userrealname = (user.get('first_name') + ' ' + user.get('last_name')).strip()
-                print('### user', userid, username, userrealname)
-                #self.users[userid] = User(self, userid, username, userrealname)
-                #self.users_by_display_name[username] = self.users[userid]
+                self.users[userid] = User(self, userid, username, userrealname)
+                self.users_by_display_name[username] = self.users[userid]
             page += 1
             
         #self.client.print('Users for %s: %s' % (self, self.users,))

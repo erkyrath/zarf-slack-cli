@@ -851,5 +851,5 @@ class UI:
                 handler_map[alias] = han
     
 
-from .teamdat import Team, get_next_cursor
+from .teamdat import Team
 

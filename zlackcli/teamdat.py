@@ -4,6 +4,7 @@ import re
 import json
 from collections import OrderedDict
 import collections.abc
+import urllib.parse
 import traceback
 import asyncio
 import aiohttp
@@ -112,18 +113,28 @@ class Team:
 
     async def api_call(self, method, httpmethod='get', **kwargs):
         """Make a web API call. Return the result.
+        In the kwargs, keys starting with __ become query parameters;
+        the rest become body data parameters. (Sorry, it's hacky.)
         This may raise an exception or return an object with
-        ok=False.
+        status_code (http error).
         """
         url = 'https://{0}/api/v4/{1}'.format(self.client.domain, method)
-        
+
+        queryls = []
         data = {}
         for (key, val) in kwargs.items():
             if val is None:
                 continue
-            data[key] = val
+            if key.startswith('__'):
+                queryls.append('%s=%s' % (key[2:], urllib.parse.quote(str(val))))
+            else:
+                data[key] = val
+
+        if queryls:
+            url += ('?' + '&'.join(queryls))
         self.client.ui.note_send_message(data, self)
-        
+
+        print('###', httpmethod, url, data)
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, data=data) as resp:
             try:
@@ -374,7 +385,7 @@ class Team:
         # Fetch user lists
         page = 0
         while True:
-            res = await self.api_call_check('users', page=page)
+            res = await self.api_call_check('users', __page=page)
             if not res:
                 break
             for user in res:
@@ -466,12 +477,3 @@ class User:
     def __repr__(self):
         return '<User %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
 
-def get_next_cursor(res):
-    """Extract the next_cursor field from a message object. This is
-    used by all Web API calls which get paginated results.
-    """
-    metadata = res.get('response_metadata')
-    if not metadata:
-        return None
-    return metadata.get('next_cursor', None)
-    

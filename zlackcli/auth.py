@@ -1,5 +1,5 @@
 import random
-import urllib
+import urllib.parse
 import aiohttp
 import aiohttp.web
 

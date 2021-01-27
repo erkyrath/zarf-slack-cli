@@ -125,9 +125,14 @@ class Team:
         
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, data=data) as resp:
-            res = await resp.json()
-            self.client.ui.note_receive_message(res, self)
-            return res
+            try:
+                # Disable content-type check; Mattermost seems to send text/plain for errors, even JSON errors
+                res = await resp.json(content_type=None)
+                self.client.ui.note_receive_message(res, self)
+                return res
+            except json.JSONDecodeError:
+                val = await resp.text()
+                raise Exception('Non-JSON response: %s' % (val[:80],))
     
     async def api_call_check(self, method, **kwargs):
         """Make a web API call. Return the result.

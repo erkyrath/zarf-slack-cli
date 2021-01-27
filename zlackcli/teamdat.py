@@ -3,6 +3,7 @@ import os
 import re
 import json
 from collections import OrderedDict
+import collections.abc
 import traceback
 import asyncio
 import aiohttp
@@ -109,7 +110,7 @@ class Team:
             await self.session.close()
             self.session = None
 
-    async def api_call(self, method, httpmethod='post', **kwargs):
+    async def api_call(self, method, httpmethod='get', **kwargs):
         """Make a web API call. Return the result.
         This may raise an exception or return an object with
         ok=False.
@@ -140,10 +141,11 @@ class Team:
         """
         try:
             res = await self.api_call(method, **kwargs)
-            if res is None or (res.get('status_code') and res.get('message')):
-                errmsg = '???'
-                if res and 'message' in res:
-                    errmsg = res.get('message')
+            if res is None:
+                self.client.print('Slack error (%s) (%s): no result' % (method, self.short_name(),))
+                return None
+            if isinstance(res, collections.abc.Mapping) and res.get('status_code') and res.get('message'):
+                errmsg = res.get('message', '???')
                 self.client.print('Slack error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
                 return None
             return res
@@ -370,22 +372,19 @@ class Team:
         ### muted channels
     
         # Fetch user lists
-        cursor = None
+        page = 0
         while True:
-            res = await self.api_call_check('users.list', cursor=cursor)
+            res = await self.api_call_check('users', page=page)
             if not res:
                 break
-            for user in res.get('members'):
+            for user in res:
                 userid = user['id']
-                username = user['profile']['display_name']
-                if not username:
-                    username = user['name']    # legacy data field
-                userrealname = user['profile']['real_name']
-                self.users[userid] = User(self, userid, username, userrealname)
-                self.users_by_display_name[username] = self.users[userid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
+                username = user['username']
+                userrealname = (user.get('first_name') + ' ' + user.get('last_name')).strip()
+                print('### user', userid, username, userrealname)
+                #self.users[userid] = User(self, userid, username, userrealname)
+                #self.users_by_display_name[username] = self.users[userid]
+            page += 1
             
         #self.client.print('Users for %s: %s' % (self, self.users,))
     

@@ -217,8 +217,10 @@ class ZlackClient:
             # seconds, but if the machine sleeps, it'll be more.)
             curtime = time.time()
 
-    def begin_auth(self, mhost):
-        """Launch the process of authenticating to a new Slack team.
+    def begin_auth(self, mhost, patoken=None):
+        """Launch the process of authenticating to a new Mattermost server.
+        If patoken is supplied, we log in using that. If not, we begin
+        the OAuth process and send the user to the site to confirm.
         (This returns immediately.)
         """
         if self.authtask:
@@ -231,8 +233,12 @@ class ZlackClient:
         if not self.opts.client_secret:
             self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
             return
-            
-        self.authtask = self.evloop.create_task(self.perform_auth_async(mhost))
+
+        if patoken is None:
+            task = self.perform_oauth_async(mhost)
+        else:
+            task = self.perform_tokenauth_async(mhost, patoken)
+        self.authtask = self.evloop.create_task(task)
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
@@ -240,7 +246,7 @@ class ZlackClient:
             self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
-    async def perform_auth_async(self, mhost):
+    async def perform_oauth_async(self, mhost):
         """Do the work of authenticating to a new Mattermost server.
         This is async, and it takes a while, because the user has to
         authenticate through Slack's web site.
@@ -290,12 +296,20 @@ class ZlackClient:
 
         ### stash expires_in, refresh_token somewhere
 
-        # Got the permanent token. Create a new entry for ~/.zlack-tokens.
+        # Got the permanent token.
+        await self.perform_tokenauth_async(mhost, res['access_token'])
+    
+    async def perform_tokenauth_async(self, mhost, access_token):
+        """Continue the authentication process. The token may be a personal
+        access token, or it may have arrived through OAuth.
+        """
+
+        # Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
         teammap['_protocol'] = 'mattermost'
-        for key in ('scope', 'access_token'):
-            if key in res:
-                teammap[key] = res.get(key)
+        teammap['host'] = mhost
+        teammap['access_token'] = access_token
+        ### maybe expires_in/refresh_token
 
         # Try fetching user info. (We want to include the user's name in the
         # ~/.zlack-tokens entry.)

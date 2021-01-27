@@ -581,14 +581,17 @@ class UI:
             self.print('/%s%s -- %s' % (han.name, prefix, han.help),)
 
     @uicommand('auth',
-               arghelp='server',
-               help='request authentication to a Slack team')
+               arghelp='server [personaltoken]',
+               help='request authentication to a Mattermost team')
     def cmd_auth(self, args):
         """Command: authenticate to a Slack team.
         """
-        if len(args) != 1:
+        if not args:
             raise ArgException('You must supply a server name')
-        self.client.begin_auth(args[0])
+        patoken = None
+        if len(args) > 1:
+            patoken = args[1]
+        self.client.begin_auth(args[0], patoken)
         
     @uicommand('debug',
                arghelp='[bool]',

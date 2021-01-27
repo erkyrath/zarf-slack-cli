@@ -22,9 +22,9 @@ class Team:
         self.client = client
         self.evloop = client.evloop
         
-        self.id = map['team_id']
+        self.id = map['host']
         self.key = '%s:%s' % (self.protocol, self.id)
-        self.team_name = map.get('team_name', '???')
+        self.team_name = self.id
         self.user_id = map['user_id']
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out

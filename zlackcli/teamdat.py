@@ -126,7 +126,14 @@ class Team:
             if val is None:
                 continue
             if key.startswith('__'):
-                queryls.append('%s=%s' % (key[2:], urllib.parse.quote(str(val))))
+                key = key[2:]
+                if val is True:
+                    val = 'true'
+                elif val is False:
+                    val = 'false'
+                else:
+                    val = str(val)
+                queryls.append('%s=%s' % (key, urllib.parse.quote(val)))
             else:
                 data[key] = val
 

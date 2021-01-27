@@ -209,9 +209,9 @@ class ZlackClient:
             # that is a better way to avoid timeout errors. Now we've got
             # all the sockets restabilized, but timeout errors are still
             # possible; the pings will root them out.
-            for team in self.teams.values():
-                if team.rtm_connected():
-                    await team.rtm_send_async({ 'type':'ping', 'id':None })
+            ###for team in self.teams.values():
+            ###    if team.rtm_connected():
+            ###        await team.rtm_send_async({ 'type':'ping', 'id':None })
 
             # Note the time for next go-around. (Should be exactly five
             # seconds, but if the machine sleeps, it'll be more.)

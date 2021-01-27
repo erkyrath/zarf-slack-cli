@@ -93,7 +93,7 @@ class Team:
 
         await self.load_connection_data()
 
-        if False: ###
+        if True:
             await self.rtm_connect_async()
 
     async def close(self):
@@ -210,21 +210,17 @@ class Team:
             await asyncio.sleep(0.05)
             
         self.want_connected = True
-        res = await self.api_call_check('rtm.connect')
-        if not res:
-            return
-        self.rtm_url = res.get('url')
-        if not self.rtm_url:
-            self.print('rtm.connect response had no url')
-            return
+        self.rtm_url = 'wss://{0}/api/v4/{1}'.format(self.client.domain, 'websocket')
 
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
         if self.rtm_socket and not self.rtm_socket.open:
             # This may not be a plausible failure state, but we'll cover it.
-            self.print('rtm.connect did not return an open socket')
+            self.print('websocket did not return an open socket')
             self.rtm_socket = None
             return
+
+        await self.rtm_send_async({ 'action':'authentication_challenge', 'seq':None, 'data':{ 'token':self.access_token } })
 
         self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
         def callback(future):
@@ -360,10 +356,10 @@ class Team:
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
-        if 'id' in msg and msg['id'] is None:
+        if 'seq' in msg and msg['seq'] is None:
             self.msg_counter += 1
-            msg['id'] = self.msg_counter
-            self.msg_in_flight[msg['id']] = msg
+            msg['seq'] = self.msg_counter
+            self.msg_in_flight[msg['seq']] = msg
         self.client.ui.note_send_message(msg, self)
         try:
             await self.rtm_socket.send(json.dumps(msg))

@@ -91,7 +91,7 @@ class Team:
 
         await self.load_connection_data()
 
-        if True:
+        if False: ###
             await self.rtm_connect_async()
 
     async def close(self):
@@ -135,15 +135,15 @@ class Team:
         """
         try:
             res = await self.api_call(method, **kwargs)
-            if res is None or not res.get('ok'):
+            if res is None or (res.get('status_code') and res.get('message')):
                 errmsg = '???'
-                if res and 'error' in res:
-                    errmsg = res.get('error')
+                if res and 'message' in res:
+                    errmsg = res.get('message')
                 self.client.print('Slack error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
                 return None
             return res
         except Exception as ex:
-            self.print_exception(ex, 'Slack exception (%s)' % (method,))
+            self.print_exception(ex, 'Slack exception (%s) (%s)' % (method, self.short_name(),))
             return None
 
     def resolve_in_flight(self, val):
@@ -361,17 +361,9 @@ class Team:
         self.channels_by_name.clear()
         self.users.clear()
         self.users_by_display_name.clear();
-    
-        # The muted_channels information is stored in your Slack preferences,
-        # which are an undocumented (but I guess widely used) API call.
-        # See: https://github.com/ErikKalkoken/slackApiDoc
-        res = await self.api_call_check('users.prefs.get')
-        if res:
-            prefs = res.get('prefs')
-            mutels = prefs.get('muted_channels')
-            if mutels:
-                self.muted_channels = set(mutels.split(','))
 
+        ### muted channels
+    
         # Fetch user lists
         cursor = None
         while True:

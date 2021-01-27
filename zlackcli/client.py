@@ -330,5 +330,5 @@ class ZlackClient:
         self.teams[team.key] = team
         self.write_teams()
         
-        ###await team.open()
+        await team.open()
         

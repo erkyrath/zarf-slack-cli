@@ -405,40 +405,9 @@ class Team:
             
         #self.client.print('Users for %s: %s' % (self, self.users,))
     
-        # Fetch public and private channels
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                channame = chan['name']
-                priv = chan['is_private']
-                member = chan['is_member']
-                self.channels[chanid] = Channel(self, chanid, channame, private=priv, member=member)
-                self.channels_by_name[channame] = self.channels[chanid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
+        ### Fetch public and private channels
             
-        # Fetch IM (person-to-person) channels
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                chanuser = chan['user']
-                if chanuser in self.users:
-                    self.users[chanuser].im_channel = chanid
-                    channame = '@'+self.users[chanuser].name
-                    self.channels[chanid] = Channel(self, chanid, channame, private=True, member=True, im=chanuser)
-                    # But not channels_by_name.
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
+        ### Fetch IM (person-to-person) channels
 
         #self.client.print('Channels for %s: %s' % (self, self.channels,))
 

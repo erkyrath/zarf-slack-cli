@@ -227,12 +227,13 @@ class ZlackClient:
             self.print('Already awaiting authentication callback!')
             return
 
-        if not self.opts.client_id:
-            self.print('You must set --clientid or $ZLACK_CLIENT_ID to use the /auth command.')
-            return
-        if not self.opts.client_secret:
-            self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
-            return
+        if patoken is None:
+            if not self.opts.client_id:
+                self.print('You must set --clientid or $ZLACK_CLIENT_ID to use the /auth command.')
+                return
+            if not self.opts.client_secret:
+                self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
+                return
 
         if patoken is None:
             task = self.perform_oauth_async(mhost)

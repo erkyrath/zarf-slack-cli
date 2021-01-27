@@ -172,7 +172,7 @@ class Team:
             return None
 
     def resolve_in_flight(self, val):
-        """Check an id value in a reply_to. If we've sent a message
+        """Check a seq value in a reply_to. If we've sent a message
         with that value, return it (and remove it from our pool of sent
         messages.)
         """

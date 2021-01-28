@@ -16,9 +16,13 @@ class Protocol:
         self.client = client
         self.teams = OrderedDict()   # team.key to Team
 
+    def __repr__(self):
+        return '<%s (%s)>' % (self.__class__.__name__, self.key,)
+
     def create_team(self, map):
         # Call the TeamClass's constructor.
-        team = self.teamclass(self, map)
+        cla = self.teamclass
+        team = cla(self, map)
         
         # Add it to both our team list and the master team list.
         self.teams[team.key] = team

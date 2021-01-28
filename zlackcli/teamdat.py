@@ -8,19 +8,37 @@ import asyncio
 import aiohttp
 import websockets
 
+class Protocol:
+    key = None
+    teamclass = None
+
+    def __init__(self, client):
+        self.client = client
+        self.teams = OrderedDict()   # team.key to Team
+
+    def create_team(self, map):
+        # Call the TeamClass's constructor.
+        team = self.teamclass(self, map)
+        self.teams[team.key] = team
+        return team
+
+
 class Team:
     protocol = None
+    protocolkey = None
     
     # team.id: identifier, unique within protocol
     # team.key: "protocol:id"
 
-    @staticmethod
-    def construct(client, map):
-        proto = map['_protocol']
-        if proto == 'slack':
-            return SlackTeam(client, map)
-        raise Exception('Protocol not recognized: %s' % (proto,))
+    
+class SlackProtocol(Protocol):
+    key = 'slack'
+    # teamclass is filled in at init time
 
+    def __init__(self, client):
+        super().__init__(client)
+        SlackProtocol.teamclass = SlackTeam
+    
 class SlackTeam(Team):
     """Represents one Slack group (team, workspace... I'm not all that
     consistent about it, sorry). This includes the websocket (which
@@ -28,16 +46,20 @@ class SlackTeam(Team):
     group's channels and users.
     """
 
-    protocol = 'slack'
+    protocolkey = 'slack'
     
-    def __init__(self, client, map):
-        if map['_protocol'] != SlackTeam.protocol:
+    def __init__(self, protocol, map):
+        if not isinstance(protocol, SlackProtocol):
+            raise Exception('SlackTeam called with wrong protocol')
+        if map['_protocol'] != self.protocolkey:
             raise Exception('SlackTeam data has the wrong protocol')
-        self.client = client
-        self.evloop = client.evloop
+        
+        self.protocol = protocol
+        self.client = protocol.client
+        self.evloop = self.client.evloop
         
         self.id = map['team_id']
-        self.key = '%s:%s' % (self.protocol, self.id)
+        self.key = '%s:%s' % (self.protocolkey, self.id)
         self.team_name = map.get('team_name', '???')
         self.user_id = map['user_id']
         self.access_token = map['access_token']
@@ -60,7 +82,7 @@ class SlackTeam(Team):
         self.msg_in_flight = {}
 
     def __repr__(self):
-        return '<SlackTeam %s:%s "%s">' % (self.protocol, self.id, self.team_name)
+        return '<SlackTeam %s:%s "%s">' % (self.protocolkey, self.id, self.team_name)
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain

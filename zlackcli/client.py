@@ -10,14 +10,15 @@ import aiohttp
 import aiohttp.web
 
 from .teamdat import Team
+from .teamdat import SlackProtocol
 from .prefs import Prefs
 from .auth import construct_auth_url, construct_auth_handler
 from .ui import UI
 
 class ZlackClient:
     
-    domain = 'slack.com'
-    version = '2.0.0'
+    domain = 'slack.com' ###
+    version = '3.0.0'
     
     def __init__(self, tokenpath, prefspath=None, opts={}, loop=None):
         if loop is None:
@@ -25,6 +26,9 @@ class ZlackClient:
             self.evloop = asyncio.get_event_loop()
         else:
             self.evloop = loop
+
+        self.protocols = [ SlackProtocol(self) ]
+        self.protocolmap = { pro.key:pro for pro in self.protocols }
             
         self.tokenpath = tokenpath
         self.opts = opts
@@ -81,7 +85,11 @@ class ZlackClient:
             return
         for map in dat:
             try:
-                team = Team.construct(self, map)
+                pro = self.protocolmap.get(map['_protocol'])
+                if not pro:
+                    self.print('Protocol not recognized: %s' % (map['_protocol'],))
+                    continue
+                team = pro.create_team(map)
                 self.teams[team.key] = team
             except Exception as ex:
                 self.print_exception(ex, 'Reading tokens')
@@ -309,7 +317,7 @@ class ZlackClient:
         teammap['user_real_name'] = user['real_name']
             
         # Create a new Team entry.
-        team = SlackTeam(self, teammap)
+        team = SlackProtocol(self, teammap)
         self.teams[team.key] = team
         self.write_teams()
         

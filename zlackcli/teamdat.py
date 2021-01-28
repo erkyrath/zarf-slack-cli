@@ -28,7 +28,6 @@ class SlackTeam(Team):
     group's channels and users.
     """
 
-    # Someday we will support more than one protocol
     protocol = 'slack'
     
     def __init__(self, client, map):

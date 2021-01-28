@@ -90,7 +90,6 @@ class ZlackClient:
                     self.print('Protocol not recognized: %s' % (map['_protocol'],))
                     continue
                 team = pro.create_team(map)
-                self.teams[team.key] = team
             except Exception as ex:
                 self.print_exception(ex, 'Reading tokens')
 
@@ -317,8 +316,7 @@ class ZlackClient:
         teammap['user_real_name'] = user['real_name']
             
         # Create a new Team entry.
-        team = SlackProtocol(self, teammap)
-        self.teams[team.key] = team
+        team = SlackProtocol.create_team(map)
         self.write_teams()
         
         await team.open()

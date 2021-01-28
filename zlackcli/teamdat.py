@@ -19,7 +19,11 @@ class Protocol:
     def create_team(self, map):
         # Call the TeamClass's constructor.
         team = self.teamclass(self, map)
+        
+        # Add it to both our team list and the master team list.
         self.teams[team.key] = team
+        self.client.teams[team.key] = team
+        
         return team
 
 

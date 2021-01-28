@@ -14,8 +14,12 @@ import zlackcli.client
 token_file = '.zlack-tokens'
 prefs_file = '.zlack-prefs'
 
-token_path = os.path.join(os.environ.get('HOME'), token_file)
-prefs_path = os.path.join(os.environ.get('HOME'), prefs_file)
+zlackdir = os.environ.get('ZLACK_DIR')
+if not zlackdir:
+    zlackdir = os.environ.get('HOME')
+
+token_path = os.path.join(zlackdir, token_file)
+prefs_path = os.path.join(zlackdir, prefs_file)
 
 env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
 env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)

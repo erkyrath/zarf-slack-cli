@@ -9,6 +9,19 @@ import aiohttp
 import websockets
 
 class Team:
+    protocol = None
+    
+    # team.id: identifier, unique within protocol
+    # team.key: "protocol:id"
+
+    @staticmethod
+    def construct(client, map):
+        proto = map['_protocol']
+        if proto == 'slack':
+            return SlackTeam(client, map)
+        raise Exception('Protocol not recognized: %s' % (proto,))
+
+class SlackTeam(Team):
     """Represents one Slack group (team, workspace... I'm not all that
     consistent about it, sorry). This includes the websocket (which
     carries the RTM protocol). It also includes information about the
@@ -19,6 +32,8 @@ class Team:
     protocol = 'slack'
     
     def __init__(self, client, map):
+        if map['_protocol'] != SlackTeam.protocol:
+            raise Exception('SlackTeam data has the wrong protocol')
         self.client = client
         self.evloop = client.evloop
         
@@ -46,7 +61,7 @@ class Team:
         self.msg_in_flight = {}
 
     def __repr__(self):
-        return '<Team %s:%s "%s">' % (self.protocol, self.id, self.team_name)
+        return '<SlackTeam %s:%s "%s">' % (self.protocol, self.id, self.team_name)
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain

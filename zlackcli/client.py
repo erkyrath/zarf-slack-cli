@@ -79,18 +79,12 @@ class ZlackClient:
             fl.close()
         except:
             return
-        if isinstance(dat, OrderedDict):
-            # This is an old-style tokens file from Zlack V1. Reform it
-            # into a list, assuming all entries are Slack entries.
-            dat = list(dat.values())
-            for map in dat:
-                map['_protocol'] = 'slack'
         for map in dat:
-            if map['_protocol'] != 'slack':
-                self.print('Protocol not recognized: %s' % (map['_protocol'],))
-                continue
-            team = Team(self, map)
-            self.teams[team.key] = team
+            try:
+                team = Team.construct(self, map)
+                self.teams[team.key] = team
+            except Exception as ex:
+                self.print_exception(ex, 'Reading tokens')
 
     def write_teams(self):
         """Write out the current team list to ~/.zlack-tokens.
@@ -315,7 +309,7 @@ class ZlackClient:
         teammap['user_real_name'] = user['real_name']
             
         # Create a new Team entry.
-        team = Team(self, teammap)
+        team = SlackTeam(self, teammap)
         self.teams[team.key] = team
         self.write_teams()
         

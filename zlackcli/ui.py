@@ -390,6 +390,7 @@ class UI:
     
     def channel_name(self, team, chanid):
         """Look up a channel name.
+        ### generic?
         """
         if not isinstance(team, Team):
             if team not in self.client.teams:
@@ -401,6 +402,7 @@ class UI:
     
     def user_name(self, team, userid):
         """Look up a user name (the displayname).
+        ### probably not generic
         """
         if not isinstance(team, Team):
             if team not in self.client.teams:

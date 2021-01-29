@@ -10,7 +10,7 @@ import aiohttp
 import aiohttp.web
 
 from .teamdat import Team
-from .teamdat import SlackProtocol
+from .slackmod import SlackProtocol
 from .prefs import Prefs
 from .ui import UI
 

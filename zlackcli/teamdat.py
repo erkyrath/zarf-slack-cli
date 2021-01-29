@@ -70,6 +70,8 @@ class Team:
 
     
 class SlackProtocol(Protocol):
+    domain = 'slack.com'
+    
     key = 'slack'
     # teamclass is filled in at init time
 
@@ -105,6 +107,7 @@ class SlackProtocol(Protocol):
         if self.authtask:
             self.authtask.cancel()
             self.authtask = None
+            self.client.auth_in_progress = False
             
         if self.waketask:
             self.waketask.cancel()
@@ -116,6 +119,27 @@ class SlackProtocol(Protocol):
         if self.session:
             await self.session.close()
             self.session = None
+
+    async def api_call(self, method, **kwargs):
+        """Make a Slack API call. If kwargs contains a "token"
+        field, this is used; otherwise, the call is unauthenticated.
+        This is only used when authenticating to a new team.
+        """
+        url = 'https://{0}/api/{1}'.format(self.domain, method)
+        
+        data = {}
+        headers = {}
+
+        for (key, val) in kwargs.items():
+            if val is None:
+                continue
+            if key == 'token':
+                headers['Authorization'] = 'Bearer '+val
+                continue
+            data[key] = val
+
+        async with self.session.post(url, headers=headers, data=data) as resp:
+            return await resp.json()
 
     async def wakeloop_async(self):
         """This task runs in the background and watches the system clock.
@@ -160,6 +184,113 @@ class SlackProtocol(Protocol):
             # Note the time for next go-around. (Should be exactly five
             # seconds, but if the machine sleeps, it'll be more.)
             curtime = time.time()
+            
+    def begin_auth(self):
+        """Launch the process of authenticating to a new Slack team.
+        (This returns immediately.)
+        """
+        if self.client.auth_in_progress or self.authtask:
+            self.print('Already awaiting authentication callback!')
+            return
+
+        if not self.client.opts.client_id:
+            ### generalize
+            self.print('You must set --clientid or $ZLACK_CLIENT_ID to use the /auth command.')
+            return
+        if not self.client.opts.client_secret:
+            self.print('You must set --clientsecret or $ZLACK_CLIENT_SECRET to use the /auth command.')
+            return
+
+        self.client.auth_in_progress = True
+        self.authtask = self.client.evloop.create_task(self.perform_auth_async())
+        def callback(future):
+            # This is not called if authtask is cancelled. (But it is called
+            # if the auth's future is cancelled.)
+            self.authtask = None
+            self.client.auth_in_progress = False
+            self.print_exception(future.exception(), 'Begin auth')
+        self.authtask.add_done_callback(callback)
+        
+    async def perform_auth_async(self):
+        """Do the work of authenticating to a new Slack team.
+        This is async, and it takes a while, because the user has to
+        authenticate through Slack's web site.
+        """
+        (slackurl, redirecturl, statecheck) = construct_auth_url(self.client.opts.auth_port, self.client.opts.client_id)
+
+        self.print('Visit this URL to authenticate with Slack:\n')
+        self.print(slackurl+'\n')
+
+        future = asyncio.Future(loop=self.client.evloop)
+
+        # Bring up a local web server to wait for the redirect callback.
+        # When we get it, the future will be set.
+        server = aiohttp.web.Server(construct_auth_handler(future, statecheck))
+        sockserv = await self.client.evloop.create_server(server, 'localhost', self.client.opts.auth_port)
+
+        # Wait for the callback. (With a timeout.)
+        auth_code = None
+        try:
+            auth_code = await asyncio.wait_for(future, 60, loop=self.client.evloop)
+        except asyncio.TimeoutError:
+            self.print('URL redirect timed out.')
+        except asyncio.CancelledError:
+            self.print('URL redirect cancelled.')
+        except Exception as ex:
+            self.print_exception(ex, 'Wait for URL redirect')
+
+        # We're done with the local server.
+        await server.shutdown()
+        sockserv.close()
+
+        if not auth_code:
+            # We were cancelled or something.
+            return
+        
+        self.print('Slack authentication response received.')
+        
+        # We have the temporary authorization code. Now we exchange it for
+        # a permanent access token.
+
+        res = await self.api_call('oauth.access', client_id=self.client.opts.client_id, client_secret=self.client.opts.client_secret, code=auth_code)
+        
+        if not res.get('ok'):
+            self.print('oauth.access call failed: %s' % (res.get('error'),))
+            return
+        if not res.get('team_id'):
+            self.print('oauth.access response had no team_id')
+            return
+        if not res.get('access_token'):
+            self.print('oauth.access response had no access_token')
+            return
+
+        # Got the permanent token. Create a new entry for ~/.zlack-tokens.
+        teammap = OrderedDict()
+        teammap['_protocol'] = 'slack'
+        for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
+            if key in res:
+                teammap[key] = res.get(key)
+
+        # Try fetching user info. (We want to include the user's name in the
+        # ~/.zlack-tokens entry.)
+        res = await self.api_call('users.info', token=teammap['access_token'], user=teammap['user_id'])
+        if not res.get('ok'):
+            self.print('users.info call failed: %s' % (res.get('error'),))
+            return
+        if not res.get('user'):
+            self.print('users.info response had no user')
+            return
+        user = res['user']
+
+        teammap['user_name'] = user['name']
+        teammap['user_real_name'] = user['real_name']
+            
+        # Create a new Team entry.
+        team = self.protocol.create_team(teammap)
+        self.write_teams()
+        
+        await team.open()
+        
 
 class SlackTeam(Team):
     """Represents one Slack group (team, workspace... I'm not all that
@@ -257,7 +388,7 @@ class SlackTeam(Team):
         This may raise an exception or return an object with
         ok=False.
         """
-        url = 'https://{0}/api/{1}'.format(self.client.domain, method)
+        url = 'https://{0}/api/{1}'.format(self.protocol.domain, method)
         
         data = {}
         for (key, val) in kwargs.items():

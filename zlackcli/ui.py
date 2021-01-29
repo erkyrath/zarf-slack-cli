@@ -587,7 +587,8 @@ class UI:
     def cmd_auth(self, args):
         """Command: authenticate to a Slack team.
         """
-        self.client.begin_auth()
+        pro = self.client.protocolmap['slack'] ###
+        pro.begin_auth()
         
     @uicommand('debug',
                arghelp='[bool]',

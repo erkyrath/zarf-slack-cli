@@ -12,7 +12,6 @@ import aiohttp.web
 from .teamdat import Team
 from .teamdat import SlackProtocol
 from .prefs import Prefs
-from .auth import construct_auth_url, construct_auth_handler
 from .ui import UI
 
 class ZlackClient:

@@ -8,6 +8,8 @@ import asyncio
 import aiohttp
 import websockets
 
+from .auth import construct_auth_url, construct_auth_handler
+
 class Protocol:
     key = None
     teamclass = None
@@ -286,8 +288,8 @@ class SlackProtocol(Protocol):
         teammap['user_real_name'] = user['real_name']
             
         # Create a new Team entry.
-        team = self.protocol.create_team(teammap)
-        self.write_teams()
+        team = self.create_team(teammap)
+        self.client.write_teams()
         
         await team.open()
         

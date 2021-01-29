@@ -132,92 +132,25 @@ class ZlackClient:
         async with self.session.post(url, headers=headers, data=data) as resp:
             return await resp.json()
 
+    async def open(self):
+        ### parallel!
+        for pro in self.protocols:
+            await pro.open()
+    
+    async def close(self):
+        if self.prefs:
+            self.prefs.write_if_dirty()
+            
+        ### parallel!
+        for pro in self.protocols:
+            await pro.close()
+        
     def get_useragent(self):
         """Construct a user-agent string for our web API requests.
         """
         useragent = 'zlack {self.version} Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(self=self, v=sys.version_info, psys=platform.system(), pver=platform.release())
         return useragent
     
-    async def open(self):
-        """Open web sessions for the client, and one for each team,
-        and then load the team data. (This does not open the websockets.)
-        """
-        headers = {
-            'user-agent': self.get_useragent(),
-        }
-        self.session = aiohttp.ClientSession(headers=headers)
-            
-        if self.teams:
-            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ])
-            for res in done:
-                self.print_exception(res.exception(), 'Could not set up team')
-
-        self.waketask = self.evloop.create_task(self.wakeloop_async())
-    
-    async def close(self):
-        """Shut down all our open sessions and whatnot, in preparation
-        for quitting.
-        """
-        if self.prefs:
-            self.prefs.write_if_dirty()
-            
-        if self.authtask:
-            self.authtask.cancel()
-            
-        if self.waketask:
-            self.waketask.cancel()
-            
-        for team in self.teams.values():
-            await team.close()
-
-        if self.session:
-            await self.session.close()
-            self.session = None
-
-    async def wakeloop_async(self):
-        """This task runs in the background and watches the system clock.
-        If the clock jumps more than thirty seconds, then the machine was
-        put to sleep for a while and we need to reconnect all our websockets.
-
-        (Or the user changed the clock time, in which case we don't need to
-        reconnect all our websockets but we do it anyway. Oops.)
-
-        We also ping the server(s).
-
-        (This exists because the async websockets library isn't real
-        good at announcing timeout errors. If we just wait for
-        ConnectionClosed exceptions to appear, we could be staring at
-        a failed socket connection for a long time -- a minute or more.
-        So we proactively kick everything on any apparent sleep/wake
-        cycle. The server ping should make any other timeout errors
-        visible.)
-        """
-        curtime = time.time()
-        while True:
-            await asyncio.sleep(5.0)
-            elapsed = time.time() - curtime
-            if elapsed > 30.0:
-                async def reconnect_if_connected(team):
-                    if team.rtm_connected():
-                        await team.rtm_connect_async()
-                    
-                if self.teams:
-                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ])
-                    for res in done:
-                        self.print_exception(res.exception(), 'Could not reconnect team')
-                
-            # Server pings. We do this right after the time check because
-            # that is a better way to avoid timeout errors. Now we've got
-            # all the sockets restabilized, but timeout errors are still
-            # possible; the pings will root them out.
-            for team in self.teams.values():
-                if team.rtm_connected():
-                    await team.rtm_send_async({ 'type':'ping', 'id':None })
-
-            # Note the time for next go-around. (Should be exactly five
-            # seconds, but if the machine sleeps, it'll be more.)
-            curtime = time.time()
-
     def begin_auth(self):
         """Launch the process of authenticating to a new Slack team.
         (This returns immediately.)

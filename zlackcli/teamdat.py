@@ -30,6 +30,21 @@ class Protocol:
         
         return team
 
+    def print(self, msg):
+        """Output a line of text. (Or several lines, as it could contain
+        internal line breaks.) You typically won't want to customize this;
+        instead, replace the Client.print() method.
+        """
+        self.client.print(msg)
+
+    def print_exception(self, ex, label='zlack'):
+        """Convenience function to print an exception using self.print().
+        If ex is None, this does nothing (so you can conveniently use it
+        when you only *might* have an exception). If --debugexceptions is
+        set, this prints complete stack traces.
+        """
+        self.client.print_exception(ex, '%s (%s)' % (label, self.key))
+
 
 class Team:
     protocol = None
@@ -37,6 +52,21 @@ class Team:
     
     # team.id: identifier, unique within protocol
     # team.key: "protocol:id"
+
+    def print(self, msg):
+        """Output a line of text. (Or several lines, as it could contain
+        internal line breaks.) You typically won't want to customize this;
+        instead, replace the Client.print() method.
+        """
+        self.client.print(msg)
+
+    def print_exception(self, ex, label='zlack'):
+        """Convenience function to print an exception using self.print().
+        If ex is None, this does nothing (so you can conveniently use it
+        when you only *might* have an exception). If --debugexceptions is
+        set, this prints complete stack traces.
+        """
+        self.client.print_exception(ex, '%s (%s)' % (label, self.short_name()))
 
     
 class SlackProtocol(Protocol):
@@ -46,7 +76,91 @@ class SlackProtocol(Protocol):
     def __init__(self, client):
         super().__init__(client)
         SlackProtocol.teamclass = SlackTeam
+
+        self.session = None
+
+        self.authtask = None
+        self.waketask = None
     
+    async def open(self):
+        """Open web sessions for the client, and one for each team,
+        and then load the team data. (This does not open the websockets.)
+        """
+        headers = {
+            'user-agent': self.client.get_useragent(),
+        }
+        self.session = aiohttp.ClientSession(headers=headers)
+            
+        if self.teams:
+            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ])
+            for res in done:
+                self.print_exception(res.exception(), 'Could not set up team')
+
+        self.waketask = self.client.evloop.create_task(self.wakeloop_async())
+    
+    async def close(self):
+        """Shut down all our open sessions and whatnot, in preparation
+        for quitting.
+        """
+        if self.authtask:
+            self.authtask.cancel()
+            self.authtask = None
+            
+        if self.waketask:
+            self.waketask.cancel()
+            self.waketask = None
+            
+        for team in self.teams.values():
+            await team.close()
+
+        if self.session:
+            await self.session.close()
+            self.session = None
+
+    async def wakeloop_async(self):
+        """This task runs in the background and watches the system clock.
+        If the clock jumps more than thirty seconds, then the machine was
+        put to sleep for a while and we need to reconnect all our websockets.
+
+        (Or the user changed the clock time, in which case we don't need to
+        reconnect all our websockets but we do it anyway. Oops.)
+
+        We also ping the server(s).
+
+        (This exists because the async websockets library isn't real
+        good at announcing timeout errors. If we just wait for
+        ConnectionClosed exceptions to appear, we could be staring at
+        a failed socket connection for a long time -- a minute or more.
+        So we proactively kick everything on any apparent sleep/wake
+        cycle. The server ping should make any other timeout errors
+        visible.)
+        """
+        curtime = time.time()
+        while True:
+            await asyncio.sleep(5.0)
+            elapsed = time.time() - curtime
+            if elapsed > 30.0:
+                async def reconnect_if_connected(team):
+                    if team.rtm_connected():
+                        await team.rtm_connect_async()
+                    
+                if self.teams:
+                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ])
+                    for res in done:
+                        self.print_exception(res.exception(), 'Could not reconnect team')
+                
+            # Server pings. We do this right after the time check because
+            # that is a better way to avoid timeout errors. Now we've got
+            # all the sockets restabilized, but timeout errors are still
+            # possible; the pings will root them out.
+            for team in self.teams.values():
+                if team.rtm_connected():
+                    await team.rtm_send_async({ 'type':'ping', 'id':None })
+
+            # Note the time for next go-around. (Should be exactly five
+            # seconds, but if the machine sleeps, it'll be more.)
+            curtime = time.time()
+
 class SlackTeam(Team):
     """Represents one Slack group (team, workspace... I'm not all that
     consistent about it, sorry). This includes the websocket (which
@@ -91,21 +205,6 @@ class SlackTeam(Team):
 
     def __repr__(self):
         return '<SlackTeam %s:%s "%s">' % (self.protocolkey, self.id, self.team_name)
-
-    def print(self, msg):
-        """Output a line of text. (Or several lines, as it could contain
-        internal line breaks.) You typically won't want to customize this;
-        instead, replace the Client.print() method.
-        """
-        self.client.print(msg)
-
-    def print_exception(self, ex, label='zlack'):
-        """Convenience function to print an exception using self.print().
-        If ex is None, this does nothing (so you can conveniently use it
-        when you only *might* have an exception). If --debugexceptions is
-        set, this prints complete stack traces.
-        """
-        self.client.print_exception(ex, '%s (%s)' % (label, self.short_name()))
 
     def get_aliases(self):
         """Return a list of channel aliases or None.

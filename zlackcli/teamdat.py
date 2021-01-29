@@ -3,12 +3,13 @@ import os
 import re
 import json
 from collections import OrderedDict
+import random
+import urllib
 import traceback
 import asyncio
 import aiohttp
+import aiohttp.web
 import websockets
-
-from .auth import construct_auth_url, construct_auth_handler
 
 class Protocol:
     key = None
@@ -47,6 +48,33 @@ class Protocol:
         """
         self.client.print_exception(ex, '%s (%s)' % (label, self.key))
 
+    def construct_auth_handler(self, future, statecheck):
+        """Construct a handler for aiohttp.web.Server.
+        This handler accepts the web request on port 8090. When a valid
+        request is received, it sets a value in the passed-in future.
+        (This is generic to all OAuth implementation, so it lives in
+        Protocol.)
+        """
+        
+        async def handler(request):
+            map = request.query
+            message = '???'
+    
+            if 'code' not in map:
+                message = 'No code found.'
+            elif 'state' not in map:
+                message = 'No state field found.'
+            elif map['state'] != statecheck:
+                message = 'State field did not match.'
+            else:
+                code = map['code']
+                future.set_result(code)
+                message = 'Auth code received: %s\n' % (code,)
+            
+            return aiohttp.web.Response(text=message)
+        
+        return handler
+
 
 class Team:
     protocol = None
@@ -72,11 +100,12 @@ class Team:
 
     
 class SlackProtocol(Protocol):
-    domain = 'slack.com'
-    
     key = 'slack'
     # teamclass is filled in at init time
 
+    domain = 'slack.com'
+    auth_url = 'https://slack.com/oauth/authorize'
+    
     def __init__(self, client):
         super().__init__(client)
         SlackProtocol.teamclass = SlackTeam
@@ -218,7 +247,7 @@ class SlackProtocol(Protocol):
         This is async, and it takes a while, because the user has to
         authenticate through Slack's web site.
         """
-        (slackurl, redirecturl, statecheck) = construct_auth_url(self.client.opts.auth_port, self.client.opts.client_id)
+        (slackurl, redirecturl, statecheck) = self.construct_auth_url(self.client.opts.auth_port, self.client.opts.client_id)
 
         self.print('Visit this URL to authenticate with Slack:\n')
         self.print(slackurl+'\n')
@@ -227,7 +256,7 @@ class SlackProtocol(Protocol):
 
         # Bring up a local web server to wait for the redirect callback.
         # When we get it, the future will be set.
-        server = aiohttp.web.Server(construct_auth_handler(future, statecheck))
+        server = aiohttp.web.Server(self.construct_auth_handler(future, statecheck))
         sockserv = await self.client.evloop.create_server(server, 'localhost', self.client.opts.auth_port)
 
         # Wait for the callback. (With a timeout.)
@@ -293,7 +322,31 @@ class SlackProtocol(Protocol):
         
         await team.open()
         
-
+    def construct_auth_url(self, authport, clientid):
+        """Construct the URL which the user will use for authentication.
+        Returns (slackurl, redirecturl, statestring).
+        - slackurl: the URL which the user should enter into a browser.
+        - redirecturl: the localhost URL which Slack will send the user back to
+          after authenticating.
+        - statestring: used to double-check the user's reply when it comes
+          back.
+        """
+        redirecturl = 'http://localhost:%d/' % (authport,)
+        statecheck = 'state_%d' % (random.randrange(1000000),)
+    
+        params = [
+            ('client_id', clientid),
+            ('scope', 'client'),
+            ('redirect_uri', redirecturl),
+            ('state', statecheck),
+        ]
+        queryls = [ '%s=%s' % (key, urllib.parse.quote(val)) for (key, val) in params ]
+        tup = list(urllib.parse.urlparse(self.auth_url))
+        tup[4] = '&'.join(queryls)
+        slackurl = urllib.parse.urlunparse(tup)
+        
+        return (slackurl, redirecturl, statecheck)
+    
 class SlackTeam(Team):
     """Represents one Slack group (team, workspace... I'm not all that
     consistent about it, sorry). This includes the websocket (which

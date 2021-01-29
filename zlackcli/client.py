@@ -133,17 +133,17 @@ class ZlackClient:
             return await resp.json()
 
     async def open(self):
-        ### parallel!
-        for pro in self.protocols:
-            await pro.open()
+        (done, pending) = await asyncio.wait([ pro.open() for pro in self.protocols ])
+        for res in done:
+            self.print_exception(res.exception(), 'Could not set up protocol')
     
     async def close(self):
         if self.prefs:
             self.prefs.write_if_dirty()
             
-        ### parallel!
-        for pro in self.protocols:
-            await pro.close()
+        (done, pending) = await asyncio.wait([ pro.close() for pro in self.protocols ])
+        for res in done:
+            self.print_exception(res.exception(), 'Could not close down protocol')
         
     def get_useragent(self):
         """Construct a user-agent string for our web API requests.

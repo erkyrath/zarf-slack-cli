@@ -35,10 +35,10 @@ popt.add_option('--clientid',
 popt.add_option('--clientsecret',
                 action='store', dest='client_secret', default=env_client_secret,
                 help='Slack client secret (default: $ZLACK_CLIENT_SECRET)')
-popt.add_option('--debugexceptions',
+popt.add_option('--debug-exceptions',
                 action='store_true', dest='debug_exceptions',
                 help='Display complete stack traces of exceptions')
-popt.add_option('--debugmessages',
+popt.add_option('--debug-messages',
                 action='store_true', dest='debug_messages',
                 help='Show all command to and from the server')
 

@@ -109,7 +109,7 @@ class ZlackClient:
             self.print_exception(ex, 'Writing tokens')
     
     async def open(self):
-        (done, pending) = await asyncio.wait([ pro.open() for pro in self.protocols ])
+        (done, pending) = await asyncio.wait([ pro.open() for pro in self.protocols ], loop=self.evloop)
         for res in done:
             self.print_exception(res.exception(), 'Could not set up protocol')
     
@@ -117,7 +117,7 @@ class ZlackClient:
         if self.prefs:
             self.prefs.write_if_dirty()
             
-        (done, pending) = await asyncio.wait([ pro.close() for pro in self.protocols ])
+        (done, pending) = await asyncio.wait([ pro.close() for pro in self.protocols ], loop=self.evloop)
         for res in done:
             self.print_exception(res.exception(), 'Could not close down protocol')
         

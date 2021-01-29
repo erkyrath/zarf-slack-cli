@@ -39,7 +39,7 @@ class SlackProtocol(Protocol):
         self.session = aiohttp.ClientSession(headers=headers)
             
         if self.teams:
-            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ])
+            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ], loop=self.client.evloop)
             for res in done:
                 self.print_exception(res.exception(), 'Could not set up team')
 
@@ -58,7 +58,7 @@ class SlackProtocol(Protocol):
             self.waketask.cancel()
             self.waketask = None
             
-        (done, pending) = await asyncio.wait([ team.close() for team in self.teams.values() ])
+        (done, pending) = await asyncio.wait([ team.close() for team in self.teams.values() ], loop=self.client.evloop)
 
         if self.session:
             await self.session.close()
@@ -113,7 +113,7 @@ class SlackProtocol(Protocol):
                         await team.rtm_connect_async()
                     
                 if self.teams:
-                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ])
+                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ], loop=self.client.evloop)
                     for res in done:
                         self.print_exception(res.exception(), 'Could not reconnect team')
                 

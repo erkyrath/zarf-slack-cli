@@ -115,6 +115,8 @@ class Protocol:
 class ProtoUI:
     def __init__(self, protocol):
         self.protocol = protocol
+        self.client = protocol.client
+        self.ui = protocol.client.ui
 
 class Host:
     """Represents one server, team, workspace, or what have you. The

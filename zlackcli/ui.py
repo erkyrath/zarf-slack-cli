@@ -12,9 +12,6 @@ pat_dest_command = re.compile('#([^ ]+)')
 pat_integer = re.compile('[0-9]+')
 pat_url = re.compile('http[s]?:.*', flags=re.IGNORECASE)
 
-pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
-pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
-
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
 pat_im_command = re.compile('^(?:([a-z0-9_-]+)[/:])?@([a-z0-9._]+)$', flags=re.IGNORECASE)
 pat_defaultchan_command = re.compile('^([a-z0-9_-]+)[/:]$', flags=re.IGNORECASE)
@@ -140,76 +137,6 @@ class UI:
                 self.files_by_url[url] = tup
                 self.files_by_index[self.file_counter] = tup
         
-    def handle_message(self, msg, team):
-        """Handle one message received from the Slack server (over the
-        RTM websocket).
-        """
-        typ = msg.get('type')
-
-        files = msg.get('files')
-        if files:
-            self.note_file_urls(team, files)
-
-        if typ is None and msg.get('reply_to'):
-            # A reply to a message we sent.
-            origmsg = team.resolve_in_flight(msg.get('reply_to'))
-            if not origmsg:
-                self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
-                return
-            chanid = origmsg.get('channel', '')
-            userid = origmsg.get('user', '')
-            # Print our successful messages even on muted channels
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-            val = '[%s/%s] %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
-            self.print(val)
-            return
-        
-        if typ == 'hello':
-            # Websocket-connected message.
-            self.print('<Connected: %s>' % (self.team_name(team)))
-            return
-        
-        if typ == 'message':
-            chanid = msg.get('channel', '')
-            userid = msg.get('user', '')
-            subtype = msg.get('subtype', '')
-            if chanid in team.muted_channels:
-                return
-            if subtype == 'message_deleted':
-                userid = msg.get('previous_message').get('user', '')
-                oldtext = msg.get('previous_message').get('text')
-                oldtext = self.decode_message(team, oldtext)
-                val = '[%s/%s] (del) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), oldtext)
-                self.print(val)
-                return
-            if subtype == 'message_changed':
-                oldtext = ''
-                if 'previous_message' in msg:
-                    oldtext = msg.get('previous_message').get('text')
-                    oldtext = self.decode_message(team, oldtext)
-                userid = msg.get('message').get('user', '')
-                newtext = msg.get('message').get('text')
-                newtext = self.decode_message(team, newtext, attachments=msg.get('attachments'), files=msg.get('files'))
-                if oldtext == newtext:
-                    # Most likely this is a change to attachments, caused by Slack creating an image preview. Ignore.
-                    return
-                text = oldtext + '\n -> ' + newtext
-                val = '[%s/%s] (edit) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), self.user_name(team, userid), text)
-                self.print(val)
-                self.lastchannel = (team.key, chanid)
-                return
-            if subtype == 'slackbot_response':
-                val = self.client.prefs.tree_get('slackbot_mute', team, chanid)
-                if val:
-                    return
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-            subtypeflag = (' (%s)'%(subtype,) if subtype else '')
-            colon = (':' if subtype != 'me_message' else '')
-            val = '[%s/%s]%s %s%s %s' % (self.team_name(team), self.channel_name(team, chanid), subtypeflag, self.user_name(team, userid), colon, text)
-            self.print(val)
-            self.lastchannel = (team.key, chanid)
-            return
-
     def handle_input(self, val):
         """Handle one input line from the player.
         """
@@ -287,42 +214,6 @@ class UI:
         team = self.client.teams[teamkey]
         team.protocol.protoui.send_message(val, team=team, chanid=chanid)
                 
-    def decode_message(self, team, val, attachments=None, files=None):
-        """Convert a plain-text message in standard Slack form into a printable
-        string. You can also pass a list of attachments from the message.
-        Slack message text has a few special features:
-        - User references look like <@USERID>
-        - URLs look like <URL> or <URL|SLUG>
-        - &, <, and > characters are &-encoded (as in HTML)
-        """
-        if val is None:
-            val = ''
-        else:
-            val = pat_encoded_user_id.sub(lambda match:'@'+self.user_name(team, match.group(1)), val)
-            val = pat_encoded_channel_id.sub(lambda match:'#'+self.channel_name(team, match.group(1))+(match.group(2) if match.group(2) else ''), val)
-            # We could translate <URL> and <URL|SLUG> here, but those look fine as is
-            if '\n' in val:
-                val = val.replace('\n', '\n... ')
-            if '&' in val:
-                val = val.replace('&lt;', '<')
-                val = val.replace('&gt;', '>')
-                val = val.replace('&amp;', '&')
-        if attachments:
-            for att in attachments:
-                fallback = att.get('fallback')
-                if fallback:
-                    if '\n' in fallback:
-                        fallback = fallback.replace('\n', '\n... ')
-                    ### & < > also?
-                    val += ('\n..> ' + fallback)
-        if files:
-            for fil in files:
-                url = fil.get('url_private')
-                tup = self.files_by_url.get(url, None)
-                index = tup[0] if tup else '?'
-                val += ('\n..file [%s] %s (%s, %s bytes): %s' % (index, fil.get('title'), fil.get('pretty_type'), fil.get('size'), url, ))
-        return val
-    
     def short_timestamp(self, ts):
         """Given a Slack-style timestamp (a string like "1526150036.000002"),
         display it in a nice way.

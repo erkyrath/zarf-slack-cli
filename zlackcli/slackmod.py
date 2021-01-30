@@ -268,7 +268,6 @@ class SlackProtocol(Protocol):
         return (slackurl, redirecturl, statecheck)
 
 class SlackUI(ProtoUI):
-class ProtoUI:
     """This module translates between the UI (human-readable input and
     output) and the protocol (with its protocol-specific messages).
     """

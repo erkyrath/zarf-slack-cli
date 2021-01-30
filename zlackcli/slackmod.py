@@ -587,7 +587,6 @@ class SlackTeam(Host):
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel
         and user lists.
-        (Async call.)
         """
 
         self.client.print('Fetching user information for %s' % (self.team_name,))

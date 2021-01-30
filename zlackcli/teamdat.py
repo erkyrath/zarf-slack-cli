@@ -34,6 +34,42 @@ class Protocol:
         
         return team
 
+    async def open(self):
+        """Open web sessions for the client, and one for each team,
+        and then load the team data. (This does not open the websockets.)
+        """
+        raise NotImplementedError('open')
+    
+    async def close(self):
+        """Shut down all our open sessions and whatnot, in preparation
+        for quitting.
+        """
+        raise NotImplementedError('close')
+    
+    async def load_connection_data(self):
+        """Load all the information we need for a connection: the channel
+        and user lists.
+        """
+        raise NotImplementedError('load_connection_data')
+
+    def rtm_connect(self):
+        """Open the RTM (real-time) websocket. If it's already connected,
+        disconnect and reconnect.
+        (Fire-and-forget call.)
+        """
+        raise NotImplementedError('rtm_connect')
+        
+    def rtm_disconnect(self):
+        """Close the RTM (real-time) websocket.
+        (Fire-and-forget call.)
+        """
+        raise NotImplementedError('rtm_disconnect')
+        
+    def rtm_connected(self):
+        """Check whether the RTM websocket is open.
+        """
+        return False
+    
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.) You typically won't want to customize this;
@@ -89,6 +125,7 @@ class Host:
     # self.key: "protocol:id"
     # self.users: map
     # self.channels: map
+    # self.origmap: the OrderedDict that was used to construct the Host
 
     def __repr__(self):
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)

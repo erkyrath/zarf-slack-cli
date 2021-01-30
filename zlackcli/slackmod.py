@@ -311,14 +311,6 @@ class SlackTeam(Host):
             return ls
         return None
 
-    def short_name(self):
-        """Return the team name or the first alias.
-        """
-        ls = self.client.prefs.team_get('aliases', self)
-        if ls:
-            return ls[0]
-        return self.team_name
-        
     async def open(self):
         """Create the web API session, load the team data, and open
         the RTM socket (if desired).

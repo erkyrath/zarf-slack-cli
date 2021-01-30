@@ -73,10 +73,20 @@ class Host:
     
     # team.id: identifier, unique within protocol
     # team.key: "protocol:id"
+    # team.users: map
+    # team.channels: map
 
     def __repr__(self):
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
 
+    def short_name(self):
+        """Return the team name or the first alias.
+        """
+        ls = self.client.prefs.team_get('aliases', self)
+        if ls:
+            return ls[0]
+        return self.team_name
+        
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.) You typically won't want to customize this;

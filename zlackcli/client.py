@@ -37,6 +37,8 @@ class ZlackClient:
         self.teams = OrderedDict()
         self.auth_in_progress = False
 
+        self.ui.find_commands(self.protocols)
+
         self.read_teams()
         if not self.teams:
             self.print('You are not authorized in any Slack groups. Type /auth to join one.')

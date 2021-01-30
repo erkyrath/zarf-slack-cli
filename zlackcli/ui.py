@@ -639,19 +639,23 @@ class UI:
         """
         if args:
             raise ArgException('Expected no arguments')
-        ls = list(self.client.teams.values())
-        ls.sort(key = lambda team:team.team_name)
-        for team in ls:
-            teamname = team.team_name
-            memflag = ('*' if team.rtm_connected() else ' ')
-            idstring = (' (id %s)' % (team.id,) if self.debug_messages else '')
-            aliases = team.get_aliases()
-            if aliases:
-                aliases = ', '.join(aliases)
-                aliasstr = ' (%s)' % (aliases,)
-            else:
-                aliasstr = ''
-            self.print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
+        livecount = len([ pro for pro in self.client.protocols if pro.teams ])
+        for pro in self.client.protocols:
+            if livecount > 1:
+                print('%s:' % (pro.key,))
+            ls = list(pro.teams.values())
+            ls.sort(key = lambda team:team.team_name)
+            for team in ls:
+                teamname = team.team_name
+                memflag = ('*' if team.rtm_connected() else ' ')
+                idstring = (' (id %s)' % (team.id,) if self.debug_messages else '')
+                aliases = team.get_aliases()
+                if aliases:
+                    aliases = ', '.join(aliases)
+                    aliasstr = ' (%s)' % (aliases,)
+                else:
+                    aliasstr = ''
+                self.print(' %s%s%s%s' % (memflag, teamname, idstring, aliasstr))
     
     @uicommand('users',
                arghelp='[team]',

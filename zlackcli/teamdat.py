@@ -74,6 +74,9 @@ class Host:
     # team.id: identifier, unique within protocol
     # team.key: "protocol:id"
 
+    def __repr__(self):
+        return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
+
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.) You typically won't want to customize this;

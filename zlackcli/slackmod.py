@@ -280,7 +280,7 @@ class SlackTeam(Host):
         self.client = protocol.client
         self.evloop = self.client.evloop
         
-        self.id = map['team_id']
+        self.id = map['team_id']   # looks like "T00ABC123"
         self.key = '%s:%s' % (self.protocolkey, self.id)
         self.team_name = map.get('team_name', '???')
         self.user_id = map['user_id']
@@ -302,9 +302,6 @@ class SlackTeam(Host):
         self.rtm_socket = None
         self.msg_counter = 0
         self.msg_in_flight = {}
-
-    def __repr__(self):
-        return '<SlackTeam %s:%s "%s">' % (self.protocolkey, self.id, self.team_name)
 
     def get_aliases(self):
         """Return a list of channel aliases or None.

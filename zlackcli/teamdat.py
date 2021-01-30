@@ -2,9 +2,16 @@ from collections import OrderedDict
 import aiohttp
 import aiohttp.web
 
+"""
+Virtual base classes, to be subclassed for each protcol.
+"""
+
 class Protocol:
+    """Represents one protocol. Each implemented protocol (Slack, etc)
+    is a subclass which is instantiated in the client.protocols array.
+    """
     key = None
-    hostclass = None
+    hostclass = None   # A subclass of Host
 
     def __init__(self, client):
         self.client = client
@@ -14,6 +21,9 @@ class Protocol:
         return '<%s (%s)>' % (self.__class__.__name__, self.key,)
 
     def create_team(self, map):
+        """Create a team and add it to the team list(s). The argument
+        is an OrderedDict of information.
+        """
         # Call the HostClass's constructor.
         cla = self.hostclass
         team = cla(self, map)
@@ -68,13 +78,17 @@ class Protocol:
 
 
 class Host:
+    """Represents one server, team, workspace, or what have you. The
+    user logs into a host with a password or OAuth token.
+    """
+    
     protocol = None
     protocolkey = None
     
-    # team.id: identifier, unique within protocol
-    # team.key: "protocol:id"
-    # team.users: map
-    # team.channels: map
+    # self.id: identifier, unique within protocol
+    # self.key: "protocol:id"
+    # self.users: map
+    # self.channels: map
 
     def __repr__(self):
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
@@ -104,6 +118,8 @@ class Host:
 
     
 class Channel:
+    """Represents a discussion channel on a Host.
+    """
     # self.team
     # self.id
     # self.name
@@ -124,6 +140,8 @@ class Channel:
         return False
 
 class User:
+    """Represents a user at a Host.
+    """
     # self.team
     # self.id
     # self.name

@@ -14,6 +14,9 @@ import websockets
 from .teamdat import Protocol, Host, Channel, User
 
 class SlackProtocol(Protocol):
+    """The Slack protocol.
+    """
+    
     key = 'slack'
     # hostclass is filled in at init time
 

@@ -121,6 +121,13 @@ class ProtoUI:
         self.client = protocol.client
         self.ui = protocol.client.ui
 
+    def print(self, msg):
+        """Output a line of text. (Or several lines, as it could contain
+        internal line breaks.) You typically won't want to customize this;
+        instead, replace the Client.print() method.
+        """
+        self.client.print(msg)
+
 class Host:
     """Represents one server, team, workspace, or what have you. The
     user logs into a host with a password or OAuth token.

@@ -329,19 +329,19 @@ class SlackUI(ProtoUI):
             # A reply to a message we sent.
             origmsg = team.resolve_in_flight(msg.get('reply_to'))
             if not origmsg:
-                self.ui.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
+                self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
                 return
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
             # Print our successful messages even on muted channels
             text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
             val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
-            self.ui.print(val)
+            self.print(val)
             return
         
         if typ == 'hello':
             # Websocket-connected message.
-            self.ui.print('<Connected: %s>' % (self.ui.team_name(team)))
+            self.print('<Connected: %s>' % (self.ui.team_name(team)))
             return
         
         if typ == 'message':
@@ -355,7 +355,7 @@ class SlackUI(ProtoUI):
                 oldtext = msg.get('previous_message').get('text')
                 oldtext = self.decode_message(team, oldtext)
                 val = '[%s/%s] (del) %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), oldtext)
-                self.ui.print(val)
+                self.print(val)
                 return
             if subtype == 'message_changed':
                 oldtext = ''
@@ -370,7 +370,7 @@ class SlackUI(ProtoUI):
                     return
                 text = oldtext + '\n -> ' + newtext
                 val = '[%s/%s] (edit) %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
-                self.ui.print(val)
+                self.print(val)
                 self.ui.lastchannel = (team.key, chanid)
                 return
             if subtype == 'slackbot_response':
@@ -381,7 +381,7 @@ class SlackUI(ProtoUI):
             subtypeflag = (' (%s)'%(subtype,) if subtype else '')
             colon = (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), subtypeflag, self.ui.user_name(team, userid), colon, text)
-            self.ui.print(val)
+            self.print(val)
             self.ui.lastchannel = (team.key, chanid)
             return
 

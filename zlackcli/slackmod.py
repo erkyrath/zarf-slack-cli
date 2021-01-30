@@ -268,6 +268,11 @@ class SlackProtocol(Protocol):
         return (slackurl, redirecturl, statecheck)
 
 class SlackUI(ProtoUI):
+class ProtoUI:
+    """This module translates between the UI (human-readable input and
+    output) and the protocol (with its protocol-specific messages).
+    """
+    
     pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
     pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
     pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)

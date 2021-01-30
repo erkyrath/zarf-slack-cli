@@ -120,10 +120,11 @@ class ZlackClient:
         (done, pending) = await asyncio.wait([ pro.close() for pro in self.protocols ], loop=self.evloop)
         for res in done:
             self.print_exception(res.exception(), 'Could not close down protocol')
-        
-    def get_useragent(self):
+
+    @staticmethod
+    def get_useragent():
         """Construct a user-agent string for our web API requests.
         """
-        useragent = 'zlack {self.version} Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(self=self, v=sys.version_info, psys=platform.system(), pver=platform.release())
+        useragent = 'zlack {version} Python/{v.major}.{v.minor}.{v.micro} {psys}/{pver}'.format(version=ZlackClient.version, v=sys.version_info, psys=platform.system(), pver=platform.release())
         return useragent
     

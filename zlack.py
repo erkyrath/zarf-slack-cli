@@ -9,7 +9,7 @@ import prompt_toolkit
 import prompt_toolkit.patch_stdout
 import prompt_toolkit.eventloop
 
-import zlackcli.client
+from zlackcli.client import ZlackClient
 
 token_file = '.zlack-tokens'
 prefs_file = '.zlack-prefs'
@@ -40,9 +40,23 @@ popt.add_option('--debug-exceptions',
                 help='Display complete stack traces of exceptions')
 popt.add_option('--debug-messages',
                 action='store_true', dest='debug_messages',
-                help='Show all command to and from the server')
+                help='Show all commands to and from the server')
+popt.add_option('--version',
+                action='store_true', dest='version',
+                help='Show the version')
+popt.add_option('--show-useragent',
+                action='store_true', dest='show_useragent',
+                help='Show the useragent')
 
 (opts, args) = popt.parse_args()
+
+if opts.version:
+    print(ZlackClient.version)
+    sys.exit(0)
+
+if opts.show_useragent:
+    print(ZlackClient.get_useragent())
+    sys.exit(0)
 
 client = None
 
@@ -101,6 +115,6 @@ async def mainloop(client):
 evloop = asyncio.get_event_loop()
 evloop.set_exception_handler(exception_handler)
 
-client = zlackcli.client.ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
+client = ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
 
 evloop.run_until_complete(mainloop(client))

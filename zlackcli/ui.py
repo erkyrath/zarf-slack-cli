@@ -725,25 +725,7 @@ class UI:
             if count < 1:
                 raise ArgException('Recap must be a (nonzero) amount of time.')
 
-        timestamp = str(int(time.time()) - count)
-        cursor = None
-        while True:
-            res = await team.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
-            if not res:
-                break
-            for msg in reversed(res.get('messages')):
-                userid = msg.get('user', '')
-                subtype = msg.get('subtype', '')
-                if subtype:
-                    continue  # don't recap subtype messages
-                ts = msg.get('ts')
-                ts = self.short_timestamp(ts)
-                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-                val = '[%s/%s] (%s) %s: %s' % (self.team_name(team), self.channel_name(team, chanid), ts, self.user_name(team, userid), text)
-                self.print(val)
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
+        await team.recap_channel(chanid, count)
         
     @uicommand('fetch', isasync=True,
                arghelp='[team] index|url',
@@ -853,5 +835,4 @@ class UI:
     
 
 from .teamdat import Host
-from .slackmod import get_next_cursor ###
 

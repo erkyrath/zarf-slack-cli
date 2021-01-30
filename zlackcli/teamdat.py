@@ -138,6 +138,11 @@ class Host:
             return ls[0]
         return self.team_name
         
+    async def recap_channel(self, chanid, interval):
+        """Recap the last interval seconds of a channel.
+        """
+        raise NotImplementedError('recap_channel')
+        
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.) You typically won't want to customize this;

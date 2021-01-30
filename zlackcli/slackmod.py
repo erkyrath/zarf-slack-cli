@@ -1,4 +1,5 @@
 import sys
+import time
 import os
 import re
 import json
@@ -583,6 +584,30 @@ class SlackTeam(Host):
             self.handle_disconnect()
         except Exception as ex:
             self.print_exception(ex, 'RTM send')
+        
+    async def recap_channel(self, chanid, interval):
+        """Recap the last interval seconds of a channel.
+        """
+        ui = self.client.ui
+        timestamp = str(int(time.time()) - interval)
+        cursor = None
+        while True:
+            res = await self.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
+            if not res:
+                break
+            for msg in reversed(res.get('messages')):
+                userid = msg.get('user', '')
+                subtype = msg.get('subtype', '')
+                if subtype:
+                    continue  # don't recap subtype messages
+                ts = msg.get('ts')
+                ts = ui.short_timestamp(ts)
+                text = ui.decode_message(self, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
+                val = '[%s/%s] (%s) %s: %s' % (ui.team_name(self), ui.channel_name(self, chanid), ts, ui.user_name(self, userid), text)
+                self.print(val)
+            cursor = get_next_cursor(res)
+            if not cursor:
+                break
         
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

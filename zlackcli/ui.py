@@ -34,11 +34,17 @@ class UICommand:
         self.arghelp = arghelp
         self.func = func
 
+        # set in find_commands()
+        self.protocol = None
+
     def __repr__(self):
         aliases = ''
         if self.aliases:
             aliases = ' (%s)' % (','.join(self.aliases),)
-        return '<UICommand %s%s>' % (self.name, aliases,)
+        pro = ''
+        if self.protocol:
+            pro = '%s:' % (self.protocol.key,)
+        return '<UICommand %s%s%s>' % (pro, self.name, aliases)
 
 def uicommand(name, *aliases, isasync=False, help='???', arghelp=None):
     """The @uicommand decorator appears on UI methods which implement
@@ -82,6 +88,14 @@ class UI:
             if han.aliases:
                 for alias in han.aliases:
                     self.handler_map[alias] = han
+
+        for pro in self.client.protocols:
+            for han in pro.protoui.handler_list:
+                han.protocol = pro
+                self.handler_map[han.name] = han
+                if han.aliases:
+                    for alias in han.aliases:
+                        self.handler_map[alias] = han
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
@@ -446,11 +460,18 @@ class UI:
     def cmd_help(self, args):
         """Command: display the command list.
         """
-        for han in self.handler_list:
+        hanls = self.handler_list
+        for pro in self.client.protocols:
+            hanls.extend(pro.protoui.handler_list)
+            
+        for han in hanls:
             prefix = ''
             if han.arghelp:
                 prefix = ' ' + han.arghelp
-            self.print('/%s%s -- %s' % (han.name, prefix, han.help),)
+            pro = ''
+            if han.protocol:
+                pro = '-- (%s only) ' % (han.protocol.key,)
+            self.print('/%s%s %s-- %s' % (han.name, prefix, pro, han.help),)
 
     @uicommand('auth',
                help='request authentication to a Slack team')
@@ -696,5 +717,5 @@ class UI:
     ]
     
 
-from .teamdat import Host
+from .teamdat import Host, ProtoUI
 

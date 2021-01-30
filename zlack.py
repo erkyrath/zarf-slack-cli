@@ -21,20 +21,20 @@ if not zlackdir:
 token_path = os.path.join(zlackdir, token_file)
 prefs_path = os.path.join(zlackdir, prefs_file)
 
-env_client_id = os.environ.get('ZLACK_CLIENT_ID', None)
-env_client_secret = os.environ.get('ZLACK_CLIENT_SECRET', None)
+slack_client_id = os.environ.get('SLACK_CLIENT_ID', None)
+slack_client_secret = os.environ.get('SLACK_CLIENT_SECRET', None)
 
 popt = optparse.OptionParser(usage='zlack.py [ OPTIONS ] command...')
 
 popt.add_option('--authport',
                 action='store', type=int, dest='auth_port', default=8090,
                 help='localhost port to redirect authentication to (default: 8090)')
-popt.add_option('--clientid',
-                action='store', dest='client_id', default=env_client_id,
-                help='Slack client id (default: $ZLACK_CLIENT_ID)')
-popt.add_option('--clientsecret',
-                action='store', dest='client_secret', default=env_client_secret,
-                help='Slack client secret (default: $ZLACK_CLIENT_SECRET)')
+popt.add_option('--slack-client-id',
+                action='store', dest='slack_client_id', default=slack_client_id,
+                help='Slack client id (default: $SLACK_CLIENT_ID)')
+popt.add_option('--slack-client-secret',
+                action='store', dest='slack_client_secret', default=slack_client_secret,
+                help='Slack client secret (default: $SLACK_CLIENT_SECRET)')
 popt.add_option('--debug-exceptions',
                 action='store_true', dest='debug_exceptions',
                 help='Display complete stack traces of exceptions')

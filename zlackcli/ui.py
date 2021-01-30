@@ -272,8 +272,8 @@ class UI:
                 return
             
         # TODO: A line starting with colon should generate a me_message.
-        # However, I don't seem to be able to send me_message -- that subtype
-        # is ignored. Maybe it needs to go via the web API?
+        # However, I don't seem to be able to send me_message (on Slack)
+        # -- that subtype is ignored. Maybe it needs to go via the web API?
         
         # If there's no line at all, this was just a channel prefix. Exit.
         if not val:
@@ -718,6 +718,7 @@ class UI:
             url = target
 
         tup = urllib.parse.urlparse(url)
+        ### generalize
         if not tup.netloc.lower().endswith('.slack.com'):
             self.print('URL does not appear to be a Slack URL: %s' % (url,))
             return

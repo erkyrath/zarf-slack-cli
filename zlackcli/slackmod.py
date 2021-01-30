@@ -17,7 +17,7 @@ class SlackProtocol(Protocol):
     key = 'slack'
     # teamclass is filled in at init time
 
-    domain = 'slack.com'
+    api_url = 'https://slack.com/api'
     auth_url = 'https://slack.com/oauth/authorize'
     
     def __init__(self, client):
@@ -69,7 +69,7 @@ class SlackProtocol(Protocol):
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
         """
-        url = 'https://{0}/api/{1}'.format(self.domain, method)
+        url = '{0}/{1}'.format(self.api_url, method)
         
         data = {}
         headers = {}
@@ -356,7 +356,7 @@ class SlackTeam(Team):
         This may raise an exception or return an object with
         ok=False.
         """
-        url = 'https://{0}/api/{1}'.format(self.protocol.domain, method)
+        url = '{0}/{1}'.format(self.protocol.api_url, method)
         
         data = {}
         for (key, val) in kwargs.items():

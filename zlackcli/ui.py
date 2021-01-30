@@ -12,9 +12,7 @@ pat_dest_command = re.compile('#([^ ]+)')
 pat_integer = re.compile('[0-9]+')
 pat_url = re.compile('http[s]?:.*', flags=re.IGNORECASE)
 
-pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
 pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
-pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
 pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
 
 pat_channel_command = re.compile('^(?:([a-z0-9_-]+)[/:])?([a-z0-9_-]+)$', flags=re.IGNORECASE)
@@ -287,43 +285,8 @@ class UI:
             return
         (teamkey, chanid) = self.curchannel
         team = self.client.teams[teamkey]
-        text = self.encode_message(team, val)
-        team.rtm_send({ 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':text })
+        team.protocol.protoui.send_message(val, team=team, chanid=chanid)
                 
-    def encode_message(self, team, val):
-        """Encode a human-typed message into standard Slack form.
-        """
-        val = val.replace('&', '&amp;')
-        val = val.replace('<', '&lt;')
-        val = val.replace('>', '&gt;')
-        # We try to locate @displayname references and convert them to
-        # <@USERID>.
-        val = pat_user_id.sub(lambda match:self.encode_exact_user_id(team, match), val)
-        val = pat_channel_id.sub(lambda match:self.encode_exact_channel_id(team, match), val)
-        return val
-    
-    def encode_exact_user_id(self, team, match):
-        """Utility function used by encode_message. Given a match object from
-        pat_user_id, return a <@USERID> substitution. If the match doesn't
-        exactly match a user display name, we return the original string.    
-        """
-        orig = match.group(0)  # '@name'
-        val = match.group(1)   # 'name'
-        if val not in team.users_by_display_name:
-            return orig
-        return '<@' + team.users_by_display_name[val].id + '>'
-    
-    def encode_exact_channel_id(self, team, match):
-        """Utility function used by encode_message. Given a match object from
-        pat_channel_id, return a <#CHANID> substitution. If the match doesn't
-        exactly match a channel name, we return the original string.    
-        """
-        orig = match.group(0)  # '#channel'
-        val = match.group(1)   # 'channel'
-        if val not in team.channels_by_name:
-            return orig
-        return '<#' + team.channels_by_name[val].id + '>'
-
     def decode_message(self, team, val, attachments=None, files=None):
         """Convert a plain-text message in standard Slack form into a printable
         string. You can also pass a list of attachments from the message.

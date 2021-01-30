@@ -112,6 +112,9 @@ class Protocol:
         
         return handler
 
+class ProtoUI:
+    def __init__(self, protocol):
+        self.protocol = protocol
 
 class Host:
     """Represents one server, team, workspace, or what have you. The

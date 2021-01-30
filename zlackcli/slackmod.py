@@ -12,7 +12,7 @@ import aiohttp
 import aiohttp.web
 import websockets
 
-from .teamdat import Protocol, Host, Channel, User
+from .teamdat import Protocol, ProtoUI, Host, Channel, User
 
 class SlackProtocol(Protocol):
     """The Slack protocol.
@@ -27,6 +27,8 @@ class SlackProtocol(Protocol):
     def __init__(self, client):
         super().__init__(client)
         SlackProtocol.hostclass = SlackTeam
+
+        self.protoui = SlackUI(self)
 
         self.client_id = client.opts.slack_client_id
         self.client_secret = client.opts.slack_client_secret
@@ -264,6 +266,50 @@ class SlackProtocol(Protocol):
         slackurl = urllib.parse.urlunparse(tup)
         
         return (slackurl, redirecturl, statecheck)
+
+class SlackUI(ProtoUI):
+    pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
+    pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
+
+    def send_message(self, text, team, chanid):
+        etext = self.encode_message(team, text)
+        team.rtm_send({ 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':etext })
+    
+    def encode_message(self, team, val):
+        """Encode a human-typed message into standard Slack form.
+        """
+        val = val.replace('&', '&amp;')
+        val = val.replace('<', '&lt;')
+        val = val.replace('>', '&gt;')
+        # We try to locate @displayname references and convert them to
+        # <@USERID>.
+        val = self.pat_user_id.sub(lambda match:self.encode_exact_user_id(team, match), val)
+        val = self.pat_channel_id.sub(lambda match:self.encode_exact_channel_id(team, match), val)
+        return val
+    
+    def encode_exact_user_id(self, team, match):
+        """Utility function used by encode_message. Given a match object from
+        pat_user_id, return a <@USERID> substitution. If the match doesn't
+        exactly match a user display name, we return the original string.    
+        """
+        orig = match.group(0)  # '@name'
+        val = match.group(1)   # 'name'
+        if val not in team.users_by_display_name:
+            return orig
+        return '<@' + team.users_by_display_name[val].id + '>'
+    
+    def encode_exact_channel_id(self, team, match):
+        """Utility function used by encode_message. Given a match object from
+        pat_channel_id, return a <#CHANID> substitution. If the match doesn't
+        exactly match a channel name, we return the original string.    
+        """
+        orig = match.group(0)  # '#channel'
+        val = match.group(1)   # 'channel'
+        if val not in team.channels_by_name:
+            return orig
+        return '<#' + team.channels_by_name[val].id + '>'
+
+    
     
 class SlackTeam(Host):
     """Represents one Slack group (team, workspace... I'm not all that

@@ -33,7 +33,13 @@ class UICommand:
         self.help = help
         self.arghelp = arghelp
         self.func = func
-            
+
+    def __repr__(self):
+        aliases = ''
+        if self.aliases:
+            aliases = ' (%s)' % (','.join(self.aliases),)
+        return '<UICommand %s%s>' % (self.name, aliases,)
+
 def uicommand(name, *aliases, isasync=False, help='???', arghelp=None):
     """The @uicommand decorator appears on UI methods which implement
     user (slash) commands.
@@ -49,6 +55,7 @@ class UI:
     """
     def __init__(self, client, opts=None):
         self.client = client
+        self.handler_map = {}
 
         self.curchannel = None
         self.lastchannel = None
@@ -66,6 +73,15 @@ class UI:
         tup = self.client.prefs.get('curchannel', None)
         if tup:
             self.curchannel = tuple(tup)
+
+    def find_commands(self, protocols):
+        # Construct the map of slash command strings to UICommand objects.
+        # Both command names and command aliases are recognized as keys.
+        for han in self.handler_list:
+            self.handler_map[han.name] = han
+            if han.aliases:
+                for alias in han.aliases:
+                    self.handler_map[alias] = han
 
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
@@ -678,15 +694,6 @@ class UI:
         cmd_alias,
         cmd_debug,
     ]
-
-    # Construct the map of slash command strings to UICommand objects.
-    # Both command names and command aliases are recognized as keys.
-    handler_map = {}
-    for han in handler_list:
-        handler_map[han.name] = han
-        if han.aliases:
-            for alias in han.aliases:
-                handler_map[alias] = han
     
 
 from .teamdat import Host

@@ -116,6 +116,9 @@ class ProtoUI:
     """This module translates between the UI (human-readable input and
     output) and the protocol (with its protocol-specific messages).
     """
+    # Protocol-specific slash commands
+    handler_list = []
+
     def __init__(self, protocol):
         self.protocol = protocol
         self.client = protocol.client

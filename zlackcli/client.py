@@ -9,7 +9,7 @@ import asyncio
 import aiohttp
 import aiohttp.web
 
-from .teamdat import Team
+from .teamdat import Host
 from .slackmod import SlackProtocol
 from .prefs import Prefs
 from .ui import UI
@@ -72,7 +72,7 @@ class ZlackClient:
     
     def read_teams(self):
         """Read the current token list from ~/.zlack-tokens.
-        Fills out self.teams with Team objects.
+        Fills out self.teams with Host objects.
         """
         try:
             fl = open(self.tokenpath)
@@ -94,7 +94,7 @@ class ZlackClient:
         """Write out the current team list to ~/.zlack-tokens.
         (Always chmods the file to 0700, for privacy.)
         """
-        # We use the origmap object which we saved when loading in the Team.
+        # We use the origmap object which we saved when loading in the Host.
         teamlist = []
         for team in self.teams.values():
             teamlist.append(team.origmap)

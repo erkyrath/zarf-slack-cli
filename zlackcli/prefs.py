@@ -40,7 +40,7 @@ class Prefs:
         self.mark_dirty()
 
     def team_get(self, key, team, defval=None):
-        if isinstance(team, Team):
+        if isinstance(team, Host):
             team = team.key
         map = self.map['teams'].get(team)
         if map is None:
@@ -48,7 +48,7 @@ class Prefs:
         return map.get(key, defval)
 
     def team_put(self, key, val, team):
-        if isinstance(team, Team):
+        if isinstance(team, Host):
             team = team.key
         map = self.map['teams'].get(team)
         if map is None:
@@ -58,7 +58,7 @@ class Prefs:
         self.mark_dirty()
 
     def channel_get(self, key, team, chan, defval=None):
-        if isinstance(team, Team):
+        if isinstance(team, Host):
             team = team.key
         if isinstance(chan, Channel):
             chan = chan.id
@@ -74,7 +74,7 @@ class Prefs:
         return submap.get(key, defval)
 
     def channel_put(self, key, val, team, chan):
-        if isinstance(team, Team):
+        if isinstance(team, Host):
             team = team.key
         if isinstance(chan, Channel):
             chan = chan.id
@@ -116,4 +116,4 @@ class Prefs:
             self.write_file()
             
 
-from .teamdat import Team, Channel
+from .teamdat import Host, Channel

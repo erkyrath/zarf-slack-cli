@@ -375,11 +375,11 @@ class UI:
 
     def team_name(self, team):
         """Look up a team name, either as an alias (if available) or the
-        full name. The argument can be a Team or team key string.
+        full name. The argument can be a Host or team key string.
         """
         if team is None:
             return '<no team>'
-        if not isinstance(team, Team):
+        if not isinstance(team, Host):
             if team not in self.client.teams:
                 return '???%s' % (team,)
             team = self.client.teams[team]
@@ -392,7 +392,7 @@ class UI:
         """Look up a channel name.
         ### generic?
         """
-        if not isinstance(team, Team):
+        if not isinstance(team, Host):
             if team not in self.client.teams:
                 return '???%s' % (chanid,)
             team = self.client.teams[team]
@@ -404,7 +404,7 @@ class UI:
         """Look up a user name (the displayname).
         ### probably not generic
         """
-        if not isinstance(team, Team):
+        if not isinstance(team, Host):
             if team not in self.client.teams:
                 return userid
             team = self.client.teams[team]
@@ -436,7 +436,7 @@ class UI:
                     raise ArgException('No current team.')
                 team = self.client.get_team(self.curchannel[0])
                 if not team:
-                    raise ArgException('Team not recognized: %s' % (self.curchannel[0],))
+                    raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
             channame = match.group(2)
             try:
                 chanid = self.parse_channel(team, channame)
@@ -456,7 +456,7 @@ class UI:
                     raise ArgException('No current team.')
                 team = self.client.get_team(self.curchannel[0])
                 if not team:
-                    raise ArgException('Team not recognized: %s' % (self.curchannel[0],))
+                    raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
             username = match.group(2)
             if username not in team.users_by_display_name:
                 raise ArgException('User not recognized: %s' % (username,))
@@ -476,7 +476,7 @@ class UI:
         return (team, chanid)
 
     def parse_team(self, val):
-        """Parse a team name, ID, or alias. Returns the Team entry.
+        """Parse a team name, ID, or alias. Returns the Host entry.
         Raises ArgException if not recognized.
         """
         for team in self.client.teams.values():
@@ -487,11 +487,11 @@ class UI:
             aliases = team.get_aliases()
             if aliases and val in aliases:
                 return team
-        raise ArgException('Team not recognized: %s' % (val,))
+        raise ArgException('Host not recognized: %s' % (val,))
     
     def parse_channel(self, team, val):
         """Parse a channel name (a bare channel, no # or team prefix)
-        for a given Team. Returns the channel ID.
+        for a given Host. Returns the channel ID.
         Raises ArgException if not recognized.
         """
         for (id, chan) in team.channels.items():
@@ -561,7 +561,7 @@ class UI:
                 raise ArgException('No current team.')
             team = self.client.get_team(self.curchannel[0])
             if not team:
-                raise ArgException('Team not recognized: %s' % (self.curchannel[0],))
+                raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
         elif len(args) == 1:
             team = self.parse_team(args[0])
         else:
@@ -624,7 +624,7 @@ class UI:
         """
         team = self.parse_team_or_current(args)
         if not team.rtm_connected():
-            self.print('Team not connected: %s' % (self.team_name(team),))
+            self.print('Host not connected: %s' % (self.team_name(team),))
             return
         team.rtm_disconnect()
         if self.curchannel and self.curchannel[0] == team.key:
@@ -711,7 +711,7 @@ class UI:
             (teamid, chanid) = self.curchannel
             team = self.client.get_team(teamid)
             if not team:
-                raise ArgException('Team not recognized: %s' % (teamid,))
+                raise ArgException('Host not recognized: %s' % (teamid,))
         if not args:
             count = 5 * 60  # five minutes
         else:
@@ -757,11 +757,11 @@ class UI:
             index = int(target)
             tup = self.files_by_index.get(index, None)
             if tup is None:
-                raise ArgException('Team %s has no file index %d' % (team.short_name(), index,))
+                raise ArgException('Host %s has no file index %d' % (team.short_name(), index,))
             url = tup[2]
             team = self.client.get_team(tup[1])
             if not team:
-                raise ArgException('Team not recognized: %s' % (tup[1],))
+                raise ArgException('Host not recognized: %s' % (tup[1],))
         else:
             match = pat_url.match(target)
             if not match:
@@ -806,7 +806,7 @@ class UI:
             (teamid, chanid) = self.curchannel
             team = self.client.get_team(teamid)
             if not team:
-                raise ArgException('Team not recognized: %s' % (teamid,))
+                raise ArgException('Host not recognized: %s' % (teamid,))
             aliases = team.get_aliases()
             if not aliases:
                 self.print('%s: no aliases set.' % (team.team_name,))
@@ -848,6 +848,6 @@ class UI:
                 handler_map[alias] = han
     
 
-from .teamdat import Team
+from .teamdat import Host
 from .slackmod import get_next_cursor ###
 

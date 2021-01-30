@@ -11,18 +11,18 @@ import aiohttp
 import aiohttp.web
 import websockets
 
-from .teamdat import Protocol, Team, Channel, User
+from .teamdat import Protocol, Host, Channel, User
 
 class SlackProtocol(Protocol):
     key = 'slack'
-    # teamclass is filled in at init time
+    # hostclass is filled in at init time
 
     api_url = 'https://slack.com/api'
     auth_url = 'https://slack.com/oauth/authorize'
     
     def __init__(self, client):
         super().__init__(client)
-        SlackProtocol.teamclass = SlackTeam
+        SlackProtocol.hostclass = SlackTeam
 
         self.client_id = client.opts.slack_client_id
         self.client_secret = client.opts.slack_client_secret
@@ -230,7 +230,7 @@ class SlackProtocol(Protocol):
         teammap['user_name'] = user['name']
         teammap['user_real_name'] = user['real_name']
             
-        # Create a new Team entry.
+        # Create a new SlackTeam entry.
         team = self.create_team(teammap)
         self.client.write_teams()
         
@@ -261,7 +261,7 @@ class SlackProtocol(Protocol):
         
         return (slackurl, redirecturl, statecheck)
     
-class SlackTeam(Team):
+class SlackTeam(Host):
     """Represents one Slack group (team, workspace... I'm not all that
     consistent about it, sorry). This includes the websocket (which
     carries the RTM protocol). It also includes information about the
@@ -473,7 +473,7 @@ class SlackTeam(Team):
             
         self.want_connected = False
         if not self.rtm_socket:
-            self.print('Team not connected: %s' % (self.team_name,))
+            self.print('SlackTeam not connected: %s' % (self.team_name,))
             return
         await self.rtm_socket.close()
         self.rtm_socket = None
@@ -695,7 +695,7 @@ class SlackChannel(Channel):
 
     def muted(self):
         """Check whether this channel is muted. The mute flag is stored
-        in the Team, because it comes from Slack's preferences data,
+        in the SlackTeam, because it comes from Slack's preferences data,
         not the channel data.
         """
         return (self.id in self.team.muted_channels)

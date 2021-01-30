@@ -4,18 +4,18 @@ import aiohttp.web
 
 class Protocol:
     key = None
-    teamclass = None
+    hostclass = None
 
     def __init__(self, client):
         self.client = client
-        self.teams = OrderedDict()   # team.key to Team
+        self.teams = OrderedDict()   # team.key to Host
 
     def __repr__(self):
         return '<%s (%s)>' % (self.__class__.__name__, self.key,)
 
     def create_team(self, map):
-        # Call the TeamClass's constructor.
-        cla = self.teamclass
+        # Call the HostClass's constructor.
+        cla = self.hostclass
         team = cla(self, map)
         
         # Add it to both our team list and the master team list.
@@ -67,7 +67,7 @@ class Protocol:
         return handler
 
 
-class Team:
+class Host:
     protocol = None
     protocolkey = None
     

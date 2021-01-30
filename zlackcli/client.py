@@ -25,15 +25,15 @@ class ZlackClient:
         else:
             self.evloop = loop
 
-        self.protocols = [ SlackProtocol(self) ]
-        self.protocolmap = { pro.key:pro for pro in self.protocols }
-            
         self.tokenpath = tokenpath
         self.opts = opts
         self.debug_exceptions = opts.debug_exceptions
         self.prefs = Prefs(self, prefspath)
         self.ui = UI(self, opts=opts)
 
+        self.protocols = [ SlackProtocol(self) ]
+        self.protocolmap = { pro.key:pro for pro in self.protocols }
+            
         self.teams = OrderedDict()
         self.auth_in_progress = False
 

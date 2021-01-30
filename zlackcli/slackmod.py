@@ -24,6 +24,8 @@ class SlackProtocol(Protocol):
         super().__init__(client)
         SlackProtocol.teamclass = SlackTeam
 
+        self.client_id = client.opts.slack_client_id
+        self.client_secret = client.opts.slack_client_secret
         self.session = None
 
         self.authtask = None
@@ -137,10 +139,10 @@ class SlackProtocol(Protocol):
             self.print('Already awaiting authentication callback!')
             return
 
-        if not self.client.opts.slack_client_id:
+        if not self.client_id:
             self.print('You must set --slack-client-id or $SLACK_CLIENT_ID to use the /auth command.')
             return
-        if not self.client.opts.slack_client_secret:
+        if not self.client_secret:
             self.print('You must set --slack-client-secret or $SLACK_CLIENT_SECRET to use the /auth command.')
             return
 
@@ -159,7 +161,7 @@ class SlackProtocol(Protocol):
         This is async, and it takes a while, because the user has to
         authenticate through Slack's web site.
         """
-        (slackurl, redirecturl, statecheck) = self.construct_auth_url(self.client.opts.auth_port, self.client.opts.slack_client_id)
+        (slackurl, redirecturl, statecheck) = self.construct_auth_url(self.client.opts.auth_port, self.client_id)
 
         self.print('Visit this URL to authenticate with Slack:\n')
         self.print(slackurl+'\n')
@@ -195,7 +197,7 @@ class SlackProtocol(Protocol):
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth.access', client_id=self.client.opts.slack_client_id, client_secret=self.client.opts.slack_client_secret, code=auth_code)
+        res = await self.api_call('oauth.access', client_id=self.client_id, client_secret=self.client_secret, code=auth_code)
         
         if not res.get('ok'):
             self.print('oauth.access call failed: %s' % (res.get('error'),))

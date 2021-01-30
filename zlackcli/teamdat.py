@@ -91,7 +91,32 @@ class Host:
 
     
 class Channel:
-    pass
+    # self.team
+    # self.id
+    # self.name
+    # self.client: same as self.team.client
+    # self.private: is this not public to all users?
+    # self.imuser: is this a direct-message channel with a user?
+    # self.member: have we joined?
+
+    def __repr__(self):
+        if self.imuser:
+            privflag = ' (im)'
+        else:
+            privflag = (' (priv)' if self.private else '')
+        memberflag = (' (mem)' if self.member else '')
+        return '<%s %s%s%s: "%s">' % (self.__class__.__name__, self.id, privflag, memberflag, self.name)
+
+    def muted(self):
+        return False
 
 class User:
-    pass
+    # self.team
+    # self.id
+    # self.name
+    # self.real_name
+    # self.client: same as self.team.client
+    
+    def __repr__(self):
+        return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)
+

@@ -685,14 +685,6 @@ class SlackChannel(Channel):
         self.member = member
         self.imuser = im
 
-    def __repr__(self):
-        if self.imuser:
-            privflag = ' (im)'
-        else:
-            privflag = (' (priv)' if self.private else '')
-        memberflag = (' (mem)' if self.member else '')
-        return '<SlackChannel %s%s%s: "%s">' % (self.id, privflag, memberflag, self.name)
-
     def muted(self):
         """Check whether this channel is muted. The mute flag is stored
         in the SlackTeam, because it comes from Slack's preferences data,
@@ -711,9 +703,6 @@ class SlackUser(User):
         self.real_name = real_name
         self.im_channel = None  # May be set later
         
-    def __repr__(self):
-        return '<SlackUser %s: "%s"/"%s">' % (self.id, self.name, self.real_name)
-
 def get_next_cursor(res):
     """Extract the next_cursor field from a message object. This is
     used by all Web API calls which get paginated results.

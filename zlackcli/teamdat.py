@@ -103,6 +103,9 @@ class ProtoUI:
         self.client = protocol.client
         self.ui = protocol.client.ui
 
+    def send_message(self, text, team, chanid):
+        raise NotImplementedError('send_message')
+        
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.) You typically won't want to customize this;

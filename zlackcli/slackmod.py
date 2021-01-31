@@ -455,8 +455,9 @@ class SlackTeam(Host):
         self.channels_by_name = {}
         self.muted_channels = set()
         
-        # The last channel (id) we used in this team. (We use this when
-        # switching to a team without specifying a channel.)
+        # The last channel (id) we spoke on in this team. (That is, we
+        # set this when ui.curchannel is set. We use this when switching
+        # to a team without specifying a channel.)
         self.lastchannel = None
         
         self.session = None

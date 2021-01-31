@@ -63,11 +63,14 @@ class UI:
         self.client = client
         self.handler_map = {}
 
+        # Current default channel (teamid, chanid).
         self.curchannel = None
+        # Last channel we received a message on.
         self.lastchannel = None
+        # The last channel seen when the user started typing.
         self.presumedchannel = None
+        
         self.debug_messages = False
-
         if opts and opts.debug_messages:
             self.debug_messages = True
 

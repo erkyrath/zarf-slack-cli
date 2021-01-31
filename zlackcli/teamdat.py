@@ -46,30 +46,6 @@ class Protocol:
         """
         raise NotImplementedError('close')
     
-    async def load_connection_data(self):
-        """Load all the information we need for a connection: the channel
-        and user lists.
-        """
-        raise NotImplementedError('load_connection_data')
-
-    def rtm_connect(self):
-        """Open the RTM (real-time) websocket. If it's already connected,
-        disconnect and reconnect.
-        (Fire-and-forget call.)
-        """
-        raise NotImplementedError('rtm_connect')
-        
-    def rtm_disconnect(self):
-        """Close the RTM (real-time) websocket.
-        (Fire-and-forget call.)
-        """
-        raise NotImplementedError('rtm_disconnect')
-        
-    def rtm_connected(self):
-        """Check whether the RTM websocket is open.
-        """
-        return False
-    
     def begin_auth(self):
         raise NotImplementedError('begin_auth')
     
@@ -150,6 +126,49 @@ class Host:
 
     def __repr__(self):
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
+
+    async def open(self):
+        """Create the web API session, load the team data, and open
+        the RTM socket (if desired).
+        """
+        raise NotImplementedError('open')
+    
+    async def close(self):
+        """Shut down our session (and socket) for good.
+        """
+        raise NotImplementedError('close')
+    
+    def rtm_connect(self):
+        """Open the RTM (real-time) websocket. If it's already connected,
+        disconnect and reconnect.
+        (Fire-and-forget call.)
+        """
+        raise NotImplementedError('rtm_connect')
+        
+    def rtm_disconnect(self):
+        """Close the RTM (real-time) websocket.
+        (Fire-and-forget call.)
+        """
+        raise NotImplementedError('rtm_disconnect')
+        
+    def rtm_connected(self):
+        """Check whether the RTM websocket is open.
+        """
+        return False
+    
+    async def load_connection_data(self):
+        """Load all the information we need for a connection: the channel
+        and user lists.
+        """
+        raise NotImplementedError('load_connection_data')
+
+    def get_aliases(self):
+        """Return a list of channel aliases or None.
+        """
+        ls = self.client.prefs.team_get('aliases', self)
+        if ls:
+            return ls
+        return None
 
     def short_name(self):
         """Return the team name or the first alias.

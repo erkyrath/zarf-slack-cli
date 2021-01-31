@@ -469,14 +469,6 @@ class SlackTeam(Host):
         self.msg_counter = 0
         self.msg_in_flight = {}
 
-    def get_aliases(self):
-        """Return a list of channel aliases or None.
-        """
-        ls = self.client.prefs.team_get('aliases', self)
-        if ls:
-            return ls
-        return None
-
     async def open(self):
         """Create the web API session, load the team data, and open
         the RTM socket (if desired).

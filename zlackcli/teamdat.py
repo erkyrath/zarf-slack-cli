@@ -246,6 +246,7 @@ class User:
     # self.name
     # self.real_name
     # self.client: same as self.team.client
+    # self.im_channel: ID of their direct (imuser) channel (or None)
     
     def __repr__(self):
         return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)

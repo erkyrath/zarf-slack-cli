@@ -217,7 +217,7 @@ class SlackProtocol(Protocol):
 
         # Got the permanent token. Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
-        teammap['_protocol'] = 'slack'
+        teammap['_protocol'] = SlackProtocol.key
         for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
             if key in res:
                 teammap[key] = res.get(key)

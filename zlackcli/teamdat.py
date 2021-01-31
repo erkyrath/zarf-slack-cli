@@ -70,6 +70,9 @@ class Protocol:
         """
         return False
     
+    def begin_auth(self):
+        raise NotImplementedError('begin_auth')
+    
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain
         internal line breaks.) You typically won't want to customize this;

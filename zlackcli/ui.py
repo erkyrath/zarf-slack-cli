@@ -463,6 +463,8 @@ class UI:
     def cmd_help(self, args):
         """Command: display the command list.
         """
+        # Collect all the top-level commands plus all the protocol-
+        # specific comments.
         hanls = self.handler_list
         for pro in self.client.protocols:
             hanls.extend(pro.protoui.handler_list)
@@ -477,12 +479,19 @@ class UI:
             self.print('/%s%s %s-- %s' % (han.name, prefix, pro, han.help),)
 
     @uicommand('auth',
-               help='request authentication to a Slack team')
+               arghelp='slack',
+               help='request authentication to a host/team/workspace')
     def cmd_auth(self, args):
-        """Command: authenticate to a Slack team.
+        """Command: authenticate to a host.
         """
-        pro = self.client.protocolmap['slack'] ###
-        pro.begin_auth()
+        if not args:
+            val = ', '.join([ pro.key for pro in self.client.protocols ])
+            raise ArgException('You must supply a protocol (%s)' % (val,))
+        pro = self.client.protocolmap.get(args[0])
+        if not pro:
+            val = ', '.join([ pro.key for pro in self.client.protocols ])
+            raise ArgException('Protocol not recognized (available: %s)' % (val,))
+        pro.begin_auth(*args[1:])
         
     @uicommand('debug',
                arghelp='[bool]',

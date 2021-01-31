@@ -65,8 +65,10 @@ class SlackProtocol(Protocol):
         if self.waketask:
             self.waketask.cancel()
             self.waketask = None
-            
-        (done, pending) = await asyncio.wait([ team.close() for team in self.teams.values() ], loop=self.client.evloop)
+
+        if self.teams:
+            (done, pending) = await asyncio.wait([ team.close() for team in self.teams.values() ], loop=self.client.evloop)
+            # Ignore exceptions.
 
         if self.session:
             await self.session.close()

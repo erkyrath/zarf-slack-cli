@@ -553,20 +553,9 @@ class SlackTeam(Host):
         """
         return bool(self.rtm_socket)
     
-    def rtm_connect(self):
-        """Open the RTM (real-time) websocket. If it's already connected,
-        disconnect and reconnect.
-        (Fire-and-forget call.)
-        """
-        task = self.evloop.create_task(self.rtm_connect_async())
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM connect')
-        task.add_done_callback(callback)
-        
     async def rtm_connect_async(self, from_reconnect=False):
         """Open the RTM (real-time) websocket. If it's already connected,
         disconnect and reconnect.
-        (Async call.)
         """
         if self.reconnect_task and not from_reconnect:
             self.reconnect_task.cancel()
@@ -599,18 +588,8 @@ class SlackTeam(Host):
             self.print_exception(future.exception(), 'RTM read')
         self.readloop_task.add_done_callback(callback)
         
-    def rtm_disconnect(self):
-        """Close the RTM (real-time) websocket.
-        (Fire-and-forget call.)
-        """
-        task = self.evloop.create_task(self.rtm_disconnect_async())
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM disconnect')
-        task.add_done_callback(callback)
-        
     async def rtm_disconnect_async(self, from_reconnect=False):
         """Close the RTM (real-time) websocket.
-        (Async call.)
         """
         if self.reconnect_task and not from_reconnect:
             self.reconnect_task.cancel()

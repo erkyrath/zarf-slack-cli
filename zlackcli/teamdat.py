@@ -143,18 +143,35 @@ class Host:
         disconnect and reconnect.
         (Fire-and-forget call.)
         """
-        raise NotImplementedError('rtm_connect')
+        task = self.evloop.create_task(self.rtm_connect_async())
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM connect')
+        task.add_done_callback(callback)
         
     def rtm_disconnect(self):
         """Close the RTM (real-time) websocket.
         (Fire-and-forget call.)
         """
-        raise NotImplementedError('rtm_disconnect')
+        task = self.evloop.create_task(self.rtm_disconnect_async())
+        def callback(future):
+            self.print_exception(future.exception(), 'RTM disconnect')
+        task.add_done_callback(callback)
+        
+    async def rtm_connect_async(self, from_reconnect=False):
+        """Open the RTM (real-time) websocket. If it's already connected,
+        disconnect and reconnect.
+        """
+        raise NotImplementedError('rtm_connect_async')
+        
+    async def rtm_disconnect_async(self, from_reconnect=False):
+        """Close the RTM (real-time) websocket.
+        """
+        raise NotImplementedError('rtm_disconnect_async')
         
     def rtm_connected(self):
         """Check whether the RTM websocket is open.
         """
-        return False
+        raise NotImplementedError('rtm_connected')
     
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

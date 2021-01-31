@@ -238,6 +238,9 @@ class Channel:
         memberflag = (' (mem)' if self.member else '')
         return '<%s %s%s%s: "%s">' % (self.__class__.__name__, self.id, privflag, memberflag, self.name)
 
+    def display_name(self):
+        return self.name
+
     def muted(self):
         return False
 
@@ -253,4 +256,7 @@ class User:
     
     def __repr__(self):
         return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)
+
+    def display_name(self):
+        return self.name
 

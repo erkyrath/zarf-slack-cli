@@ -277,7 +277,6 @@ class UI:
     
     def channel_name(self, team, chanid):
         """Look up a channel name.
-        ### generic?
         """
         if not isinstance(team, Host):
             if team not in self.client.teams:
@@ -285,11 +284,10 @@ class UI:
             team = self.client.teams[team]
         if chanid not in team.channels:
             return '???%s' % (chanid,)
-        return team.channels[chanid].name
+        return team.channels[chanid].display_name()
     
     def user_name(self, team, userid):
         """Look up a user name (the displayname).
-        ### probably not generic
         """
         if not isinstance(team, Host):
             if team not in self.client.teams:
@@ -297,7 +295,7 @@ class UI:
             team = self.client.teams[team]
         if userid not in team.users:
             return userid
-        return team.users[userid].name
+        return team.users[userid].display_name()
 
     def parse_channelspec(self, val):
         """Parse a channel specification, in any of its various forms:
@@ -571,7 +569,7 @@ class UI:
         ls.sort(key = lambda user:user.name)
         for user in ls:
             idstring = (' (id %s)' % (user.id,) if self.debug_messages else '')
-            self.print('  %s%s: %s' % (user.name, idstring, user.real_name))
+            self.print('  %s%s: %s' % (user.display_name(), idstring, user.real_name))
     
     @uicommand('channels',
                arghelp='[team]',
@@ -589,7 +587,7 @@ class UI:
             memflag = ('*' if chan.member else ' ')
             privflag = (' (priv)' if chan.private else '')
             muteflag = (' (mute)' if chan.muted() else '')
-            self.print(' %s%s%s%s%s' % (memflag, chan.name, idstring, privflag, muteflag))
+            self.print(' %s%s%s%s%s' % (memflag, chan.display_name(), idstring, privflag, muteflag))
 
     @uicommand('reload', isasync=True,
                arghelp='[team]',

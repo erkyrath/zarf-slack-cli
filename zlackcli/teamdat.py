@@ -306,6 +306,24 @@ class ParseMatch:
                 best = val
         return best
         
+    @staticmethod
+    def match_list(matchers, ls):
+        Res = ParseMatch.Res
+
+        if not matchers:
+            raise Exception('match_list got empty lists')
+        if len(ls) != len(matchers):
+            raise Exception('match_list lengths differ')
+
+        final = Res.EXACT
+        for match, val in zip(matchers, ls):
+            res = match(val)
+            if not res:
+                return Res.NONE
+            if res == Res.APPROX:
+                final = Res.APPROX
+        return final
+        
     def __init__(self, id, aliases=None):
         self.id = id.lower()
         self.aliases = None
@@ -326,10 +344,13 @@ class ParseMatch:
             return Res.EXACT
         if self.aliases and self.id in self.aliases:
             return Res.EXACT
-        if self.id.startswith(text):
-            return Res.APPROX
-        if self.aliases:
-            for val in self.aliases:
-                if val.startswith(text):
-                    return Res.APPROX
+        
+        if text:
+            if self.id.startswith(text):
+                return Res.APPROX
+            if self.aliases:
+                for val in self.aliases:
+                    if val.startswith(text):
+                        return Res.APPROX
+                    
         return Res.NONE

@@ -367,14 +367,11 @@ class UI:
         """Parse a team name, ID, or alias. Returns the Host entry.
         Raises ArgException if not recognized.
         """
-        for team in self.client.teams.values():
-            if team.id == val:
-                return team
-            if team.team_name.startswith(val):
-                return team
-            aliases = team.get_aliases()
-            if aliases and val in aliases:
-                return team
+        val = val.lower()
+        ls = [ (team.name_parser()(val), team) for team in self.client.teams.values() ]
+        team = ParseMatch.list_best(ls)
+        if team:
+            return team
         raise ArgException('Host not recognized: %s' % (val,))
     
     def parse_channel(self, team, val):
@@ -736,4 +733,5 @@ class UI:
     
 
 from .teamdat import Host, ProtoUI
+from .teamdat import ParseMatch
 

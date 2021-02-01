@@ -294,6 +294,18 @@ class ParseMatch:
     def nevermatch(text):
         return ParseMatch.Res.NONE
     
+    @staticmethod
+    def list_best(ls):
+        Res = ParseMatch.Res
+
+        best = None
+        for res, val in ls:
+            if res == Res.EXACT:
+                return val
+            if best is None and res == Res.APPROX:
+                best = val
+        return best
+        
     def __init__(self, id, aliases=None):
         self.id = id.lower()
         self.aliases = None

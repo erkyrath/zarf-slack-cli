@@ -10,9 +10,9 @@ import aiohttp
 import aiohttp.web
 
 from .teamdat import Host
-from .slackmod import SlackProtocol
 from .prefs import Prefs
 from .ui import UI
+from .slackmod import SlackProtocol
 
 class ZlackClient:
     

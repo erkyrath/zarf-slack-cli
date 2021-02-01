@@ -13,6 +13,7 @@ import aiohttp.web
 import websockets
 
 from .teamdat import Protocol, ProtoUI, Host, Channel, User
+from .teamdat import ParseMatch
 
 class SlackProtocol(Protocol):
     """The Slack protocol.
@@ -451,6 +452,8 @@ class SlackTeam(Host):
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out
 
+        self.update_name_parser()
+
         self.users = {}
         self.users_by_display_name = {}
         self.channels = {}
@@ -538,6 +541,9 @@ class SlackTeam(Host):
         except Exception as ex:
             self.print_exception(ex, 'Slack exception (%s)' % (method,))
             return None
+
+    def name_parser(self):
+        return self.nameparser
 
     def set_last_channel(self, chanid):
         self.lastchannel = chanid
@@ -842,6 +848,11 @@ class SlackChannel(Channel):
         self.private = private
         self.member = member
         self.imuser = im
+
+        self.nameparselist = [ ParseMatch(name) ]
+        
+    def name_parsers(self):
+        return self.nameparselist
 
     def muted(self):
         """Check whether this channel is muted. The mute flag is stored

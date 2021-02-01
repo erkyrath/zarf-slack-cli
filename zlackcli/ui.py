@@ -315,7 +315,7 @@ class UI:
         valls = [ el for el in val.split('/') if el ]
 
         if not valls:
-            raise ArgException('Empty team name.')
+            raise ArgException('Empty channel name.')
 
         curteam = None
         curchanid = None
@@ -333,7 +333,7 @@ class UI:
             if len(valls) == 1:
                 team = curteam
                 if not team:
-                    raise ArgException('No current team.')
+                    raise ArgException('No current host.')
             else:
                 team = self.parse_team(valls[0])
                 
@@ -370,8 +370,24 @@ class UI:
             if tup:
                 return tup
 
-            # Look for a channel middle that matches; use that item's lastchannel
-            ###
+            # Look for a channel middle that matches; use that item's lastchannel.
+            ### We should really check curteam first!
+            resls = []
+            for team in self.client.teams.values():
+                for (id, chan) in team.channels.items():
+                    parsers = chan.name_parsers()
+                    # all but the last, in reverse order
+                    for par in parsers[-2 :: -1]:
+                        res = par(val)
+                        if res:
+                            resls.append( (res, chan) )
+            chan = ParseMatch.list_best(resls)
+            if chan:
+                team = chan.team
+                chanid = team.get_last_channel(sibling=chan)
+                if not chanid:
+                    raise ArgException('No default channel for group: (%s) %s' % (self.team_name(team), val))
+                return (team, chanid)
 
             # Look for a team (head) that matches; use that team's lastchannel.
             try:
@@ -381,7 +397,7 @@ class UI:
             if team:
                 chanid = team.get_last_channel()
                 if not chanid:
-                    raise ArgException('No default channel for team: %s' % (self.team_name(team),))
+                    raise ArgException('No default channel for host: %s' % (self.team_name(team),))
                 return (team, chanid)
                 
         raise ArgException('Channel spec not recognized: %s' % (origval,))

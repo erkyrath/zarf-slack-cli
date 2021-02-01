@@ -399,6 +399,34 @@ class UI:
                 if not chanid:
                     raise ArgException('No default channel for host: %s' % (self.team_name(team),))
                 return (team, chanid)
+
+        else:  # len(valls) > 1
+            lenls = len(valls)
+            
+            # First, check all cases where the list length matches the
+            # channel length (1 + partcount).
+
+            try:
+                team = self.parse_team(valls[0])
+            except ArgException:
+                team = None
+            if team:
+                resls = []
+                for (id, chan) in team.channels.items():
+                    parsers = chan.name_parsers()
+                    if lenls-1 == len(parsers):
+                        res = [ par(el) for (el, par) in zip(valls[1:], parsers) ]
+                        res = min(res)
+                        if res:
+                            resls.append( (res, (team, chan.id) ))
+                tup = ParseMatch.list_best(resls)
+                if tup:
+                    return tup
+
+            # Now, all cases where the list is shorter than the channel
+            # length (so we have a subset).
+            
+            ###
                 
         raise ArgException('Channel spec not recognized: %s' % (origval,))
         

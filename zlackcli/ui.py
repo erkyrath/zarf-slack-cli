@@ -305,7 +305,93 @@ class UI:
         TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
         (No initial hash character, please.)
     
-        Returns (team, channelid).
+        Returns (team, channelid) or raises ArgException.
+        """
+        origval = val
+        # First, divide val into segments with / or : as the delimiter.
+        # Extraneous delimiters are ignored. Case is folded.
+        val = val.lower()
+        val = val.replace(':', '/')
+        valls = [ el for el in val.split('/') if el ]
+
+        if not valls:
+            raise ArgException('Empty team name.')
+
+        curteam = None
+        curchanid = None
+        if self.curchannel:
+            curteam = self.client.get_team(self.curchannel[0])
+            if curteam:
+                curchanid = self.curchannel[1]
+
+        if valls[-1].startswith('@'):
+            # User search: @USER or TEAM/@USER.
+            # We ignore the middle elements here. It might make sense to
+            # search the team subgroup named by the middle element, but
+            # we don't.
+            username = valls[-1][1:]
+            if len(valls) == 1:
+                team = curteam
+                if not team:
+                    raise ArgException('No current team.')
+            else:
+                team = self.parse_team(valls[0])
+                
+            if username not in team.users_by_display_name:
+                raise ArgException('User not recognized: %s' % (username,))
+            chanid = team.users_by_display_name[username].im_channel
+            if not chanid:
+                raise ArgException('No IM channel with user: %s' % (username,))
+            return (team, chanid)
+            
+        if len(valls) == 1:
+            # Simple search: TEAM or CHANNEL.
+            val = valls[0]
+            
+            # For curteam, check the tail of all channels.
+            if curteam:
+                resls = []
+                for (id, chan) in curteam.channels.items():
+                    res = chan.name_parsers()[-1](val)
+                    if res:
+                        resls.append( (res, (curteam, chan.id) ))
+                tup = ParseMatch.list_best(resls)
+                if tup:
+                    return tup
+
+            # For all teams, check the tail of all channels.
+            resls = []
+            for team in self.client.teams.values():
+                for (id, chan) in team.channels.items():
+                    res = chan.name_parsers()[-1](val)
+                    if res:
+                        resls.append( (res, (team, chan.id) ))
+            tup = ParseMatch.list_best(resls)
+            if tup:
+                return tup
+
+            # Look for a channel middle that matches; use that item's lastchannel
+            ###
+
+            # Look for a team (head) that matches; use that team's lastchannel.
+            try:
+                team = self.parse_team(val)
+            except ArgException:
+                team = None
+            if team:
+                chanid = team.get_last_channel()
+                if not chanid:
+                    raise ArgException('No default channel for team: %s' % (self.team_name(team),))
+                return (team, chanid)
+                
+        raise ArgException('Channel spec not recognized: %s' % (origval,))
+        
+    def parse_channelspec_XXX(self, val):
+        """Parse a channel specification, in any of its various forms:
+        TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
+        (No initial hash character, please.)
+    
+        Returns (team, channelid) or raises ArgException.
         """
         match_chan = pat_channel_command.match(val)
         match_im = pat_im_command.match(val)
@@ -375,6 +461,7 @@ class UI:
         raise ArgException('Host not recognized: %s' % (val,))
     
     def parse_channel(self, team, val):
+        ###
         """Parse a channel name (a bare channel, no # or team prefix)
         for a given Host. Returns the channel ID.
         Raises ArgException if not recognized.
@@ -388,6 +475,7 @@ class UI:
         raise ArgException('Channel not recognized: %s/%s' % (self.team_name(team), val,))
     
     def parse_channel_anyteam(self, val):
+        ###
         """Parse a channel name, checking all teams.
         Returns (team, chanid).
         """

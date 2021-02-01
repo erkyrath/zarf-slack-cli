@@ -460,7 +460,7 @@ class SlackTeam(Host):
         # The last channel (id) we spoke on in this team. (That is, we
         # set this when ui.curchannel is set. We use this when switching
         # to a team without specifying a channel.)
-        self.lastchannel = None
+        self.lastchannel = self.client.prefs.team_get('lastchannel', self)
         
         self.session = None
         self.readloop_task = None
@@ -539,6 +539,13 @@ class SlackTeam(Host):
             self.print_exception(ex, 'Slack exception (%s)' % (method,))
             return None
 
+    def set_last_channel(self, chanid):
+        self.lastchannel = chanid
+        self.client.prefs.team_put('lastchannel', chanid, self)
+        
+    def get_last_channel(self):
+        return self.lastchannel
+        
     def resolve_in_flight(self, val):
         """Check an id value in a reply_to. If we've sent a message
         with that value, return it (and remove it from our pool of sent

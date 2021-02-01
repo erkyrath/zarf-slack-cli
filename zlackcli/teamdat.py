@@ -127,9 +127,14 @@ class Host:
     # self.users: map
     # self.channels: map
     # self.origmap: the OrderedDict that was used to construct the Host
+    
+    # self.nameparser: ParseMatch for the id and aliases
 
     def __repr__(self):
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
+
+    def name_parser(self):
+        return ParseMatch.nevermatch
 
     async def open(self):
         """Create the web API session, load the team data, and open
@@ -191,6 +196,15 @@ class Host:
             return ls
         return None
 
+    def set_aliases(self, aliases):
+        """Set a list of channel aliases.
+        """
+        self.client.prefs.team_put('aliases', aliases, self)
+        self.update_name_parser()
+
+    def update_name_parser(self):
+        self.nameparser = ParseMatch(self.id, self.client.prefs.team_get('aliases', self))
+        
     def short_name(self):
         """Return the team name or the first alias.
         """
@@ -198,6 +212,12 @@ class Host:
         if ls:
             return ls[0]
         return self.team_name
+
+    def set_last_channel(self, chanid):
+        pass
+        
+    def get_last_channel(self):
+        return None
         
     async def recap_channel(self, chanid, interval):
         """Recap the last interval seconds of a channel.
@@ -244,6 +264,9 @@ class Channel:
 
     def muted(self):
         return False
+
+    def name_parsers(self):
+        return [ ParseMatch.nevermatch ]
 
 class User:
     """Represents a user at a Host.

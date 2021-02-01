@@ -213,7 +213,7 @@ class UI:
                 return
             (team, chanid) = tup
             # Set the current channel.
-            team.lastchannel = chanid
+            team.set_last_channel(chanid)
             self.curchannel = (team.key, chanid)
             self.lastchannel = self.curchannel
             self.client.prefs.put('curchannel', self.curchannel)
@@ -262,7 +262,7 @@ class UI:
 
     def team_name(self, team):
         """Look up a team name, either as an alias (if available) or the
-        full name. The argument can be a Host or team key string.
+        full name. The argument can be a Host or host key string.
         """
         if team is None:
             return '<no team>'
@@ -277,6 +277,9 @@ class UI:
     
     def channel_name(self, team, chanid):
         """Look up a channel name.
+        The team argument can be a Host or host key string.
+        (This does a lot of safety checks, in case a team or channel
+        isn't loaded.)
         """
         if not isinstance(team, Host):
             if team not in self.client.teams:
@@ -352,7 +355,7 @@ class UI:
             match = match_def
             # format: "TEAM/"
             team = self.parse_team(match.group(1))
-            chanid = team.lastchannel
+            chanid = team.get_last_channel()
             if not chanid:
                 raise ArgException('No default channel for team: %s' % (self.team_name(team),))
         else:
@@ -706,8 +709,13 @@ class UI:
         aliases = [ val.strip() for val in aliases ]
         aliases = [ val for val in aliases if val ]
         team = self.parse_team_or_current(args)
-        self.client.prefs.team_put('aliases', aliases, team)
-        self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
+        team.set_aliases(aliases)
+
+        aliases = team.get_aliases()
+        if not aliases:
+            self.print('%s: no aliases set.' % (team.team_name,))
+        else:
+            self.print('%s: aliased to %s.' % (team.team_name, ','.join(aliases),))
 
     # This lists all the slash commands we recognize. The /help command
     # lists commands in this order.

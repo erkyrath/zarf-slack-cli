@@ -96,8 +96,7 @@ class MattermProtocol(Protocol):
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, headers=headers, data=data) as resp:
             try:
-                # Disable content-type check; Mattermost seems to send text/pl\
-ain for errors, even JSON errors
+                # Disable content-type check; Mattermost seems to send text/plain for errors, even JSON errors
                 return await resp.json(content_type=None)
             except json.JSONDecodeError:
                 val = await resp.text()
@@ -182,7 +181,7 @@ ain for errors, even JSON errors
             self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
-    async def perform_auth_async(self, mhost):
+    async def perform_oauth_async(self, mhost):
         """Do the work of authenticating to a new Mattermost team.
         This is async, and it takes a while, because the user has to
         authenticate through Mattermost's web site.

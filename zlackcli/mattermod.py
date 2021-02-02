@@ -75,12 +75,13 @@ class MattermProtocol(Protocol):
             await self.session.close()
             self.session = None
             
-    async def api_call(self, method, httpmethod='post', **kwargs):
+    async def api_call(self, method, mhost, httpmethod='post', **kwargs):
         """Make a Mattermost API call. If kwargs contains a "token"
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
         """
-        url = '{0}/{1}'.format(self.api_url, method)
+        url = self.base_api_url.replace('MHOST', mhost)
+        url = '{0}/{1}'.format(url, method)
         
         data = {}
         headers = {}
@@ -93,6 +94,8 @@ class MattermProtocol(Protocol):
                 continue
             data[key] = val
 
+        print('### api_call:', httpmethod, url, data)
+        
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, headers=headers, data=data) as resp:
             try:
@@ -222,7 +225,7 @@ class MattermProtocol(Protocol):
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth/access_token', grant_type='authorization_code', redirect_uri=redirecturl, client_id=self.client_id, client_secret=self.client_secret, code=auth_code)
+        res = await self.api_call('oauth/access_token', mhost=mhost, grant_type='authorization_code', redirect_uri=redirecturl, client_id=self.client_id, client_secret=self.client_secret, code=auth_code)
         
         if not res.get('access_token'):
             self.print('oauth/access_token response had no access_token')
@@ -248,7 +251,7 @@ class MattermProtocol(Protocol):
         # Try fetching user info. (We want to include the user's name in the
         # ~/.zlack-tokens entry.)
         # (Note that the client-level api_call() method doesn't add the api/v4 for us.)
-        res = await self.api_call('api/v4/users/me', httpmethod='get', token=teammap['access_token'])
+        res = await self.api_call('api/v4/users/me', mhost=mhost, httpmethod='get', token=teammap['access_token'])
         print('### users/me', res)
         if not (res.get('id') and res.get('username')):
             self.print('users.info call failed: %s' % (res.get('error'),))
@@ -821,6 +824,7 @@ class MattermHost(Host):
             if not res:
                 break
             for user in res:
+                userid = user['id']
                 username = user['username']
                 userrealname = (user.get('first_name') + ' ' + user.get('last_name')).strip()
                 self.users[userid] = MattermUser(self, userid, username, userrealname)

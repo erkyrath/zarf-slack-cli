@@ -455,7 +455,7 @@ class UI:
                 
             # Now, the cases where the team is unspecified but some or all of the tail matches.
             resls = []
-            for team in teamlist:
+            for team in allteams:
                 for (id, chan) in team.channels.items():
                     parsers = chan.name_parsers()
                     if lenls <= len(parsers):

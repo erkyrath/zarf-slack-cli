@@ -99,6 +99,7 @@ There are a handful of special commands, which start with a slash.
 - */channels [team]* -- list all channels in the current team or a named team
 - */reload [team]* -- reload users and channels for a team
 - */recap \[channel] \[interval]* -- recap an amount of time (default five minutes) on the current channel or a named channel
+- */fetch [num]* -- download an attached file (by number)
 - */alias [team] alias,alias,...* -- set the aliases for a team
 - */debug [bool]* -- set stream debugging on/off or toggle
 

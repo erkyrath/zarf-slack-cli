@@ -914,5 +914,5 @@ class UI:
     
 
 from .teamdat import Host, ProtoUI
-from .teamdat import ParseMatch
+from .parsematch import ParseMatch
 

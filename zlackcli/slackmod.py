@@ -13,7 +13,7 @@ import aiohttp.web
 import websockets
 
 from .teamdat import Protocol, ProtoUI, Host, Channel, User
-from .teamdat import ParseMatch
+from .parsematch import ParseMatch
 
 class SlackProtocol(Protocol):
     """The Slack protocol.

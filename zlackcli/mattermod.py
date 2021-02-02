@@ -345,21 +345,18 @@ class MattermUI(ProtoUI):
         """Handle one message received from the Mattermost server (over the
         RTM websocket).
         """
-        typ = msg.get('type')
+        typ = msg.get('action')
 
-        files = msg.get('files')
-        if files:
-            self.ui.note_file_urls(team, files)
-
-        if typ is None and msg.get('reply_to'):
+        if typ is None and msg.get('seq_reply'):
             # A reply to a message we sent.
-            origmsg = team.resolve_in_flight(msg.get('reply_to'))
+            origmsg = team.resolve_in_flight(msg.get('seq_reply'))
             if not origmsg:
-                self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
+                self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('seq_reply'), msg.get('text')))
                 return
             chanid = origmsg.get('channel', '')
             userid = origmsg.get('user', '')
             # Print our successful messages even on muted channels
+            ### ? not always a text message. Check format anyhow.
             text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
             val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
             self.print(val)

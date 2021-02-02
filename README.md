@@ -1,4 +1,4 @@
-# Zlack: a minimalist command-line Slack client
+# Zlack: a minimalist command-line Slack (and Mattermost) client
 
 - Created by Andrew Plotkin <erkyrath@eblong.com>
 - [MIT license][license]
@@ -10,42 +10,57 @@ As you may know, Slack turned off their IRC and XMPP gateways on May 15th. (I [w
 
 This is *not* a full-on Slack client! It's a replacement for the way I used the XMPP gateway: a little window in the corner of my screen where I can keep an eye on a few important Slack groups and type quick replies. Plain text only. It doesn't try to handle every fancy new feature that Slack rolls out. If you want to do something fancy, you pull up the official Slack client or the web page.
 
+Zlack now also supports [Mattermost][]. Mattermost is an open-source team messaging service; it is similar to Slack in form and function.
+
+[Slack]: https://slack.com/
+[Mattermost]: https://mattermost.com/
+
 ## Installation
 
 This tool is written in Python3. You'll need a recent version of that. You'll also need some packages:
 
 > `pip3 install slackclient aiohttp aiodns websockets`
 
-(This is written to [prompt-toolkit 2.0.4][prompt-toolkit]. This toolkit is undergoing active development and future major revisions may not work the same, so keep an eye out for changes.)
-
 (Note that I am not using the official [Python slackclient][slackclient] library. It's crufty and doesn't support async code, so I wrote my own. Sorry! Feel free to borrow this one, folks...)
 
 [slackclient]: https://github.com/slackapi/python-slackclient
 [prompt-toolkit]: https://github.com/jonathanslenders/python-prompt-toolkit
 
-You'll also have to create your own Slack app client ID. This repository doesn't include any such ID, because Slack doesn't want those IDs to be publicized.
+You'll also have to create your own Slack and/or Mattermost app client ID. This repository doesn't include any such ID, because these IDs should not be publicized.
+
+### Creating a Slack app client ID
 
 Visit [Slack's developer page][slackapp] and create a new app. Then, under "Permissions", add `http://localhost:8090/` as a redirect URL.
 
 [slackapp]: https://api.slack.com/apps
 
-Once you've done this, set the `ZLACK_CLIENT_ID` and `ZLACK_CLIENT_SECRET` environment variables to the values shown on your "App Credentials" page. 
+Once you've done this, set the `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` environment variables to the values shown on your "App Credentials" page. (Note that in earlier versions, these were named `ZLACK_...` with a Z. It's `SLACK_...` now.)
 
 (The developer page suggests that you add "features or permissions scopes", but you don't have to. You're not going to be submitting this to their App Directory.)
 
+### Creating a Mattermost app client ID
+
+Make sure that your Mattermost server supports OAuth apps. In the System Console, go to "Integration Management" and turn on "Enable OAuth 2.0 Service Provider". 
+
+Leave the System Console and go to "Integrations" in the main Mattermost menu. You should see an option for "OAuth 2.0 Applications". Select this and hit "Add OAuth 2.0 Application". Leave "Is Trusted" as "no". Add `http://localhost:8090/` as a callback URL.
+
+(If you want to add the Zlack application as a normal user, rather than an admin, you will first need to go to "Permissions" and turn on "Manage OAuth Applications" for all users.)
+
+Once you've done this, set the `MATTERMOST_CLIENT_ID` and `MATTERMOST_CLIENT_SECRET` environment variables to the values shown for the app.
+
 ## Authentication
 
-Run `zlack.py`, and then type `/auth` to authenticate. (The environment variables must be set for this command to work.)
+Run `zlack.py`, and then type `/auth slack` or `/auth mattermost` to authenticate. (The environment variables must be set for this command to work.)
 
 > `python3 zlack.py`
 
 If you don't know what an environment variable is, you can type everything out on the command line:
 
-> `python3 zlack.py --id CLIENT_ID --secret CLIENT_SECRET`
+> `python3 zlack.py --slack-client-id SLACK_CLIENT_ID --slack-client-secret SLACK_CLIENT_SECRET`
 
-...where *CLIENT_ID* and *CLIENT_SECRET* are the long hex strings you got off the developer page.
+...where *SLACK_CLIENT_ID* and *SLACK_CLIENT_SECRET* are the long hex strings you got off the developer page.
 
-When you type `/auth`, the script will display a Slack URL to visit. It also starts listening on localhost port 8090. Go to the Slack URL in your web browser, authorize the client, and then you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
+When you type `/auth`, the script will display a Slack URL to visit. It also starts listening on localhost port 8090. Go to the Slack URL in your web browser, authorize the client, and you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
 
 Since your tokens are saved, you will not need to authenticate again on the same machine. Unless you delete the `~/.zlack-tokens` file.
 
@@ -75,7 +90,8 @@ If you type a semicolon on a line by itself, it will switch your default channel
 There are a handful of special commands, which start with a slash.
 
 - */help* -- this list
-- */auth* -- request authentication to a Slack team
+- */auth slack* -- request authentication to a Slack team
+- */auth mattermost* -- request authentication to a Mattermost team
 - */connect [team]* -- connect (or reconnect) to a team
 - */disconnect [team]* -- disconnect from a team
 - */teams* -- list all teams you are authorized with
@@ -89,6 +105,7 @@ There are a handful of special commands, which start with a slash.
 
 ## Version history
 
+- 3.0.0: Added Mattermost support!
 - 2.0.0: Completely rewritten client library, fully async, no multithreading.
 - 1.0.0: Original release. Used the [Python slackclient][slackclient] library. Had questionable thread-safety logic.
 
@@ -109,8 +126,5 @@ Features the client does not currently handle which I might someday add:
 - muting some channels just in this client
 - muting Slackbot entirely
 - deactivating/muting an entire team
-- parallel support for [Mattermost][]?
-
-[Mattermost]: https://about.mattermost.com/
 
 (Not listed: all the features which I don't intend to add. I'm not even trying to keep up with Slack here.)

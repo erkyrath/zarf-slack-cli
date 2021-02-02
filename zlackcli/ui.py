@@ -458,12 +458,13 @@ class UI:
                         res = ParseMatch.match_list(parsers[-lenls:], valls)
                         if res:
                             resls.append( (res, (team, chan.id) ))
-                        # Try the first N:
-                        res = ParseMatch.match_list(parsers[:lenls], valls)
-                        if res:
-                            chanid = team.get_last_channel(sibling=chan)
-                            # chanid might be None! Must check this later.
-                            resls.append( (res, (team, chanid) ))
+                        # Try the first N (if we haven't already):
+                        if lenls < len(parsers):
+                            res = ParseMatch.match_list(parsers[:lenls], valls)
+                            if res:
+                                chanid = team.get_last_channel(sibling=chan)
+                                # chanid might be None! Must check this later.
+                                resls.append( (res, (team, chanid) ))
                         
             tup = ParseMatch.list_best(resls)
             if tup:

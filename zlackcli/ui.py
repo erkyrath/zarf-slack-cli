@@ -324,6 +324,13 @@ class UI:
             if curteam:
                 curchanid = self.curchannel[1]
 
+        allteams = list(self.client.teams.values())
+        # Sort curteam to the front. It might matter that we check it first.
+        if curteam:
+            pos = allteams.index(curteam)
+            del allteams[pos]
+            allteams.insert(0, curteam)
+        
         if valls[-1].startswith('@'):
             # User search: @USER or TEAM/@USER.
             # We ignore the middle elements here. It might make sense to
@@ -361,7 +368,7 @@ class UI:
 
             # For all teams, check the tail of all channels.
             resls = []
-            for team in self.client.teams.values():
+            for team in allteams:
                 for (id, chan) in team.channels.items():
                     res = chan.name_parsers()[-1](val)
                     if res:
@@ -371,9 +378,8 @@ class UI:
                 return tup
 
             # Look for a channel middle that matches; use that item's lastchannel.
-            ### We should really check curteam first!
             resls = []
-            for team in self.client.teams.values():
+            for team in allteams:
                 for (id, chan) in team.channels.items():
                     parsers = chan.name_parsers()
                     # all but the last, in reverse order
@@ -448,9 +454,8 @@ class UI:
                     return tup
                 
             # Now, the cases where the team is unspecified but some or all of the tail matches.
-            ### We should really check curteam first!
             resls = []
-            for team in self.client.teams.values():
+            for team in teamlist:
                 for (id, chan) in team.channels.items():
                     parsers = chan.name_parsers()
                     if lenls <= len(parsers):

@@ -13,6 +13,7 @@ from .teamdat import Host
 from .prefs import Prefs
 from .ui import UI
 from .slackmod import SlackProtocol
+from .mattermod import MattermProtocol
 
 class ZlackClient:
     
@@ -31,7 +32,7 @@ class ZlackClient:
         self.prefs = Prefs(self, prefspath)
         self.ui = UI(self, opts=opts)
 
-        self.protocols = [ SlackProtocol(self) ]
+        self.protocols = [ SlackProtocol(self), MattermProtocol(self) ]
         self.protocolmap = { pro.key:pro for pro in self.protocols }
             
         self.teams = OrderedDict()

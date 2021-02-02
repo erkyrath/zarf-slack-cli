@@ -203,7 +203,7 @@ class Host:
         self.update_name_parser()
 
     def update_name_parser(self):
-        self.nameparser = ParseMatch(self.id, self.client.prefs.team_get('aliases', self))
+        self.nameparser = ParseMatch(self.team_name, self.client.prefs.team_get('aliases', self))
         
     def short_name(self):
         """Return the team name or the first alias.

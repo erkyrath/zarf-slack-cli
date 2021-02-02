@@ -5,8 +5,7 @@ import re
 import json
 from collections import OrderedDict
 import random
-import urllib
-import traceback
+import urllib.parse
 import asyncio
 import aiohttp
 import aiohttp.web

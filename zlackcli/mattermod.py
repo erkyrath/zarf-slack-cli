@@ -4,9 +4,9 @@ import os
 import re
 import json
 from collections import OrderedDict
+import collections.abc
 import random
-import urllib
-import traceback
+import urllib.parse
 import asyncio
 import aiohttp
 import aiohttp.web
@@ -22,8 +22,8 @@ class MattermProtocol(Protocol):
     key = 'mattermost'
     # hostclass is filled in at init time
 
-    api_url = 'https://slack.com/api'
-    auth_url = 'https://slack.com/oauth/authorize'
+    base_api_url = 'https://MHOST'
+    base_auth_url = 'https://MHOST/oauth/authorize'
     
     def __init__(self, client):
         super().__init__(client)
@@ -75,7 +75,7 @@ class MattermProtocol(Protocol):
             await self.session.close()
             self.session = None
             
-    async def api_call(self, method, **kwargs):
+    async def api_call(self, method, httpmethod='post', **kwargs):
         """Make a Mattermost API call. If kwargs contains a "token"
         field, this is used; otherwise, the call is unauthenticated.
         This is only used when authenticating to a new team.
@@ -93,8 +93,15 @@ class MattermProtocol(Protocol):
                 continue
             data[key] = val
 
-        async with self.session.post(url, headers=headers, data=data) as resp:
-            return await resp.json()
+        httpfunc = getattr(self.session, httpmethod)
+        async with httpfunc(url, headers=headers, data=data) as resp:
+            try:
+                # Disable content-type check; Mattermost seems to send text/pl\
+ain for errors, even JSON errors
+                return await resp.json(content_type=None)
+            except json.JSONDecodeError:
+                val = await resp.text()
+                raise Exception('Non-JSON response: %s' % (val[:80],))
 
     async def wakeloop_async(self):
         """This task runs in the background and watches the system clock.
@@ -132,15 +139,15 @@ class MattermProtocol(Protocol):
             # that is a better way to avoid timeout errors. Now we've got
             # all the sockets restabilized, but timeout errors are still
             # possible; the pings will root them out.
-            for team in self.teams.values():
-                if team.rtm_connected():
-                    await team.rtm_send_async({ 'type':'ping', 'id':None })
+            ###for team in self.teams.values():
+            ###    if team.rtm_connected():
+            ###        await team.rtm_send_async({ 'type':'ping', 'id':None })
 
             # Note the time for next go-around. (Should be exactly five
             # seconds, but if the machine sleeps, it'll be more.)
             curtime = time.time()
             
-    def begin_auth(self):
+    def begin_auth(self, mhost=None, patoken=None):
         """Launch the process of authenticating to a new Mattermost team.
         (This returns immediately.)
         """
@@ -148,15 +155,25 @@ class MattermProtocol(Protocol):
             self.print('Already awaiting authentication callback!')
             return
 
-        if not self.client_id:
-            self.print('You must set --mattermost-client-id or $MATTERMOST_CLIENT_ID to use the /auth command.')
-            return
-        if not self.client_secret:
-            self.print('You must set --mattermost-client-secret or $MATTERMOST_CLIENT_SECRET to use the /auth command.')
+        if not mhost:
+            self.print('You must give the mattermost hostname.')
             return
 
+        if patoken is None:
+            # With a patoken, the client id/secret are not required.
+            if not self.client_id:
+                self.print('You must set --mattermost-client-id or $MATTERMOST_CLIENT_ID to use the /auth command.')
+                return
+            if not self.client_secret:
+                self.print('You must set --mattermost-client-secret or $MATTERMOST_CLIENT_SECRET to use the /auth command.')
+                return
+
+        if patoken is None:
+            task = self.perform_oauth_async(mhost)
+        else:
+            task = self.perform_tokenauth_async(mhost, patoken)
         self.client.auth_in_progress = True
-        self.authtask = self.client.evloop.create_task(self.perform_auth_async())
+        self.authtask = self.client.evloop.create_task(task)
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
@@ -165,12 +182,12 @@ class MattermProtocol(Protocol):
             self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
-    async def perform_auth_async(self):
+    async def perform_auth_async(self, mhost):
         """Do the work of authenticating to a new Mattermost team.
         This is async, and it takes a while, because the user has to
         authenticate through Mattermost's web site.
         """
-        (authurl, redirecturl, statecheck) = self.construct_auth_url(self.client.opts.auth_port, self.client_id)
+        (authurl, redirecturl, statecheck) = self.construct_auth_url(mhost, self.client.opts.auth_port, self.client_id)
 
         self.print('Visit this URL to authenticate with Mattermost:\n')
         self.print(authurl+'\n')
@@ -206,46 +223,49 @@ class MattermProtocol(Protocol):
         # We have the temporary authorization code. Now we exchange it for
         # a permanent access token.
 
-        res = await self.api_call('oauth.access', client_id=self.client_id, client_secret=self.client_secret, code=auth_code)
+        res = await self.api_call('oauth/access_token', grant_type='authorization_code', redirect_uri=redirecturl, client_id=self.client_id, client_secret=self.client_secret, code=auth_code)
         
-        if not res.get('ok'):
-            self.print('oauth.access call failed: %s' % (res.get('error'),))
-            return
-        if not res.get('team_id'):
-            self.print('oauth.access response had no team_id')
-            return
         if not res.get('access_token'):
-            self.print('oauth.access response had no access_token')
+            self.print('oauth/access_token response had no access_token')
             return
 
-        # Got the permanent token. Create a new entry for ~/.zlack-tokens.
+        ### stash expires_in, refresh_token somewhere
+        
+        # Got the permanent token.
+        await self.perform_tokenauth_async(mhost, res['access_token'])
+
+    async def perform_tokenauth_async(self, mhost, access_token):
+        """Continue the authentication process. The token may be a personal
+        access token, or it may have arrived through OAuth.
+        """
+
+        # Create a new entry for ~/.zlack-tokens.
         teammap = OrderedDict()
         teammap['_protocol'] = MattermProtocol.key
-        for key in ('team_id', 'team_name', 'user_id', 'scope', 'access_token'):
-            if key in res:
-                teammap[key] = res.get(key)
+        teammap['host'] = mhost
+        teammap['access_token'] = access_token
+        ### maybe expires_in/refresh_token. Nah, they go in preferences.
 
         # Try fetching user info. (We want to include the user's name in the
         # ~/.zlack-tokens entry.)
-        res = await self.api_call('users.info', token=teammap['access_token'], user=teammap['user_id'])
-        if not res.get('ok'):
+        # (Note that the client-level api_call() method doesn't add the api/v4 for us.)
+        res = await self.api_call('api/v4/users/me', httpmethod='get', token=teammap['access_token'])
+        print('### users/me', res)
+        if not (res.get('id') and res.get('username')):
             self.print('users.info call failed: %s' % (res.get('error'),))
             return
-        if not res.get('user'):
-            self.print('users.info response had no user')
-            return
-        user = res['user']
 
-        teammap['user_name'] = user['name']
-        teammap['user_real_name'] = user['real_name']
+        teammap['user_id'] = res['id']
+        teammap['user_name'] = res['username']
+        teammap['user_real_name'] = (res.get('first_name') + ' ' + res.get('last_name')).strip()
             
-        # Create a new MattermHost entry.
+        # Create a new Team entry.
         team = self.create_team(teammap)
         self.client.write_teams()
         
         await team.open()
         
-    def construct_auth_url(self, authport, clientid):
+    def construct_auth_url(self, mhost, authport, clientid):
         """Construct the URL which the user will use for authentication.
         Returns (authurl, redirecturl, statestring).
         - authurl: the URL which the user should enter into a browser.
@@ -256,15 +276,18 @@ class MattermProtocol(Protocol):
         """
         redirecturl = 'http://localhost:%d/' % (authport,)
         statecheck = 'state_%d' % (random.randrange(1000000),)
-    
+
+        authurl = self.base_auth_url.replace('MHOST', mhost)
+        
         params = [
             ('client_id', clientid),
-            ('scope', 'client'),
+            ('response_type', 'code'),
             ('redirect_uri', redirecturl),
             ('state', statecheck),
         ]
         queryls = [ '%s=%s' % (key, urllib.parse.quote(val)) for (key, val) in params ]
-        tup = list(urllib.parse.urlparse(self.auth_url))
+        tup = list(urllib.parse.urlparse(authurl))
+        tup[1] = mhost
         tup[4] = '&'.join(queryls)
         authurl = urllib.parse.urlunparse(tup)
         
@@ -445,9 +468,9 @@ class MattermHost(Host):
         self.client = protocol.client
         self.evloop = self.client.evloop
         
-        self.id = map['team_id']   # looks like "T00ABC123"
+        self.id = map['host']
         self.key = '%s:%s' % (self.protocolkey, self.id)
-        self.team_name = map.get('team_name', '???')
+        self.team_name = self.id
         self.user_id = map['user_id']
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out
@@ -504,26 +527,49 @@ class MattermHost(Host):
             await self.session.close()
             self.session = None
 
-    async def api_call(self, method, **kwargs):
+    async def api_call(self, method, httpmethod='get', **kwargs):
         """Make a web API call. Return the result.
+        In the kwargs, keys starting with __ become query parameters;
+        the rest become body data parameters. (Sorry, it's hacky.)
         This may raise an exception or return an object with
-        ok=False.
+        status_code (http error).
         """
-        url = '{0}/{1}'.format(self.protocol.api_url, method)
-        
+        url = self.protocol.base_api_url.replace('MHOST', self.id)
+        url = '{0}/api/v4/{1}'.format(url, method)
+
+        queryls = []
         data = {}
         for (key, val) in kwargs.items():
             if val is None:
                 continue
-            ### channels, users, types: convert list to comma-separated string
-            ### other lists/dicts: convert to json.dumps()
-            data[key] = val
+            if key.startswith('__'):
+                key = key[2:]
+                if val is True:
+                    val = 'true'
+                elif val is False:
+                    val = 'false'
+                else:
+                    val = str(val)
+                queryls.append('%s=%s' % (key, urllib.parse.quote(val)))
+            else:
+                data[key] = val
+
+        if queryls:
+            url += ('?' + '&'.join(queryls))
         self.client.ui.note_send_message(data, self)
-        
-        async with self.session.post(url, data=data) as resp:
-            res = await resp.json()
-            self.client.ui.note_receive_message(res, self)
-            return res
+
+        print('### api_call:', httpmethod, url, data)
+
+        httpfunc = getattr(self.session, httpmethod)
+        async with httpfunc(url, data=data) as resp:
+            try:
+                # Disable content-type check; Mattermost seems to send text/plain for errors, even JSON errors
+                res = await resp.json(content_type=None)
+                self.client.ui.note_receive_message(res, self)
+                return res
+            except json.JSONDecodeError:
+                val = await resp.text()
+                raise Exception('Non-JSON response: %s' % (val[:80],))
     
     async def api_call_check(self, method, **kwargs):
         """Make a web API call. Return the result.
@@ -531,15 +577,16 @@ class MattermHost(Host):
         """
         try:
             res = await self.api_call(method, **kwargs)
-            if res is None or not res.get('ok'):
-                errmsg = '???'
-                if res and 'error' in res:
-                    errmsg = res.get('error')
+            if res is None:
+                self.client.print('Mattermost error (%s) (%s): no result' % (method, self.short_name(),))
+                return None
+            if isinstance(res, collections.abc.Mapping) and res.get('status_code') and res.get('message'):
+                errmsg = res.get('message', '???')
                 self.client.print('Mattermost error (%s) (%s): %s' % (method, self.short_name(), errmsg,))
                 return None
             return res
         except Exception as ex:
-            self.print_exception(ex, 'Mattermost exception (%s)' % (method,))
+            self.print_exception(ex, 'Mattermost exception (%s) (%s)' % (method, self.short_name(),))
             return None
 
     def name_parser(self):
@@ -553,7 +600,7 @@ class MattermHost(Host):
         return self.lastchannel
         
     def resolve_in_flight(self, val):
-        """Check an id value in a reply_to. If we've sent a message
+        """Check a seq value in a reply_to. If we've sent a message
         with that value, return it (and remove it from our pool of sent
         messages.)
         """
@@ -580,21 +627,20 @@ class MattermHost(Host):
             await asyncio.sleep(0.05)
             
         self.want_connected = True
-        res = await self.api_call_check('rtm.connect')
-        if not res:
-            return
-        self.rtm_url = res.get('url')
-        if not self.rtm_url:
-            self.print('rtm.connect response had no url')
-            return
+        url = self.protocol.base_api_url.replace('MHOST', self.id)
+        url = url.replace('https:', 'wss:')
+        self.rtm_url = '{0}/api/v4/{1}'.format(url, 'websocket')
+        print('### rtm_url:', self.rtm_url)
 
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)
         if self.rtm_socket and not self.rtm_socket.open:
             # This may not be a plausible failure state, but we'll cover it.
-            self.print('rtm.connect did not return an open socket')
+            self.print('websocket did not return an open socket')
             self.rtm_socket = None
             return
+
+        await self.rtm_send_async({ 'action':'authentication_challenge', 'seq':None, 'data':{ 'token':self.access_token } })
 
         self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
         def callback(future):
@@ -720,10 +766,10 @@ class MattermHost(Host):
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
-        if 'id' in msg and msg['id'] is None:
+        if 'seq' in msg and msg['seq'] is None:
             self.msg_counter += 1
-            msg['id'] = self.msg_counter
-            self.msg_in_flight[msg['id']] = msg
+            msg['seq'] = self.msg_counter
+            self.msg_in_flight[msg['seq']] = msg
         self.client.ui.note_send_message(msg, self)
         try:
             await self.rtm_socket.send(json.dumps(msg))
@@ -769,72 +815,26 @@ class MattermHost(Host):
         self.channels_by_name.clear()
         self.users.clear()
         self.users_by_display_name.clear();
-    
-        # The muted_channels information is stored in your Mattermost preferences,
-        # which are an undocumented (but I guess widely used) API call.
-        # See: https://github.com/ErikKalkoken/slackApiDoc
-        res = await self.api_call_check('users.prefs.get')
-        if res:
-            prefs = res.get('prefs')
-            mutels = prefs.get('muted_channels')
-            if mutels:
-                self.muted_channels = set(mutels.split(','))
+
+        ### muted channels
 
         # Fetch user lists
-        cursor = None
+        page = 0
         while True:
-            res = await self.api_call_check('users.list', cursor=cursor)
+            res = await self.api_call_check('users', __page=page)
             if not res:
                 break
-            for user in res.get('members'):
-                userid = user['id']
-                username = user['profile']['display_name']
-                if not username:
-                    username = user['name']    # legacy data field
-                userrealname = user['profile']['real_name']
+            for user in res:
+                username = user['username']
+                userrealname = (user.get('first_name') + ' ' + user.get('last_name')).strip()
                 self.users[userid] = MattermUser(self, userid, username, userrealname)
                 self.users_by_display_name[username] = self.users[userid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
+            page += 1
             
-        #self.client.print('Users for %s: %s' % (self, self.users,))
+        self.client.print('Users for %s: %s' % (self, self.users,))
     
-        # Fetch public and private channels
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.list', exclude_archived=True, types='public_channel,private_channel', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                channame = chan['name']
-                priv = chan['is_private']
-                member = chan['is_member']
-                self.channels[chanid] = MattermChannel(self, chanid, channame, private=priv, member=member)
-                self.channels_by_name[channame] = self.channels[chanid]
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-            
-        # Fetch IM (person-to-person) channels
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.list', exclude_archived=True, types='im', cursor=cursor)
-            if not res:
-                break
-            for chan in res.get('channels'):
-                chanid = chan['id']
-                chanuser = chan['user']
-                if chanuser in self.users:
-                    self.users[chanuser].im_channel = chanid
-                    channame = '@'+self.users[chanuser].name
-                    self.channels[chanid] = MattermChannel(self, chanid, channame, private=True, member=True, im=chanuser)
-                    # But not channels_by_name.
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
-
+        ### Fetch public and private channels
+        ### Fetch IM (person-to-person) channels
         #self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class MattermChannel(Channel):

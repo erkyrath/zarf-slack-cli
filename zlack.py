@@ -23,6 +23,8 @@ prefs_path = os.path.join(zlackdir, prefs_file)
 
 slack_client_id = os.environ.get('SLACK_CLIENT_ID', None)
 slack_client_secret = os.environ.get('SLACK_CLIENT_SECRET', None)
+mattermost_client_id = os.environ.get('MATTERMOST_CLIENT_ID', None)
+mattermost_client_secret = os.environ.get('MATTERMOST_CLIENT_SECRET', None)
 
 popt = optparse.OptionParser(usage='zlack.py [ OPTIONS ] command...')
 
@@ -35,6 +37,12 @@ popt.add_option('--slack-client-id',
 popt.add_option('--slack-client-secret',
                 action='store', dest='slack_client_secret', default=slack_client_secret,
                 help='Slack client secret (default: $SLACK_CLIENT_SECRET)')
+popt.add_option('--mattermost-client-id',
+                action='store', dest='mattermost_client_id', default=mattermost_client_id,
+                help='Mattermost client id (default: $MATTERMOST_CLIENT_ID)')
+popt.add_option('--mattermost-client-secret',
+                action='store', dest='mattermost_client_secret', default=mattermost_client_secret,
+                help='Mattermost client secret (default: $MATTERMOST_CLIENT_SECRET)')
 popt.add_option('--debug-exceptions',
                 action='store_true', dest='debug_exceptions',
                 help='Display complete stack traces of exceptions')
@@ -76,7 +84,7 @@ async def mainloop(client):
     """The main input loop. This prompts for user input and dispatches it
     to the client.
 
-    The client's Slack communication work happens in the background,
+    The client's communication work happens in the background,
     due to the magic of async tasks. (It's not a background *thread*;
     rather, the prompt_toolkit module knows how to yield control back
     to the event loop so that everything can happen cooperatively.)

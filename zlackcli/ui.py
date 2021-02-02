@@ -415,18 +415,61 @@ class UI:
                 for (id, chan) in team.channels.items():
                     parsers = chan.name_parsers()
                     if lenls-1 == len(parsers):
-                        res = [ par(el) for (el, par) in zip(valls[1:], parsers) ]
-                        res = min(res)
+                        res = ParseMatch.match_list(parsers, valls[1:])
                         if res:
                             resls.append( (res, (team, chan.id) ))
                 tup = ParseMatch.list_best(resls)
                 if tup:
                     return tup
 
-            # Now, all cases where the list is shorter than the channel
-            # length (so we have a subset).
+            # Now, the cases where the team (head) matches but only a
+            # subset of the rest.
+
+            if team:
+                resls = []
+                for (id, chan) in team.channels.items():
+                    parsers = chan.name_parsers()
+                    if lenls-1 < len(parsers):
+                        # Try the last N:
+                        res = ParseMatch.match_list(parsers[-(lenls-1):], valls[1:])
+                        if res:
+                            resls.append( (res, (team, chan.id) ))
+                        # Try the first N:
+                        res = ParseMatch.match_list(parsers[:(lenls-1)], valls[1:])
+                        if res:
+                            chanid = team.get_last_channel(sibling=chan)
+                            # chanid might be None! Must check this later.
+                            resls.append( (res, (team, chanid) ))
             
-            ###
+                tup = ParseMatch.list_best(resls)
+                if tup:
+                    if tup[1] is None:
+                        raise ArgException('No default channel for group: (%s) %s' % (self.team_name(tup[0]), valls[-1]))
+                    return tup
+                
+            # Now, the cases where the team is unspecified but some or all of the tail matches.
+            ### We should really check curteam first!
+            resls = []
+            for team in self.client.teams.values():
+                for (id, chan) in team.channels.items():
+                    parsers = chan.name_parsers()
+                    if lenls <= len(parsers):
+                        # Try the last N:
+                        res = ParseMatch.match_list(parsers[-lenls:], valls)
+                        if res:
+                            resls.append( (res, (team, chan.id) ))
+                        # Try the first N:
+                        res = ParseMatch.match_list(parsers[:lenls], valls)
+                        if res:
+                            chanid = team.get_last_channel(sibling=chan)
+                            # chanid might be None! Must check this later.
+                            resls.append( (res, (team, chanid) ))
+                        
+            tup = ParseMatch.list_best(resls)
+            if tup:
+                if tup[1] is None:
+                    raise ArgException('No default channel for group: (%s) %s' % (self.team_name(tup[0]), valls[-1]))
+                return tup
                 
         raise ArgException('Channel spec not recognized: %s' % (origval,))
         

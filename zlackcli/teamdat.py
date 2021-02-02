@@ -2,7 +2,7 @@ from collections import OrderedDict
 import aiohttp
 import aiohttp.web
 
-from .parsematch import ParseMatch
+from .parsematch import ParseMatch, NeverMatch
 
 """
 Virtual base classes, to be subclassed for each protcol.
@@ -135,7 +135,7 @@ class Host:
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
 
     def name_parser(self):
-        return ParseMatch.nevermatch
+        return NeverMatch()
 
     async def open(self):
         """Create the web API session, load the team data, and open
@@ -267,7 +267,7 @@ class Channel:
         return False
 
     def name_parsers(self):
-        return [ ParseMatch.nevermatch ]
+        return [ NeverMatch() ]
 
 class User:
     """Represents a user at a Host.

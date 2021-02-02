@@ -12,13 +12,6 @@ class ParseMatch:
         EXACT = 2
 
     @staticmethod
-    def nevermatch(text):
-        """A ParseMatch which never matches. This is meant to be used
-        as a default value.
-        """
-        return ParseMatch.Res.NONE
-    
-    @staticmethod
     def list_best(ls):
         """Given a list of (result, value) pairs, return the first value
         whose result is EXACT. If there are none, return the first value
@@ -100,3 +93,15 @@ class ParseMatch:
                         return Res.APPROX
                     
         return Res.NONE
+
+
+# NeverMatch is a ParseMatch which never matches. This is meant to be
+# used as a default value.
+
+class NeverMatch(ParseMatch):
+    def __init__(self):
+        pass
+    def __repr__(self):
+        return '<ParseMatch NeverMatch>'
+    def __call__(self, text):
+        return ParseMatch.Res.NONE

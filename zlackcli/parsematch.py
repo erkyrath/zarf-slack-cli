@@ -68,6 +68,12 @@ class ParseMatch:
         val = ','.join(ls)
         return '<ParseMatch "%s">' % (val,)
 
+    def update_aliases(self, aliases):
+        if aliases:
+            self.aliases = set([ val.lower() for val in aliases ])
+        else:
+            self.aliases = None
+
     def __call__(self, text):
         """self(text) checks whether the text matches the name or any of
         the aliases. An exact match returns Res.EXACT. If the text is

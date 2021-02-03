@@ -451,6 +451,8 @@ class SlackTeam(Host):
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out
 
+        # The modularity here is wrong.
+        self.nameparser = ParseMatch(self.team_name)
         self.update_name_parser()
 
         self.users = {}

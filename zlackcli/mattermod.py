@@ -474,6 +474,8 @@ class MattermHost(Host):
         self.access_token = map['access_token']
         self.origmap = map  # save the OrderedDict for writing out
 
+        # The modularity here is wrong.
+        self.nameparser = ParseMatch(self.team_name)
         self.update_name_parser()
 
         self.subteams = {}  # Mattermost teams
@@ -857,8 +859,10 @@ class MattermHost(Host):
                 self.channels[chan.id] = chan
                 self.channels_by_name[channame] = chan
 
-        ### Fetch open channels? (ones you're not in)
+            ### Fetch open channels? (ones you're not in)
+            
         ### Fetch IM (person-to-person) channels
+            
         self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class MattermSubteam:
@@ -872,6 +876,7 @@ class MattermSubteam:
         self.name = name
         self.real_name = real_name
         
+        self.nameparser = ParseMatch(self.name)
         self.update_name_parser()
     
     def __repr__(self):
@@ -882,7 +887,7 @@ class MattermSubteam:
         aliasmap = self.client.prefs.team_get('subteam_aliases', self.team)
         if aliases:
             aliases = aliasmap.get(self.id)
-        self.nameparser = ParseMatch(self.name, aliases)
+        self.nameparser.update_aliases(aliases)
         
 class MattermChannel(Channel):
     """Simple object representing one channel in a group.

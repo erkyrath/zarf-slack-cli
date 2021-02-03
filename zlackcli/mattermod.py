@@ -347,7 +347,7 @@ class MattermUI(ProtoUI):
         """Handle one message received from the Mattermost server (over the
         RTM websocket).
         """
-        typ = msg.get('action')
+        typ = msg.get('event')
 
         if typ is None and msg.get('seq_reply'):
             # A reply to a message we sent.
@@ -355,13 +355,15 @@ class MattermUI(ProtoUI):
             if not origmsg:
                 self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('seq_reply'), msg.get('text')))
                 return
-            chanid = origmsg.get('channel', '')
-            userid = origmsg.get('user', '')
-            # Print our successful messages even on muted channels
-            ### ? not always a text message. Check format anyhow.
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-            val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
-            self.print(val)
+            self.print('### reply to %s' % (origmsg,))
+            if False: ###
+                chanid = origmsg.get('channel', '')
+                userid = origmsg.get('user', '')
+                # Print our successful messages even on muted channels
+                ### ? not always a text message. Check format anyhow.
+                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
+                val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
+                self.print(val)
             return
         
         if typ == 'hello':
@@ -369,42 +371,21 @@ class MattermUI(ProtoUI):
             self.print('<Connected: %s>' % (self.ui.team_name(team)))
             return
         
-        if typ == 'message':
-            chanid = msg.get('channel', '')
-            userid = msg.get('user', '')
-            subtype = msg.get('subtype', '')
+        if typ == 'posted':
+            data = msg.get('data', {})
+            subteamid = data.get('team_id', '')
+            subteam = team.subteams[subteamid]
+            try:
+                post = json.loads(data.get('post', ''))
+            except:
+                post = {}
+            userid = post.get('user_id', '')
+            chanid = '%s/%s' % (subteam.name, post.get('channel_id', ''),)
             if chanid in team.muted_channels:
                 return
-            if subtype == 'message_deleted':
-                userid = msg.get('previous_message').get('user', '')
-                oldtext = msg.get('previous_message').get('text')
-                oldtext = self.decode_message(team, oldtext)
-                val = '[%s/%s] (del) %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), oldtext)
-                self.print(val)
-                return
-            if subtype == 'message_changed':
-                oldtext = ''
-                if 'previous_message' in msg:
-                    oldtext = msg.get('previous_message').get('text')
-                    oldtext = self.decode_message(team, oldtext)
-                userid = msg.get('message').get('user', '')
-                newtext = msg.get('message').get('text')
-                newtext = self.decode_message(team, newtext, attachments=msg.get('attachments'), files=msg.get('files'))
-                if oldtext == newtext:
-                    # Most likely this is a change to attachments, caused by Mattermost creating an image preview. Ignore.
-                    return
-                text = oldtext + '\n -> ' + newtext
-                val = '[%s/%s] (edit) %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
-                self.print(val)
-                self.ui.lastchannel = (team.key, chanid)
-                return
-            if subtype == 'slackbot_response':
-                val = self.client.prefs.tree_get('slackbot_mute', team, chanid)
-                if val:
-                    return
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-            subtypeflag = (' (%s)'%(subtype,) if subtype else '')
-            colon = (':' if subtype != 'me_message' else '')
+            text = self.decode_message(team, post.get('message'))
+            subtypeflag = ''  ### (' (%s)'%(subtype,) if subtype else '')
+            colon = ':'  ### (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), subtypeflag, self.ui.user_name(team, userid), colon, text)
             self.print(val)
             self.ui.lastchannel = (team.key, chanid)
@@ -414,8 +395,8 @@ class MattermUI(ProtoUI):
         """Convert a plain-text message in standard Mattermost form into a printable
         string. You can also pass a list of attachments from the message.
         Mattermost message text has a few special features:
-        - User references look like <@USERID>
-        - URLs look like <URL> or <URL|SLUG>
+        - User references look like <@USERID> ### nope
+        - URLs look like <URL> or <URL|SLUG> ### nope
         - &, <, and > characters are &-encoded (as in HTML)
         """
         if val is None:

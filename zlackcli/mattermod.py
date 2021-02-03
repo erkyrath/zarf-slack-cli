@@ -844,9 +844,22 @@ class MattermHost(Host):
     
         self.client.print('Subteams for %s: %s' % (self, list(self.subteams.values()),))
 
-        ### Fetch public and private channels
+        # Fetch public and private channels
+
+        for subteam in self.subteams.values():
+            res = await self.api_call_check('users/me/teams/%s/channels' % (subteam.id,))
+            for obj in res:
+                chanid = obj['id']
+                channame = obj['name']
+                # real name?
+                private = (obj['type'] == 'P')
+                chan = MattermChannel(self, subteam, chanid, channame, private=private)
+                self.channels[chan.id] = chan
+                self.channels_by_name[channame] = chan
+
+        ### Fetch open channels? (ones you're not in)
         ### Fetch IM (person-to-person) channels
-        #self.client.print('Channels for %s: %s' % (self, self.channels,))
+        self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class MattermSubteam:
     """Simple object representing a Mattermost team (within a host).
@@ -875,16 +888,18 @@ class MattermChannel(Channel):
     """Simple object representing one channel in a group.
     """
     def __init__(self, team, subteam, id, name, private=False, member=True, im=None):
+        fullid = '%s/%s' % (subteam.name, id,)
         self.team = team
         self.subteam = subteam
         self.client = team.client
-        self.id = id
-        self.name = name
+        self.id = fullid   # the client indexes channels as subteam/id
+        self.realid = id   # what Mattermost thinks
+        self.name = '%s/%s' % (subteam.name, name,)
         self.private = private
         self.member = member
         self.imuser = im
 
-        self.nameparselist = [ ParseMatch(name) ]
+        self.nameparselist = [ subteam.nameparser, ParseMatch(name) ]
         
     def name_parsers(self):
         return self.nameparselist

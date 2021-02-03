@@ -476,6 +476,8 @@ class MattermHost(Host):
 
         self.update_name_parser()
 
+        self.subteams = {}  # Mattermost teams
+        
         self.users = {}
         self.users_by_display_name = {}
         self.channels = {}
@@ -508,7 +510,7 @@ class MattermHost(Host):
 
         await self.load_connection_data()
 
-        if True:
+        if False: ###
             await self.rtm_connect_async()
 
     async def close(self):
@@ -831,17 +833,50 @@ class MattermHost(Host):
                 self.users_by_display_name[username] = self.users[userid]
             page += 1
             
-        self.client.print('Users for %s: %s' % (self, self.users,))
+        self.client.print('Users for %s: %s' % (self, list(self.users.values()),))
+
+        res = await self.api_call_check('users/me/teams')
+        for obj in res:
+            subteamid = obj['id']
+            subteamname = obj['name']
+            subteamrealname = obj.get('display_name', subteamname)
+            self.subteams[subteamid] = MattermSubteam(self, subteamid, subteamname, subteamrealname)
     
+        self.client.print('Subteams for %s: %s' % (self, list(self.subteams.values()),))
+
         ### Fetch public and private channels
         ### Fetch IM (person-to-person) channels
         #self.client.print('Channels for %s: %s' % (self, self.channels,))
 
+class MattermSubteam:
+    """Simple object representing a Mattermost team (within a host).
+    We call it a "subteam" to avoid confusion.
+    """
+    def __init__(self, team, id, name, real_name):
+        self.team = team
+        self.client = team.client
+        self.id = id
+        self.name = name
+        self.real_name = real_name
+        
+        self.update_name_parser()
+    
+    def __repr__(self):
+        return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)
+
+    def update_name_parser(self):
+        aliases = None
+        aliasmap = self.client.prefs.team_get('subteam_aliases', self.team)
+        if aliases:
+            aliases = aliasmap.get(self.id)
+        self.nameparser = ParseMatch(self.name, aliases)
+        
 class MattermChannel(Channel):
     """Simple object representing one channel in a group.
     """
-    def __init__(self, team, id, name, private=False, member=True, im=None):
+    def __init__(self, team, subteam, id, name, private=False, member=True, im=None):
         self.team = team
+        self.subteam = subteam
         self.client = team.client
         self.id = id
         self.name = name

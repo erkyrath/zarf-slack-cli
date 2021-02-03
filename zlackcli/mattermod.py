@@ -490,6 +490,10 @@ class MattermHost(Host):
         # set this when ui.curchannel is set. We use this when switching
         # to a team without specifying a channel.)
         self.lastchannel = self.client.prefs.team_get('lastchannel', self)
+        self.lastsubchannels = {}  # maps head to whole chanid
+        val = self.client.prefs.team_get('lastsubchannels', self)
+        if val:
+            self.lastsubchannels = dict(val)
         
         self.session = None
         self.readloop_task = None
@@ -599,7 +603,17 @@ class MattermHost(Host):
         self.lastchannel = chanid
         self.client.prefs.team_put('lastchannel', chanid, self)
         
-    def get_last_channel(self):
+        head, _, tail = chanid.rpartition('/')
+        if head:
+            self.lastsubchannels[head] = chanid
+            self.client.prefs.team_put('lastsubchannels', self.lastsubchannels, self)
+        
+    def get_last_channel(self, sibling=None):
+        if sibling is not None:
+            head, _, tail = sibling.id.rpartition('/')
+            if head:
+                return self.lastsubchannels.get(head)
+            return None
         return self.lastchannel
         
     def resolve_in_flight(self, val):

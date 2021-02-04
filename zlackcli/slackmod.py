@@ -326,7 +326,9 @@ class SlackUI(ProtoUI):
 
         files = msg.get('files')
         if files:
-            self.ui.note_file_urls(team, files)
+            for fil in files:
+                url = fil.get('url_private')
+                self.client.note_file_data(team, url, fil)
 
         if typ is None and msg.get('reply_to'):
             # A reply to a message we sent.
@@ -419,7 +421,7 @@ class SlackUI(ProtoUI):
         if files:
             for fil in files:
                 url = fil.get('url_private')
-                tup = self.ui.files_by_url.get(url, None)
+                tup = self.client.files_by_id.get(url, None)
                 index = tup[0] if tup else '?'
                 val += ('\n..file [%s] %s (%s, %s bytes): %s' % (index, fil.get('title'), fil.get('pretty_type'), fil.get('size'), url, ))
         return val

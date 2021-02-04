@@ -31,6 +31,11 @@ class ZlackClient:
         self.prefs = Prefs(self, prefspath)
         self.ui = UI(self, opts=opts)
 
+        self.file_counter = 0
+        # Both of these map to (index, teamkey, data) tuples.
+        self.files_by_index = {}
+        self.files_by_id = {}  # id may be a url or id string
+
         self.protocols = [ SlackProtocol(self) ]
         self.protocolmap = { pro.key:pro for pro in self.protocols }
             
@@ -123,6 +128,14 @@ class ZlackClient:
         for res in done:
             self.print_exception(res.exception(), 'Could not close down protocol')
 
+    def note_file_data(self, team, id, dat):
+        if id in self.files_by_id:
+            return
+        self.file_counter += 1
+        tup = (self.file_counter, team.key, dat)
+        self.files_by_id[id] = tup
+        self.files_by_index[self.file_counter] = tup
+        
     @staticmethod
     def get_useragent():
         """Construct a user-agent string for our web API requests.

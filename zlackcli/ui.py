@@ -74,11 +74,6 @@ class UI:
         if opts and opts.debug_messages:
             self.debug_messages = True
 
-        self.file_counter = 0
-        # Both of these map to (index, teamkey, url) tuples.
-        self.files_by_index = {}
-        self.files_by_url = {}
-
         tup = self.client.prefs.get('curchannel', None)
         if tup:
             self.curchannel = tuple(tup)
@@ -159,17 +154,6 @@ class UI:
         if self.debug_messages:
             self.print('Received (%s): %s' % (self.team_name(team), msg,))
 
-    def note_file_urls(self, team, files):
-        """Record URLs if they are not yet known.
-        """
-        for fil in files:
-            url = fil.get('url_private')
-            if url not in self.files_by_url:
-                self.file_counter += 1
-                tup = (self.file_counter, team.key, url)
-                self.files_by_url[url] = tup
-                self.files_by_index[self.file_counter] = tup
-        
     def handle_input(self, val):
         """Handle one input line from the player.
         """

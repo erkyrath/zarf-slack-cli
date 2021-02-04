@@ -94,8 +94,6 @@ class MattermProtocol(Protocol):
                 continue
             data[key] = val
 
-        print('### api_call:', httpmethod, url, data)
-        
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, headers=headers, data=data) as resp:
             try:
@@ -252,7 +250,6 @@ class MattermProtocol(Protocol):
         # ~/.zlack-tokens entry.)
         # (Note that the client-level api_call() method doesn't add the api/v4 for us.)
         res = await self.api_call('api/v4/users/me', mhost=mhost, httpmethod='get', token=teammap['access_token'])
-        print('### users/me', res)
         if not (res.get('id') and res.get('username')):
             self.print('users.info call failed: %s' % (res.get('error'),))
             return
@@ -570,8 +567,6 @@ class MattermHost(Host):
             url += ('?' + '&'.join(queryls))
         self.client.ui.note_send_message(data, self)
 
-        print('### api_call:', httpmethod, url, data)
-
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, data=data) as resp:
             try:
@@ -652,7 +647,6 @@ class MattermHost(Host):
         url = self.protocol.base_api_url.replace('MHOST', self.id)
         url = url.replace('https:', 'wss:')
         self.rtm_url = '{0}/api/v4/{1}'.format(url, 'websocket')
-        print('### rtm_url:', self.rtm_url)
 
         is_ssl = self.rtm_url.startswith('wss:')
         self.rtm_socket = await websockets.connect(self.rtm_url, ssl=is_ssl)

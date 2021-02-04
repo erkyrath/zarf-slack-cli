@@ -369,13 +369,16 @@ class MattermUI(ProtoUI):
         if typ == 'posted':
             data = msg.get('data', {})
             subteamid = data.get('team_id', '')
-            subteam = team.subteams[subteamid]
+            # subteamid is empty for DM messages
+            subteam = team.subteams.get(subteamid)
             try:
                 post = json.loads(data.get('post', ''))
             except:
                 post = {}
             userid = post.get('user_id', '')
-            chanid = '%s/%s' % (subteam.name, post.get('channel_id', ''),)
+            chanid = post.get('channel_id', '')
+            if subteam:
+                chanid = '%s/%s' % (subteam.name, chanid,)
             if chanid in team.muted_channels:
                 return
             subtype = post.get('type', '')

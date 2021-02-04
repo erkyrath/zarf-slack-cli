@@ -864,7 +864,9 @@ class MattermHost(Host):
     
         self.client.print('Subteams for %s: %s' % (self, list(self.subteams.values()),))
 
-        # Fetch public and private channels
+        # Fetch member and IM channels
+
+        realchannelids = set()
 
         for subteam in self.subteams.values():
             res = await self.api_call_check('users/me/teams/%s/channels' % (subteam.id,))
@@ -873,8 +875,8 @@ class MattermHost(Host):
                 channame = obj['name']
                 chansubteam = subteam
                 # real name?
-                if chanid in self.channels:
-                    continue # duplicate
+                if chanid in realchannelids:
+                    continue  # duplicate
                 private = False
                 imuser = None
                 if obj['type'] == 'P':
@@ -892,14 +894,34 @@ class MattermHost(Host):
                     chansubteam = None
                     self.users[imuserid].im_channel = chanid
                 chan = MattermChannel(self, chansubteam, chanid, channame, private=private, im=imuser)
+                realchannelids.add(chanid)
                 self.channels[chan.id] = chan
                 self.channels_by_realid[chan.realid] = chan
                 if imuser is None:
                     self.channels_by_name[channame] = chan
 
-            ### Fetch open channels? (ones you're not in)
-            
-        ### Fetch IM (person-to-person) channels
+            # Fetch open channels. (We already have the ones you're a member of.)
+            page = 0
+            while True:
+                res = await self.api_call_check('teams/%s/channels' % (subteam.id,), __page=page)
+                if not res:
+                    break
+                for obj in res:
+                    chanid = obj['id']
+                    channame = obj['name']
+                    chansubteam = subteam
+                    # real name?
+                    if chanid in realchannelids:
+                        continue  # duplicate
+                    if obj['type'] != 'O':
+                        continue  # not public
+                    chan = MattermChannel(self, chansubteam, chanid, channame, member=False)
+                    realchannelids.add(chanid)
+                    self.channels[chan.id] = chan
+                    self.channels_by_realid[chan.realid] = chan
+                    self.channels_by_name[channame] = chan
+                    
+                page += 1
             
         self.client.print('Channels for %s: %s' % (self, self.channels,))
 

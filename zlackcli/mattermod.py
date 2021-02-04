@@ -450,6 +450,12 @@ class MattermUI(ProtoUI):
                 val += ('\n..file [%s] %s (%s, %s bytes)' % (index, fil.get('name'), fil.get('extension'), fil.get('size'), ))
         return val
     
+    async def fetch_url(self, team, url):
+        tup = urllib.parse.urlparse(url)
+        if not tup.netloc.lower().endswith(team.id):
+            self.print('URL does not appear to be a Mattermost URL: %s' % (url,))
+            return
+        await super().fetch_url(team, url)
     
     
 class MattermHost(Host):

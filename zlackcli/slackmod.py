@@ -426,6 +426,10 @@ class SlackUI(ProtoUI):
                 val += ('\n..file [%s] %s (%s, %s bytes): %s' % (index, fil.get('title'), fil.get('pretty_type'), fil.get('size'), url, ))
         return val
 
+    async def fetch_data(self, team, fil):
+        url = fil['url_private']
+        await self.fetch_url(team, url)
+        
     async def fetch_url(self, team, url):
         tup = urllib.parse.urlparse(url)
         if not tup.netloc.lower().endswith('.slack.com'):

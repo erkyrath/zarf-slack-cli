@@ -868,12 +868,29 @@ class MattermHost(Host):
             for obj in res:
                 chanid = obj['id']
                 channame = obj['name']
+                chansubteam = subteam
                 # real name?
-                private = (obj['type'] == 'P')
-                chan = MattermChannel(self, subteam, chanid, channame, private=private)
+                if chanid in self.channels:
+                    continue # duplicate
+                private = False
+                imuser = None
+                if obj['type'] == 'P':
+                    private = True
+                elif obj['type'] == 'D':
+                    private = True
+                    # This relies on Mattermost's conventional handling of
+                    # the IM channel name
+                    tup = channame.split('__')
+                    imuserid = tup[1] if (tup[0] == self.user_id) else tup[0]
+                    imuser = self.users.get(imuserid)
+                    channame = '@'+(imuser.name if imuser else '???')
+                    chansubteam = None
+                chan = MattermChannel(self, chansubteam, chanid, channame, private=private, im=imuser)
+                print('###', chan)
                 self.channels[chan.id] = chan
                 self.channels_by_realid[chan.realid] = chan
-                self.channels_by_name[channame] = chan
+                if imuser is None:
+                    self.channels_by_name[channame] = chan
 
             ### Fetch open channels? (ones you're not in)
             
@@ -909,18 +926,29 @@ class MattermChannel(Channel):
     """Simple object representing one channel in a group.
     """
     def __init__(self, team, subteam, id, name, private=False, member=True, im=None):
-        fullid = '%s/%s' % (subteam.name, id,)
+        if subteam is None and im is None:
+            raise Exception('only DM channels should be subteamless')
+        if subteam is not None:
+            fullid = '%s/%s' % (subteam.name, id,)
+        else:
+            fullid = id
         self.team = team
         self.subteam = subteam
         self.client = team.client
-        self.id = fullid   # the client indexes channels as subteam/id
+        self.id = fullid   # the client indexes channels as subteam/id (except for DM channels)
         self.realid = id   # what Mattermost thinks
-        self.name = '%s/%s' % (subteam.name, name,)
+        if subteam is not None:
+            self.name = '%s/%s' % (subteam.name, name,)
+        else:
+            self.name = name
         self.private = private
         self.member = member
         self.imuser = im
 
-        self.nameparselist = [ subteam.nameparser, ParseMatch(name) ]
+        if subteam is not None:
+            self.nameparselist = [ subteam.nameparser, ParseMatch(name) ]
+        else:
+            self.nameparselist = [ ParseMatch(name) ]
         
     def name_parsers(self):
         return self.nameparselist

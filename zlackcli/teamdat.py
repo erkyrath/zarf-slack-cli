@@ -1,6 +1,11 @@
 from collections import OrderedDict
+import tempfile
+import os.path
+import urllib.parse
+import subprocess
 import aiohttp
 import aiohttp.web
+import asyncio
 
 from .parsematch import ParseMatch, NeverMatch
 
@@ -107,6 +112,39 @@ class ProtoUI:
 
     def send_message(self, text, team, chanid):
         raise NotImplementedError('send_message')
+        
+    async def fetch_data(self, team, dat):
+        """Fetch data stored by note_file_data().
+        """
+        raise NotImplementedError('fetch_data')
+
+    async def fetch_url(self, team, url):
+        """Fetch the given URL, using the team's web credentials.
+        Store the data in a temporary file.
+        If the "viewfile" preference is set, run it to open the
+        data.
+        """
+        self.print('[%s]: Fetching %s...' % (team.short_name(), url,))
+        tup = urllib.parse.urlparse(url)
+        async with team.session.get(url, max_redirects=4) as resp:
+            dat = await resp.read()
+            if resp.status != 200:
+                self.print('Got HTTP error %s' % (resp.status,))
+                return
+            filename = os.path.basename(tup.path)
+            pathname = os.path.join(tempfile.gettempdir(), filename)
+            fl = open(pathname, 'wb')
+            fl.write(dat)
+            fl.close()
+            self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
+            opencmd = self.client.prefs.get('viewfile', None)
+            if opencmd:
+                ### only do this on known MIME types?
+                args = opencmd.split(' ')
+                args.append(pathname)
+                proc = subprocess.Popen(args)
+                while proc.poll() is None:
+                    await asyncio.sleep(1)
         
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain

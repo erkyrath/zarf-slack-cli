@@ -425,7 +425,13 @@ class SlackUI(ProtoUI):
                 index = tup[0] if tup else '?'
                 val += ('\n..file [%s] %s (%s, %s bytes): %s' % (index, fil.get('title'), fil.get('pretty_type'), fil.get('size'), url, ))
         return val
-    
+
+    async def fetch_url(self, team, url):
+        tup = urllib.parse.urlparse(url)
+        if not tup.netloc.lower().endswith('.slack.com'):
+            self.print('URL does not appear to be a Slack URL: %s' % (url,))
+            return
+        await super().fetch_url(team, url)
     
     
 class SlackTeam(Host):

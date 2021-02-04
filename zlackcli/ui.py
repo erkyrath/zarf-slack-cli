@@ -1,10 +1,7 @@
 import re
 import time
 import os.path
-import tempfile
 import urllib.parse
-import asyncio
-import subprocess
 
 pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
@@ -807,45 +804,21 @@ class UI:
         match = pat_integer.match(target)
         if match:
             index = int(target)
-            tup = self.files_by_index.get(index, None)
+            tup = self.client.files_by_index.get(index, None)
             if tup is None:
-                raise ArgException('Host %s has no file index %d' % (team.short_name(), index,))
-            url = tup[2]
+                raise ArgException('No file index %d' % (index,))
+            dat = tup[2]
             team = self.client.get_team(tup[1])
             if not team:
                 raise ArgException('Host not recognized: %s' % (tup[1],))
+            await team.protocol.protoui.fetch_data(team, dat)
         else:
             match = pat_url.match(target)
             if not match:
                 raise ArgException('Not an index or URL: %s' % (target,))
             url = target
+            await team.protocol.protoui.fetch_url(team, url)
 
-        tup = urllib.parse.urlparse(url)
-        ### generalize
-        if not tup.netloc.lower().endswith('.slack.com'):
-            self.print('URL does not appear to be a Slack URL: %s' % (url,))
-            return
-            
-        self.print('Fetching %s...' % (url,))
-        async with team.session.get(url, max_redirects=4) as resp:
-            dat = await resp.read()
-            if resp.status != 200:
-                self.print('Got HTTP error %s' % (resp.status,))
-                return
-            filename = os.path.basename(tup.path)
-            pathname = os.path.join(tempfile.gettempdir(), filename)
-            fl = open(pathname, 'wb')
-            fl.write(dat)
-            fl.close()
-            self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
-            opencmd = self.client.prefs.get('viewfile', None)
-            if opencmd:
-                args = opencmd.split(' ')
-                args.append(pathname)
-                proc = subprocess.Popen(args)
-                while proc.poll() is None:
-                    await asyncio.sleep(1)
-        
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',
                help='set the aliases for a team')

@@ -386,6 +386,10 @@ class MattermUI(ProtoUI):
             metadata = post.get('metadata')
             if metadata:
                 files = metadata.get('files')
+                if files:
+                    ###self.ui.note_file_urls(team, files)
+                    pass ### adjust this
+                        
             text = self.decode_message(team, post.get('message'), files=files)
             colon = (':' if subtype != 'me' else '')
             val = '[%s/%s] %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), colon, text)

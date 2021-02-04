@@ -381,7 +381,11 @@ class MattermUI(ProtoUI):
             chanid = '%s/%s' % (subteam.name, post.get('channel_id', ''),)
             if chanid in team.muted_channels:
                 return
-            text = self.decode_message(team, post.get('message'), files=post.get('file_ids'))
+            files = None
+            metadata = post.get('metadata')
+            if metadata:
+                files = metadata.get('files')
+            text = self.decode_message(team, post.get('message'), files=files)
             subtypeflag = ''  ### (' (%s)'%(subtype,) if subtype else '')
             colon = ':'  ### (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), subtypeflag, self.ui.user_name(team, userid), colon, text)
@@ -417,8 +421,11 @@ class MattermUI(ProtoUI):
                         fallback = fallback.replace('\n', '\n... ')
                     val += ('\n..> ' + fallback)
         if files:
-            for fileid in files:
-                val += ('\n..file %s' % (fileid,))
+            for fil in files:
+                fileid = fil.get('id')
+                tup = self.ui.files_by_url.get(fileid, None)
+                index = tup[0] if tup else '?'
+                val += ('\n..file [%s] %s (%s, %s bytes)' % (index, fil.get('name'), fil.get('extension'), fil.get('size'), ))
         return val
     
     

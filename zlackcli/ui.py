@@ -1,10 +1,7 @@
 import re
 import time
 import os.path
-import tempfile
 import urllib.parse
-import asyncio
-import subprocess
 
 pat_special_command = re.compile('/([a-z0-9?_-]+)', flags=re.IGNORECASE)
 pat_dest_command = re.compile('#([^ ]+)')
@@ -73,11 +70,6 @@ class UI:
         self.debug_messages = False
         if opts and opts.debug_messages:
             self.debug_messages = True
-
-        self.file_counter = 0
-        # Both of these map to (index, teamkey, url) tuples.
-        self.files_by_index = {}
-        self.files_by_url = {}
 
         tup = self.client.prefs.get('curchannel', None)
         if tup:
@@ -159,17 +151,6 @@ class UI:
         if self.debug_messages:
             self.print('Received (%s): %s' % (self.team_name(team), msg,))
 
-    def note_file_urls(self, team, files):
-        """Record URLs if they are not yet known.
-        """
-        for fil in files:
-            url = fil.get('url_private')
-            if url not in self.files_by_url:
-                self.file_counter += 1
-                tup = (self.file_counter, team.key, url)
-                self.files_by_url[url] = tup
-                self.files_by_index[self.file_counter] = tup
-        
     def handle_input(self, val):
         """Handle one input line from the player.
         """
@@ -479,69 +460,6 @@ class UI:
                 
         raise ArgException('Channel spec not recognized: %s' % (origval,))
         
-    def parse_channelspec_XXX(self, val):
-        """Parse a channel specification, in any of its various forms:
-        TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
-        (No initial hash character, please.)
-    
-        Returns (team, channelid) or raises ArgException.
-        """
-        match_chan = pat_channel_command.match(val)
-        match_im = pat_im_command.match(val)
-        match_def = pat_defaultchan_command.match(val)
-        
-        if match_chan:
-            match = match_chan
-            knownteam = False
-            if match.group(1) is not None:
-                # format: "TEAM/CHANNEL"
-                team = self.parse_team(match.group(1))
-                knownteam = True
-            else:
-                # format: "CHANNEL"
-                if not self.curchannel:
-                    raise ArgException('No current team.')
-                team = self.client.get_team(self.curchannel[0])
-                if not team:
-                    raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
-            channame = match.group(2)
-            try:
-                chanid = self.parse_channel(team, channame)
-            except ArgException:
-                if not knownteam:
-                    (team, chanid) = self.parse_channel_anyteam(channame)
-                else:
-                    raise
-        elif match_im:
-            match = match_im
-            if match.group(1) is not None:
-                # format: "TEAM/@USER"
-                team = self.parse_team(match.group(1))
-            else:
-                # format: "@USER"
-                if not self.curchannel:
-                    raise ArgException('No current team.')
-                team = self.client.get_team(self.curchannel[0])
-                if not team:
-                    raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
-            username = match.group(2)
-            if username not in team.users_by_display_name:
-                raise ArgException('User not recognized: %s' % (username,))
-            chanid = team.users_by_display_name[username].im_channel
-            if not chanid:
-                raise ArgException('No IM channel with user: %s' % (username,))
-        elif match_def:
-            match = match_def
-            # format: "TEAM/"
-            team = self.parse_team(match.group(1))
-            chanid = team.get_last_channel()
-            if not chanid:
-                raise ArgException('No default channel for team: %s' % (self.team_name(team),))
-        else:
-            raise ArgException('Channel spec not recognized: %s' % (val,))
-    
-        return (team, chanid)
-
     def parse_team(self, val):
         """Parse a team name, ID, or alias. Returns the Host entry.
         Raises ArgException if not recognized.
@@ -553,34 +471,6 @@ class UI:
             return team
         raise ArgException('Host not recognized: %s' % (val,))
     
-    def parse_channel(self, team, val):
-        ###
-        """Parse a channel name (a bare channel, no # or team prefix)
-        for a given Host. Returns the channel ID.
-        Raises ArgException if not recognized.
-        """
-        for (id, chan) in team.channels.items():
-            if val == id or val == chan.name:
-                return id
-        for (id, chan) in team.channels.items():
-            if chan.name.startswith(val):
-                return id
-        raise ArgException('Channel not recognized: %s/%s' % (self.team_name(team), val,))
-    
-    def parse_channel_anyteam(self, val):
-        ###
-        """Parse a channel name, checking all teams.
-        Returns (team, chanid).
-        """
-        for team in self.client.teams.values():
-            for (id, chan) in team.channels.items():
-                if val == id or val == chan.name:
-                    return (team, id)
-            for (id, chan) in team.channels.items():
-                if chan.name.startswith(val):
-                    return (team, id)
-        raise ArgException('Channel not recognized: %s' % (val,))
-
     def parse_interval(self, val):
         """Convert a string to a number of seconds. This accepts values like
         "5" (default minutes), "10m", "2h", "1d".
@@ -823,45 +713,21 @@ class UI:
         match = pat_integer.match(target)
         if match:
             index = int(target)
-            tup = self.files_by_index.get(index, None)
+            tup = self.client.files_by_index.get(index, None)
             if tup is None:
-                raise ArgException('Host %s has no file index %d' % (team.short_name(), index,))
-            url = tup[2]
+                raise ArgException('No file index %d' % (index,))
+            dat = tup[2]
             team = self.client.get_team(tup[1])
             if not team:
                 raise ArgException('Host not recognized: %s' % (tup[1],))
+            await team.protocol.protoui.fetch_data(team, dat)
         else:
             match = pat_url.match(target)
             if not match:
                 raise ArgException('Not an index or URL: %s' % (target,))
             url = target
+            await team.protocol.protoui.fetch_url(team, url)
 
-        tup = urllib.parse.urlparse(url)
-        ### generalize
-        if not tup.netloc.lower().endswith('.slack.com'):
-            self.print('URL does not appear to be a Slack URL: %s' % (url,))
-            return
-            
-        self.print('Fetching %s...' % (url,))
-        async with team.session.get(url, max_redirects=4) as resp:
-            dat = await resp.read()
-            if resp.status != 200:
-                self.print('Got HTTP error %s' % (resp.status,))
-                return
-            filename = os.path.basename(tup.path)
-            pathname = os.path.join(tempfile.gettempdir(), filename)
-            fl = open(pathname, 'wb')
-            fl.write(dat)
-            fl.close()
-            self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
-            opencmd = self.client.prefs.get('viewfile', None)
-            if opencmd:
-                args = opencmd.split(' ')
-                args.append(pathname)
-                proc = subprocess.Popen(args)
-                while proc.poll() is None:
-                    await asyncio.sleep(1)
-        
     @uicommand('alias', 'aliases',
                arghelp='[team] alias,alias,...',
                help='set the aliases for a team')

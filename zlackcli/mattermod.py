@@ -883,10 +883,12 @@ class MattermHost(Host):
                     tup = channame.split('__')
                     imuserid = tup[1] if (tup[0] == self.user_id) else tup[0]
                     imuser = self.users.get(imuserid)
-                    channame = '@'+(imuser.name if imuser else '???')
+                    if not imuser:
+                        continue
+                    channame = '@'+imuser.name
                     chansubteam = None
+                    self.users[imuserid].im_channel = chanid
                 chan = MattermChannel(self, chansubteam, chanid, channame, private=private, im=imuser)
-                print('###', chan)
                 self.channels[chan.id] = chan
                 self.channels_by_realid[chan.realid] = chan
                 if imuser is None:

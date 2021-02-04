@@ -359,7 +359,7 @@ class MattermUI(ProtoUI):
                 userid = origmsg.get('user', '')
                 # Print our successful messages even on muted channels
                 ### ? not always a text message. Check format anyhow.
-                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=post.get('file_ids'))
+                text = self.decode_message(team, msg.get('text'))
                 val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
                 self.print(val)
             return
@@ -381,25 +381,45 @@ class MattermUI(ProtoUI):
             chanid = '%s/%s' % (subteam.name, post.get('channel_id', ''),)
             if chanid in team.muted_channels:
                 return
+            subtype = post.get('type', '')
             files = None
             metadata = post.get('metadata')
             if metadata:
                 files = metadata.get('files')
             text = self.decode_message(team, post.get('message'), files=files)
-            subtypeflag = ''  ### (' (%s)'%(subtype,) if subtype else '')
-            colon = ':'  ### (':' if subtype != 'me_message' else '')
-            val = '[%s/%s]%s %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), subtypeflag, self.ui.user_name(team, userid), colon, text)
+            colon = (':' if subtype != 'me' else '')
+            val = '[%s/%s] %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), colon, text)
             self.print(val)
             self.ui.lastchannel = (team.key, chanid)
             return
 
-        if typ == 'post_deleted':
-            ###
+        if typ == 'post_edited' or typ == 'post_deleted':
+            data = msg.get('data', {})
+            try:
+                post = json.loads(data.get('post', ''))
+            except:
+                post = {}
+            userid = post.get('user_id', '')
+            chan = team.channels_by_realid.get(post.get('channel_id', ''))
+            chanid = chan.id if chan else ''
+            if chanid in team.muted_channels:
+                return
+            subtype = post.get('type', '')
+            files = None
+            metadata = post.get('metadata')
+            if metadata:
+                files = metadata.get('files')
+            text = self.decode_message(team, post.get('message'), files=files)
+            colon = (':' if subtype != 'me' else '')
+            postact = ('edit' if typ == 'post_edited' else 'del')
+            val = '[%s/%s] (%s) %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), postact, self.ui.user_name(team, userid), colon, text)
+            self.print(val)
+            self.ui.lastchannel = (team.key, chanid)
             return
         
-    def decode_message(self, team, val, attachments=None, files=None):
+    def decode_message(self, team, val, files=None):
         """Convert a plain-text message in standard Mattermost form into a printable
-        string. You can also pass a list of attachments from the message.
+        string.
         Mattermost message text has a few special features:
         - &, <, and > characters are &-encoded (as in HTML) (It's not clear
           why the standard browser client does this, but it does.)
@@ -413,13 +433,6 @@ class MattermUI(ProtoUI):
                 val = val.replace('&lt;', '<')
                 val = val.replace('&gt;', '>')
                 val = val.replace('&amp;', '&')
-        if attachments:
-            for att in attachments:
-                fallback = att.get('fallback')
-                if fallback:
-                    if '\n' in fallback:
-                        fallback = fallback.replace('\n', '\n... ')
-                    val += ('\n..> ' + fallback)
         if files:
             for fil in files:
                 fileid = fil.get('id')
@@ -466,6 +479,7 @@ class MattermHost(Host):
         self.users_by_display_name = {}
         self.channels = {}
         self.channels_by_name = {}
+        self.channels_by_realid = {}
         self.muted_channels = set()
         
         # The last channel (id) we spoke on in this team. (That is, we
@@ -796,7 +810,7 @@ class MattermHost(Host):
                     continue  # don't recap subtype messages
                 ts = msg.get('ts')
                 ts = ui.short_timestamp(ts)
-                text = self.protocol.protoui.decode_message(self, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
+                text = self.protocol.protoui.decode_message(self, msg.get('text'), files=msg.get('files'))
                 val = '[%s/%s] (%s) %s: %s' % (ui.team_name(self), ui.channel_name(self, chanid), ts, ui.user_name(self, userid), text)
                 self.print(val)
             cursor = get_next_cursor(res)
@@ -813,6 +827,7 @@ class MattermHost(Host):
         self.muted_channels.clear()
         self.channels.clear()
         self.channels_by_name.clear()
+        self.channels_by_realid.clear()
         self.users.clear()
         self.users_by_display_name.clear();
 
@@ -854,6 +869,7 @@ class MattermHost(Host):
                 private = (obj['type'] == 'P')
                 chan = MattermChannel(self, subteam, chanid, channame, private=private)
                 self.channels[chan.id] = chan
+                self.channels_by_realid[chan.realid] = chan
                 self.channels_by_name[channame] = chan
 
             ### Fetch open channels? (ones you're not in)

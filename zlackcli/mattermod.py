@@ -302,8 +302,6 @@ class MattermUI(ProtoUI):
     
     pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
     pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
-    pat_encoded_user_id = re.compile('<@([a-z0-9_]+)>', flags=re.IGNORECASE)
-    pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
 
     def send_message(self, text, team, chanid):
         etext = self.encode_message(team, text)
@@ -316,7 +314,7 @@ class MattermUI(ProtoUI):
         val = val.replace('<', '&lt;')
         val = val.replace('>', '&gt;')
         # We try to locate @displayname references and convert them to
-        # <@USERID>.
+        # <@USERID>. ###?
         val = self.pat_user_id.sub(lambda match:self.encode_exact_user_id(team, match), val)
         val = self.pat_channel_id.sub(lambda match:self.encode_exact_channel_id(team, match), val)
         return val
@@ -361,7 +359,7 @@ class MattermUI(ProtoUI):
                 userid = origmsg.get('user', '')
                 # Print our successful messages even on muted channels
                 ### ? not always a text message. Check format anyhow.
-                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
+                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=post.get('file_ids'))
                 val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
                 self.print(val)
             return
@@ -383,7 +381,7 @@ class MattermUI(ProtoUI):
             chanid = '%s/%s' % (subteam.name, post.get('channel_id', ''),)
             if chanid in team.muted_channels:
                 return
-            text = self.decode_message(team, post.get('message'))
+            text = self.decode_message(team, post.get('message'), files=post.get('file_ids'))
             subtypeflag = ''  ### (' (%s)'%(subtype,) if subtype else '')
             colon = ':'  ### (':' if subtype != 'me_message' else '')
             val = '[%s/%s]%s %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), subtypeflag, self.ui.user_name(team, userid), colon, text)
@@ -391,20 +389,20 @@ class MattermUI(ProtoUI):
             self.ui.lastchannel = (team.key, chanid)
             return
 
+        if typ == 'post_deleted':
+            ###
+            return
+        
     def decode_message(self, team, val, attachments=None, files=None):
         """Convert a plain-text message in standard Mattermost form into a printable
         string. You can also pass a list of attachments from the message.
         Mattermost message text has a few special features:
-        - User references look like <@USERID> ### nope
-        - URLs look like <URL> or <URL|SLUG> ### nope
-        - &, <, and > characters are &-encoded (as in HTML)
+        - &, <, and > characters are &-encoded (as in HTML) (It's not clear
+          why the standard browser client does this, but it does.)
         """
         if val is None:
             val = ''
         else:
-            val = self.pat_encoded_user_id.sub(lambda match:'@'+self.ui.user_name(team, match.group(1)), val)
-            val = self.pat_encoded_channel_id.sub(lambda match:'#'+self.ui.channel_name(team, match.group(1))+(match.group(2) if match.group(2) else ''), val)
-            # We could translate <URL> and <URL|SLUG> here, but those look fine as is
             if '\n' in val:
                 val = val.replace('\n', '\n... ')
             if '&' in val:
@@ -417,14 +415,10 @@ class MattermUI(ProtoUI):
                 if fallback:
                     if '\n' in fallback:
                         fallback = fallback.replace('\n', '\n... ')
-                    ### & < > also?
                     val += ('\n..> ' + fallback)
         if files:
-            for fil in files:
-                url = fil.get('url_private')
-                tup = self.ui.files_by_url.get(url, None)
-                index = tup[0] if tup else '?'
-                val += ('\n..file [%s] %s (%s, %s bytes): %s' % (index, fil.get('title'), fil.get('pretty_type'), fil.get('size'), url, ))
+            for fileid in files:
+                val += ('\n..file %s' % (fileid,))
         return val
     
     
@@ -788,6 +782,7 @@ class MattermHost(Host):
             if not res:
                 break
             for msg in reversed(res.get('messages')):
+                ### see handle_msg
                 userid = msg.get('user', '')
                 subtype = msg.get('subtype', '')
                 if subtype:

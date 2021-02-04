@@ -460,69 +460,6 @@ class UI:
                 
         raise ArgException('Channel spec not recognized: %s' % (origval,))
         
-    def parse_channelspec_XXX(self, val):
-        """Parse a channel specification, in any of its various forms:
-        TEAM/CHANNEL TEAM/@USER TEAM/ CHANNEL @USER
-        (No initial hash character, please.)
-    
-        Returns (team, channelid) or raises ArgException.
-        """
-        match_chan = pat_channel_command.match(val)
-        match_im = pat_im_command.match(val)
-        match_def = pat_defaultchan_command.match(val)
-        
-        if match_chan:
-            match = match_chan
-            knownteam = False
-            if match.group(1) is not None:
-                # format: "TEAM/CHANNEL"
-                team = self.parse_team(match.group(1))
-                knownteam = True
-            else:
-                # format: "CHANNEL"
-                if not self.curchannel:
-                    raise ArgException('No current team.')
-                team = self.client.get_team(self.curchannel[0])
-                if not team:
-                    raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
-            channame = match.group(2)
-            try:
-                chanid = self.parse_channel(team, channame)
-            except ArgException:
-                if not knownteam:
-                    (team, chanid) = self.parse_channel_anyteam(channame)
-                else:
-                    raise
-        elif match_im:
-            match = match_im
-            if match.group(1) is not None:
-                # format: "TEAM/@USER"
-                team = self.parse_team(match.group(1))
-            else:
-                # format: "@USER"
-                if not self.curchannel:
-                    raise ArgException('No current team.')
-                team = self.client.get_team(self.curchannel[0])
-                if not team:
-                    raise ArgException('Host not recognized: %s' % (self.curchannel[0],))
-            username = match.group(2)
-            if username not in team.users_by_display_name:
-                raise ArgException('User not recognized: %s' % (username,))
-            chanid = team.users_by_display_name[username].im_channel
-            if not chanid:
-                raise ArgException('No IM channel with user: %s' % (username,))
-        elif match_def:
-            match = match_def
-            # format: "TEAM/"
-            team = self.parse_team(match.group(1))
-            chanid = team.get_last_channel()
-            if not chanid:
-                raise ArgException('No default channel for team: %s' % (self.team_name(team),))
-        else:
-            raise ArgException('Channel spec not recognized: %s' % (val,))
-    
-        return (team, chanid)
-
     def parse_team(self, val):
         """Parse a team name, ID, or alias. Returns the Host entry.
         Raises ArgException if not recognized.
@@ -534,34 +471,6 @@ class UI:
             return team
         raise ArgException('Host not recognized: %s' % (val,))
     
-    def parse_channel(self, team, val):
-        ###
-        """Parse a channel name (a bare channel, no # or team prefix)
-        for a given Host. Returns the channel ID.
-        Raises ArgException if not recognized.
-        """
-        for (id, chan) in team.channels.items():
-            if val == id or val == chan.name:
-                return id
-        for (id, chan) in team.channels.items():
-            if chan.name.startswith(val):
-                return id
-        raise ArgException('Channel not recognized: %s/%s' % (self.team_name(team), val,))
-    
-    def parse_channel_anyteam(self, val):
-        ###
-        """Parse a channel name, checking all teams.
-        Returns (team, chanid).
-        """
-        for team in self.client.teams.values():
-            for (id, chan) in team.channels.items():
-                if val == id or val == chan.name:
-                    return (team, id)
-            for (id, chan) in team.channels.items():
-                if chan.name.startswith(val):
-                    return (team, id)
-        raise ArgException('Channel not recognized: %s' % (val,))
-
     def parse_interval(self, val):
         """Convert a string to a number of seconds. This accepts values like
         "5" (default minutes), "10m", "2h", "1d".

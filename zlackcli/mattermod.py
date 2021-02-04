@@ -389,7 +389,6 @@ class MattermUI(ProtoUI):
                 if files:
                     ###self.ui.note_file_urls(team, files)
                     pass ### adjust this
-                        
             text = self.decode_message(team, post.get('message'), files=files)
             colon = (':' if subtype != 'me' else '')
             val = '[%s/%s] %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), colon, text)
@@ -413,6 +412,9 @@ class MattermUI(ProtoUI):
             metadata = post.get('metadata')
             if metadata:
                 files = metadata.get('files')
+                if files:
+                    ###self.ui.note_file_urls(team, files)
+                    pass ### adjust this
             text = self.decode_message(team, post.get('message'), files=files)
             colon = (':' if subtype != 'me' else '')
             postact = ('edit' if typ == 'post_edited' else 'del')
@@ -427,6 +429,7 @@ class MattermUI(ProtoUI):
         Mattermost message text has a few special features:
         - &, <, and > characters are &-encoded (as in HTML) (It's not clear
           why the standard browser client does this, but it does.)
+        - \\ turns to \. (Ditto.)
         """
         if val is None:
             val = ''
@@ -437,6 +440,8 @@ class MattermUI(ProtoUI):
                 val = val.replace('&lt;', '<')
                 val = val.replace('&gt;', '>')
                 val = val.replace('&amp;', '&')
+            if '\\' in val:
+                val = val.replace('\\\\', '\\')
         if files:
             for fil in files:
                 fileid = fil.get('id')

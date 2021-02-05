@@ -294,12 +294,16 @@ class MattermUI(ProtoUI):
     output) and the protocol (with its protocol-specific messages).
     """
     
-    pat_user_id = re.compile('@([a-z0-9._]+)', flags=re.IGNORECASE)
-    pat_channel_id = re.compile('#([a-z0-9_-]+)', flags=re.IGNORECASE)
-
     def send_message(self, text, team, chanid):
+        task = self.client.evloop.create_task(self.send_message_async(text, team, chanid))
+        def callback(future):
+            team.print_exception(future.exception(), 'send message')
+        task.add_done_callback(callback)
+        
+    async def send_message_async(self, text, team, chanid):
+        chan = team.channels[chanid]
         etext = self.encode_message(team, text)
-        team.rtm_send({ 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':etext })
+        await team.api_call_check('posts', httpmethod='post', channel_id=chan.realid, message=etext)
     
     def encode_message(self, team, val):
         """Encode a human-typed message into standard Mattermost form.
@@ -307,34 +311,8 @@ class MattermUI(ProtoUI):
         val = val.replace('&', '&amp;')
         val = val.replace('<', '&lt;')
         val = val.replace('>', '&gt;')
-        # We try to locate @displayname references and convert them to
-        # <@USERID>. ###?
-        val = self.pat_user_id.sub(lambda match:self.encode_exact_user_id(team, match), val)
-        val = self.pat_channel_id.sub(lambda match:self.encode_exact_channel_id(team, match), val)
         return val
     
-    def encode_exact_user_id(self, team, match):
-        """Utility function used by encode_message. Given a match object from
-        pat_user_id, return a <@USERID> substitution. If the match doesn't
-        exactly match a user display name, we return the original string.    
-        """
-        orig = match.group(0)  # '@name'
-        val = match.group(1)   # 'name'
-        if val not in team.users_by_display_name:
-            return orig
-        return '<@' + team.users_by_display_name[val].id + '>'
-    
-    def encode_exact_channel_id(self, team, match):
-        """Utility function used by encode_message. Given a match object from
-        pat_channel_id, return a <#CHANID> substitution. If the match doesn't
-        exactly match a channel name, we return the original string.    
-        """
-        orig = match.group(0)  # '#channel'
-        val = match.group(1)   # 'channel'
-        if val not in team.channels_by_name:
-            return orig
-        return '<#' + team.channels_by_name[val].id + '>'
-
     def handle_message(self, msg, team):
         """Handle one message received from the Mattermost server (over the
         RTM websocket).
@@ -600,7 +578,7 @@ class MattermHost(Host):
 
         if queryls:
             url += ('?' + '&'.join(queryls))
-        self.client.ui.note_send_message(data, self)
+        self.client.ui.note_send_message('%s (%s): %s' % (url, httpmethod, data,), self)
 
         httpfunc = getattr(self.session, httpmethod)
         async with httpfunc(url, data=data) as resp:

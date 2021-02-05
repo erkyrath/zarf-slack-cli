@@ -295,6 +295,10 @@ class MattermUI(ProtoUI):
     """
     
     def send_message(self, text, team, chanid):
+        if not team.rtm_socket:
+            # We *can* send, actually, but it would be rude.
+            self.print('Cannot send: %s not connected' % (team.team_name,))
+            return
         task = self.client.evloop.create_task(self.send_message_async(text, team, chanid))
         def callback(future):
             team.print_exception(future.exception(), 'send message')
@@ -325,15 +329,6 @@ class MattermUI(ProtoUI):
             if not origmsg:
                 self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('seq_reply'), msg.get('text')))
                 return
-            self.print('### reply to %s' % (origmsg,))
-            if False: ###
-                chanid = origmsg.get('channel', '')
-                userid = origmsg.get('user', '')
-                # Print our successful messages even on muted channels
-                ### ? not always a text message. Check format anyhow.
-                text = self.decode_message(team, msg.get('text'))
-                val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
-                self.print(val)
             return
         
         if typ == 'hello':

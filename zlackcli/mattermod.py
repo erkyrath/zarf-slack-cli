@@ -1,6 +1,7 @@
 import sys
 import time
-import os
+import os.path
+import tempfile
 import re
 import json
 from collections import OrderedDict
@@ -387,8 +388,9 @@ class MattermUI(ProtoUI):
             if metadata:
                 files = metadata.get('files')
                 if files:
-                    ###self.ui.note_file_urls(team, files)
-                    pass ### adjust this
+                    for fil in files:
+                        filid = fil.get('id')
+                        self.client.note_file_data(team, filid, fil)
             text = self.decode_message(team, post.get('message'), files=files)
             colon = (':' if subtype != 'me' else '')
             val = '[%s/%s] %s%s %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), colon, text)
@@ -413,8 +415,9 @@ class MattermUI(ProtoUI):
             if metadata:
                 files = metadata.get('files')
                 if files:
-                    ###self.ui.note_file_urls(team, files)
-                    pass ### adjust this
+                    for fil in files:
+                        filid = fil.get('id')
+                        self.client.note_file_data(team, filid, fil)
             text = self.decode_message(team, post.get('message'), files=files)
             colon = (':' if subtype != 'me' else '')
             postact = ('edit' if typ == 'post_edited' else 'del')
@@ -445,11 +448,26 @@ class MattermUI(ProtoUI):
         if files:
             for fil in files:
                 fileid = fil.get('id')
-                tup = self.ui.files_by_url.get(fileid, None)
+                tup = self.client.files_by_id.get(fileid, None)
                 index = tup[0] if tup else '?'
                 val += ('\n..file [%s] %s (%s, %s bytes)' % (index, fil.get('name'), fil.get('extension'), fil.get('size'), ))
         return val
     
+    async def fetch_data(self, team, fil):
+        filid = fil['id']
+        filename = fil.get('name')
+        if not filename:
+            filename = '%s.%s' % (filid, fil.get('extension', ''),)
+        pathname = os.path.join(tempfile.gettempdir(), filename)
+
+        dat = await team.api_call_data('files/%s' % (filid,))
+        
+        fl = open(pathname, 'wb')
+        fl.write(dat)
+        fl.close()
+        self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
+        await self.display_path(pathname)
+        
     async def fetch_url(self, team, url):
         tup = urllib.parse.urlparse(url)
         if not tup.netloc.lower().endswith(team.id):
@@ -545,6 +563,18 @@ class MattermHost(Host):
             await self.session.close()
             self.session = None
 
+    async def api_call_data(self, method, httpmethod='get'):
+        """Make a web API call. Return the result as raw data (bytes,
+        rather than a json object).
+        """
+        url = self.protocol.base_api_url.replace('MHOST', self.id)
+        url = '{0}/api/v4/{1}'.format(url, method)
+
+        httpfunc = getattr(self.session, httpmethod)
+        async with httpfunc(url) as resp:
+            dat = await resp.read()
+            return dat
+    
     async def api_call(self, method, httpmethod='get', **kwargs):
         """Make a web API call. Return the result.
         In the kwargs, keys starting with __ become query parameters;

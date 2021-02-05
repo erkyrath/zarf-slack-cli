@@ -230,12 +230,13 @@ class MattermProtocol(Protocol):
             self.print('oauth/access_token response had no access_token')
             return
 
-        ### stash expires_in, refresh_token somewhere
+        expires_in = res.get('expires_in')
+        refresh_token = res.get('refresh_token')
         
         # Got the permanent token.
-        await self.perform_tokenauth_async(mhost, res['access_token'])
+        await self.perform_tokenauth_async(mhost, res['access_token'], expires_in=expires_in, refresh_token=refresh_token)
 
-    async def perform_tokenauth_async(self, mhost, access_token):
+    async def perform_tokenauth_async(self, mhost, access_token, expires_in=None, refresh_token=None):
         """Continue the authentication process. The token may be a personal
         access token, or it may have arrived through OAuth.
         """
@@ -245,7 +246,6 @@ class MattermProtocol(Protocol):
         teammap['_protocol'] = MattermProtocol.key
         teammap['host'] = mhost
         teammap['access_token'] = access_token
-        ### maybe expires_in/refresh_token. Nah, they go in preferences.
 
         # Try fetching user info. (We want to include the user's name in the
         # ~/.zlack-tokens entry.)
@@ -262,6 +262,8 @@ class MattermProtocol(Protocol):
         # Create a new Team entry.
         team = self.create_team(teammap)
         self.client.write_teams()
+
+        ### put expires_in/refresh_token in preferences?
         
         await team.open()
         

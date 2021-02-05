@@ -838,26 +838,42 @@ class MattermHost(Host):
         """Recap the last interval seconds of a channel.
         """
         ui = self.client.ui
-        timestamp = str(int(time.time()) - interval)
-        cursor = None
-        while True:
-            res = await self.api_call_check('conversations.history', channel=chanid, oldest=timestamp, cursor=cursor)
-            if not res:
-                break
-            for msg in reversed(res.get('messages')):
-                ### see handle_msg
-                userid = msg.get('user', '')
-                subtype = msg.get('subtype', '')
-                if subtype:
-                    continue  # don't recap subtype messages
-                ts = msg.get('ts')
-                ts = ui.short_timestamp(ts)
-                text = self.protocol.protoui.decode_message(self, msg.get('text'), files=msg.get('files'))
-                val = '[%s/%s] (%s) %s: %s' % (ui.team_name(self), ui.channel_name(self, chanid), ts, ui.user_name(self, userid), text)
-                self.print(val)
-            cursor = get_next_cursor(res)
-            if not cursor:
-                break
+        timestamp = str(1000 * (int(time.time()) - interval))
+        chan = self.channels.get(chanid)
+        method = 'channels/%s/posts' % (chan.realid,)
+
+        res = await self.api_call_check(method, __since=timestamp)
+        if not res:
+            return
+        order = res.get('order')
+        map = res.get('posts')
+        if not order:
+            return
+        
+        for msgid in reversed(order):
+            post = map.get(msgid)
+            if not post:
+                continue
+            userid = post.get('user_id', '')
+            chan = self.channels_by_realid.get(post.get('channel_id', ''))
+            chanid = chan.id if chan else ''
+            subtype = post.get('type', '')
+            files = None
+            metadata = post.get('metadata')
+            if metadata:
+                files = metadata.get('files')
+                if files:
+                    for fil in files:
+                        filid = fil.get('id')
+                        self.client.note_file_data(self, filid, fil)
+            ts = post.get('create_at')
+            ts = ui.short_timestamp(int(ts/1000))
+            if not post.get('message'):
+                continue
+            text = self.protocol.protoui.decode_message(self, post.get('message'), files=files)
+            colon = (':' if subtype != 'me' else '')
+            val = '[%s/%s] (%s) %s%s %s' % (ui.team_name(self), ui.channel_name(self, chanid), ts, ui.user_name(self, userid), colon, text)
+            self.print(val)
         
     async def load_connection_data(self):
         """Load all the information we need for a connection: the channel

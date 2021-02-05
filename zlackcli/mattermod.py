@@ -136,13 +136,7 @@ class MattermProtocol(Protocol):
                     for res in done:
                         self.print_exception(res.exception(), 'Could not reconnect team')
                 
-            # Server pings. We do this right after the time check because
-            # that is a better way to avoid timeout errors. Now we've got
-            # all the sockets restabilized, but timeout errors are still
-            # possible; the pings will root them out.
-            ###for team in self.teams.values():
-            ###    if team.rtm_connected():
-            ###        await team.rtm_send_async({ 'type':'ping', 'id':None })
+            # Server pings: not in Mattermost.
 
             # Note the time for next go-around. (Should be exactly five
             # seconds, but if the machine sleeps, it'll be more.)

@@ -121,8 +121,6 @@ class ProtoUI:
     async def fetch_url(self, team, url):
         """Fetch the given URL, using the team's web credentials.
         Store the data in a temporary file.
-        If the "viewfile" preference is set, run it to open the
-        data.
         """
         self.print('[%s]: Fetching %s...' % (team.short_name(), url,))
         tup = urllib.parse.urlparse(url)
@@ -137,14 +135,23 @@ class ProtoUI:
             fl.write(dat)
             fl.close()
             self.print('Fetched %d bytes: %s' % (len(dat), pathname,))
-            opencmd = self.client.prefs.get('viewfile', None)
-            if opencmd:
-                ### only do this on known MIME types?
-                args = opencmd.split(' ')
-                args.append(pathname)
-                proc = subprocess.Popen(args)
-                while proc.poll() is None:
-                    await asyncio.sleep(1)
+            await self.display_path(pathname)
+            
+    async def display_path(self, pathname):
+        """If the "viewfile" preference is set, run it to display
+        the file at the given path.
+        ### only do this on known MIME types?
+        """
+        opencmd = self.client.prefs.get('viewfile', None)
+        if opencmd:
+            args = opencmd.split(' ')
+            args.append(pathname)
+            proc = subprocess.Popen(args)
+            # We have to wait and collect the process termination result.
+            # (Quite possibly the process forked and exited immediately,
+            # but not necessarily.)
+            while proc.poll() is None:
+                await asyncio.sleep(1)
         
     def print(self, msg):
         """Output a line of text. (Or several lines, as it could contain

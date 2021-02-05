@@ -579,9 +579,11 @@ class MattermHost(Host):
         if queryls:
             url += ('?' + '&'.join(queryls))
         self.client.ui.note_send_message('%s (%s): %s' % (url, httpmethod, data,), self)
+        if not data:
+            data = None
 
         httpfunc = getattr(self.session, httpmethod)
-        async with httpfunc(url, data=data) as resp:
+        async with httpfunc(url, json=data) as resp:
             try:
                 # Disable content-type check; Mattermost seems to send text/plain for errors, even JSON errors
                 res = await resp.json(content_type=None)

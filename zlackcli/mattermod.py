@@ -15,6 +15,7 @@ import websockets
 
 from .teamdat import Protocol, ProtoUI, Host, Channel, User
 from .parsematch import ParseMatch
+from .ui import uicommand
 
 class MattermProtocol(Protocol):
     """The Mattermost protocol.
@@ -444,7 +445,35 @@ class MattermUI(ProtoUI):
             return
         await super().fetch_url(team, url)
     
-    
+    @uicommand('subalias', 'subaliases',
+               arghelp='[host/team] alias,alias,...',
+               help='set the aliases for a Mattermost team on a server')
+    def cmd_subalias(self, args):
+        if not args:
+            # Show the current aliases
+            if not self.client.ui.curchannel:
+                raise ArgException('No current team.')
+            (teamid, chanid) = self.client.ui.curchannel
+            team = self.client.get_team(teamid)
+            if not team:
+                raise ArgException('Host not recognized: %s' % (teamid,))
+            if not isinstance(team, MattermHost):
+                raise ArgException('Host is not Mattermost: %s' % (teamid,))
+            chan = team.channels.get(chanid)
+            subteam = chan.subteam if chan else None
+            if not subteam:
+                raise ArgException('No current subteam')
+            aliases = {} ###
+            if not aliases:
+                self.print('%s/%s: no aliases set.' % (team.short_name(), subteam.name,))
+            else:
+                self.print('%s/%s: aliased to %s.' % (team.short_name(), subteam.name, ','.join(aliases),))
+            return
+
+    handler_list = [
+        cmd_subalias,
+    ]
+
 class MattermHost(Host):
     """Represents one Mattermost group (team, workspace... I'm not all that
     consistent about it, sorry). This includes the websocket (which

@@ -514,7 +514,7 @@ class MattermHost(Host):
 
         await self.load_connection_data()
 
-        if False: ###
+        if True:
             await self.rtm_connect_async()
 
     async def close(self):
@@ -876,7 +876,7 @@ class MattermHost(Host):
                 self.users_by_display_name[username] = self.users[userid]
             page += 1
             
-        self.client.print('Users for %s: %s' % (self, list(self.users.values()),))
+        #self.client.print('Users for %s: %s' % (self, list(self.users.values()),))
 
         res = await self.api_call_check('users/me/teams')
         for obj in res:
@@ -885,7 +885,7 @@ class MattermHost(Host):
             subteamrealname = obj.get('display_name', subteamname)
             self.subteams[subteamid] = MattermSubteam(self, subteamid, subteamname, subteamrealname)
     
-        self.client.print('Subteams for %s: %s' % (self, list(self.subteams.values()),))
+        #self.client.print('Subteams for %s: %s' % (self, list(self.subteams.values()),))
 
         # Fetch member and IM channels
 
@@ -946,7 +946,7 @@ class MattermHost(Host):
                     
                 page += 1
             
-        self.client.print('Channels for %s: %s' % (self, self.channels,))
+        #self.client.print('Channels for %s: %s' % (self, self.channels,))
 
 class MattermSubteam:
     """Simple object representing a Mattermost team (within a host).

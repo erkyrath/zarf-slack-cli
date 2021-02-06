@@ -235,7 +235,7 @@ class Host:
         raise NotImplementedError('load_connection_data')
 
     def get_aliases(self):
-        """Return a list of channel aliases or None.
+        """Return a list of team aliases or None.
         """
         ls = self.client.prefs.team_get('aliases', self)
         if ls:
@@ -243,7 +243,7 @@ class Host:
         return None
 
     def set_aliases(self, aliases):
-        """Set a list of channel aliases.
+        """Set a list of team aliases.
         """
         self.client.prefs.team_put('aliases', aliases, self)
         self.update_name_parser()

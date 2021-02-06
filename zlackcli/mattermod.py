@@ -15,7 +15,7 @@ import websockets
 
 from .teamdat import Protocol, ProtoUI, Host, Channel, User
 from .parsematch import ParseMatch
-from .ui import uicommand
+from .ui import uicommand, ArgException
 
 class MattermProtocol(Protocol):
     """The Mattermost protocol.
@@ -444,7 +444,13 @@ class MattermUI(ProtoUI):
             self.print('URL does not appear to be a Mattermost URL: %s' % (url,))
             return
         await super().fetch_url(team, url)
-    
+
+    def parse_subteam(self, team, val):
+        for subteam in team.subteams.values():
+            if subteam.nameparser(val):
+                return subteam
+        raise ArgException('%s: No team: %s' % (team.short_name(), val))
+        
     @uicommand('subalias', 'subaliases',
                arghelp='[host/team] alias,alias,...',
                help='set the aliases for a Mattermost team on a server')
@@ -462,13 +468,30 @@ class MattermUI(ProtoUI):
             chan = team.channels.get(chanid)
             subteam = chan.subteam if chan else None
             if not subteam:
-                raise ArgException('No current subteam')
-            aliases = {} ###
+                raise ArgException('No current team')
+            aliases = team.get_sub_aliases(subteam.id)
             if not aliases:
                 self.print('%s/%s: no aliases set.' % (team.short_name(), subteam.name,))
             else:
                 self.print('%s/%s: aliased to %s.' % (team.short_name(), subteam.name, ','.join(aliases),))
             return
+        
+        val = args.pop()
+        aliases = val.split(',')
+        aliases = [ val.strip() for val in aliases ]
+        aliases = [ val for val in aliases if val ]
+        subteamname = None
+        if args and '/' in args[0]:
+            args[0], _, subteamname = args[0].partition('/')
+        team = self.client.ui.parse_team_or_current(args)
+        subteam = self.protoui.parse_subteam(team, subteamname)
+        team.set_sub_aliases(subteam.id, aliases)
+
+        aliases = team.get_sub_aliases(subteam.id)
+        if not aliases:
+            self.print('%s/%s: no aliases set.' % (team.short_name(), subteam.name,))
+        else:
+            self.print('%s/%s: aliased to %s.' % (team.short_name(), subteam.name, ','.join(aliases),))
 
     handler_list = [
         cmd_subalias,
@@ -637,6 +660,26 @@ class MattermHost(Host):
 
     def name_parser(self):
         return self.nameparser
+
+    def get_sub_aliases(self, subid):
+        """Return a list of subteam aliases or None.
+        """
+        map = self.client.prefs.team_get('subteam_aliases', self)
+        if map:
+            ls = map.get(subid)
+            return ls
+        return None
+
+    def set_sub_aliases(self, subid, aliases):
+        """Set a list of subteam aliases.
+        """
+        subteam = self.subteams[subid]
+        map = self.client.prefs.team_get('subteam_aliases', self)
+        if not map:
+            map = {}
+        map[subid] = aliases
+        self.client.prefs.team_put('subaliases', map, self)
+        subteam.update_name_parser()
 
     def set_last_channel(self, chanid):
         self.lastchannel = chanid
@@ -995,10 +1038,7 @@ class MattermSubteam:
         return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)
 
     def update_name_parser(self):
-        aliases = None
-        aliasmap = self.client.prefs.team_get('subteam_aliases', self.team)
-        if aliases:
-            aliases = aliasmap.get(self.id)
+        aliases = self.team.get_sub_aliases(self.id)
         self.nameparser.update_aliases(aliases)
         
 class MattermChannel(Channel):

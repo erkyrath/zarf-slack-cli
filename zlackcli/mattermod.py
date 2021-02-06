@@ -678,7 +678,7 @@ class MattermHost(Host):
         if not map:
             map = {}
         map[subid] = aliases
-        self.client.prefs.team_put('subaliases', map, self)
+        self.client.prefs.team_put('subteam_aliases', map, self)
         subteam.update_name_parser()
 
     def set_last_channel(self, chanid):

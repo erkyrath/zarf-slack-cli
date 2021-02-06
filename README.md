@@ -79,7 +79,7 @@ Once you've done this, set the `MATTERMOST_CLIENT_ID` and `MATTERMOST_CLIENT_SEC
 
 ### Authenticating on Mattermost
 
-Run `zlack.py`, and then type `/auth mattermost` to authenticate. (The environment variables must be set for this command to work.)
+Run `zlack.py`, and then type `/auth mattermost HOSTNAME` to authenticate. (The environment variables must be set for this command to work.)
 
 When you type `/auth`, the script will display a Mattermost URL to visit. The script will then pause and wait for an authorization. It is listening on localhost port 8090.
 
@@ -87,9 +87,9 @@ Go to the URL in your web browser. Mattermost will ask you to authorize the clie
 
 ### Authenticating on Mattermost with a Personal Access Token
 
-Mattermost also supports the idea of a Personal Access Token, which lets you authenticate directly. However, PATs have to be enabled for each user by the administrator, so this is less convenient.
+Mattermost also supports the idea of a Personal Access Token, which lets you authenticate directly. However, PATs have to be enabled for each user by the administrator, so this is less convenient. (In the System Console, go to "Users", select the "Member" pull-down menu, select "Manage Roles", check "Allow this account to generate personal access tokens.")
 
-If you have a PAT for your Mattermost account, type `/auth mattermost PAT` to authenticate with it. You don't need to follow a URL or click an authorize button.
+If you have a PAT for your Mattermost account, type `/auth mattermost HOSTNAME PAT` to authenticate with it. You don't need to follow a URL or click an authorize button.
 
 ## Running the client
 

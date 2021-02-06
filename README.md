@@ -130,7 +130,13 @@ There are a handful of special commands, which start with a slash.
 - */alias [team] alias,alias,...* -- set the aliases for a team
 - */debug [bool]* -- set stream debugging on/off or toggle
 
-The team aliases let you abbreviate the *\#team/channel* prefix. If you have joined a Slack team named *longexample*, you could type `/alias longexample lo`, and then *\#lo/channel* would work. Messages will also be displayed using the (first) alias, which will reduce screen clutter.
+The team aliases let you abbreviate the *\#team/channel* prefix. If you have joined a Slack team named *longexample*, you could type `/alias longexample lex`, and then *\#lex/channel* would work. Messages will also be displayed using the (first) alias, which reduces screen clutter.
+
+For Mattermost hosts, you can alias the middle section of *\#server/team/channel* as well:
+
+- */subalias [host/team] alias,alias,...* -- set the aliases for a Mattermost team
+
+(The first section is handled by the `/alias` command, as usual.)
 
 ## Version history
 

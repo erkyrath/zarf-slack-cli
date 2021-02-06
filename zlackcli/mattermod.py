@@ -483,9 +483,18 @@ class MattermUI(ProtoUI):
         subteamname = None
         if args and '/' in args[0]:
             args[0], _, subteamname = args[0].partition('/')
-        team = self.client.ui.parse_team_or_current(args)
+            team = self.client.ui.parse_team_or_current(args)
+        elif args:
+            subteamname = args.pop(0)
+            team = self.client.ui.parse_team_or_current(args)
+        else:
+            subteamname = None
+            team = self.client.ui.parse_team_or_current(args)
+        if subteamname is None:
+            val = team.lastchannel
+            if val and '/' in val:
+                subteamname, _, _ = val.partition('/')
         subteam = self.protoui.parse_subteam(team, subteamname)
-        team.set_sub_aliases(subteam.id, aliases)
 
         aliases = team.get_sub_aliases(subteam.id)
         if not aliases:

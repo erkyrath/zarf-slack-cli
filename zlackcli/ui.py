@@ -32,6 +32,7 @@ class UICommand:
         self.func = func
 
         # set in find_commands()
+        self.ui = None
         self.protocol = None
 
     def __repr__(self):
@@ -79,6 +80,7 @@ class UI:
         # Construct the map of slash command strings to UICommand objects.
         # Both command names and command aliases are recognized as keys.
         for han in self.handler_list:
+            han.ui = self
             self.handler_map[han.name] = han
             if han.aliases:
                 for alias in han.aliases:
@@ -87,6 +89,7 @@ class UI:
         for pro in self.client.protocols:
             for han in pro.protoui.handler_list:
                 han.protocol = pro
+                han.ui = pro
                 self.handler_map[han.name] = han
                 if han.aliases:
                     for alias in han.aliases:
@@ -164,14 +167,14 @@ class UI:
                 return
             if not han.isasync:
                 try:
-                    han.func(self, args)
+                    han.func(han.ui, args)
                 except ArgException as ex:
                     self.print('Command /%s: %s' % (cmd, ex,))
                     return
                 except Exception as ex:
                     self.print_exception(ex, 'Command /%s' % (cmd,))
             else:
-                task = self.client.evloop.create_task(han.func(self, args))
+                task = self.client.evloop.create_task(han.func(han.ui, args))
                 def callback(future):
                     ex = future.exception()
                     if ex and isinstance(ex, ArgException):

@@ -21,7 +21,7 @@ This tool is written in Python3. You'll need a recent version of that. You'll al
 
 > `pip3 install -r requirements.txt`
 
-(Note that I am not using the official [Python Slack SDK][slack-sdk] library. Sorry! I'm using an extremely minimal subset of the Slack API, and it was easier to write my own, at least back when I started this project.)
+(Note that I am not using the official [Python Slack SDK][slack-sdk] library. Sorry! I'm using an extremely minimal subset of the Slack API; it was easier to write my own, at least back when I started this project.)
 
 [slack-sdk]: https://pypi.org/project/slack-sdk/
 [prompt-toolkit]: https://github.com/jonathanslenders/python-prompt-toolkit
@@ -54,7 +54,8 @@ If you don't know what an environment variable is, you can type everything out o
 
 When you type `/auth`, the script will display a Slack URL to visit. This will look like:
 
-	https://slack.com/oauth/authorize?client_id=CLIENT_ID&scope=client& redirect_uri=http%3A//localhost%3A8090/&state=state_NUMBER
+	https://slack.com/oauth/authorize?client_id=CLIENT_ID&scope=client&
+	redirect_uri=http%3A//localhost%3A8090/&state=state_1234567
 
 The script will then pause and wait for an authorization. It is listening on localhost port 8090.
 
@@ -88,7 +89,7 @@ Go to the URL in your web browser. Mattermost will ask you to authorize the clie
 
 Mattermost also supports the idea of a Personal Access Token, which lets you authenticate directly. However, PATs have to be enabled for each user by the administrator, so this is less convenient.
 
-If you have a PAT for your Mattermost account, type `/auth mattermost PAT` to authenticate with it.
+If you have a PAT for your Mattermost account, type `/auth mattermost PAT` to authenticate with it. You don't need to follow a URL or click an authorize button.
 
 ## Running the client
 

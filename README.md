@@ -99,8 +99,6 @@ At first you have no channel set. So to send a message, type
 
 > *\#team/channel* Message text to send.
 
-(Again, you can use team aliases here.)
-
 Once you send a message on a channel, it becomes the default channel. You don't need to use the channel prefix for subsequent messages. The current channel is always displayed as the input prompt, so you know where you're typing to.
 
 The channel prefix can be any of:
@@ -113,6 +111,8 @@ The channel prefix can be any of:
 (Multi-person message channels are not yet supported.)
 
 If you type a semicolon on a line by itself, it will switch your default channel to match the last message you *received*. (If you're reading several conversations at once, look at the prompt to make sure you got what you thought!)
+
+Mattermost servers are a little more complicated, because a single server can support several teams. So Mattermost channel names look like *\#server/team/channel*. You can type just a part of the name; the client has smart disambiguation.
 
 There are a handful of special commands, which start with a slash.
 
@@ -130,6 +130,7 @@ There are a handful of special commands, which start with a slash.
 - */alias [team] alias,alias,...* -- set the aliases for a team
 - */debug [bool]* -- set stream debugging on/off or toggle
 
+The team aliases let you abbreviate the *\#team/channel* prefix. If you have joined a Slack team named *longexample*, you could type `/alias longexample lo`, and then *\#lo/channel* would work. Messages will also be displayed using the (first) alias, which will reduce screen clutter.
 
 ## Version history
 

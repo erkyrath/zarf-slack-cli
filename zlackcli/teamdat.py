@@ -54,6 +54,9 @@ class Protocol:
         raise NotImplementedError('close')
     
     def begin_auth(self):
+        """Launch the process of authenticating to a new Slack team.
+        (This returns immediately.)
+        """
         raise NotImplementedError('begin_auth')
     
     def print(self, msg):
@@ -111,6 +114,9 @@ class ProtoUI:
         self.ui = protocol.client.ui
 
     def send_message(self, text, team, chanid):
+        """Send a message to the given team and channel.
+        (This returns immediately.)
+        """
         raise NotImplementedError('send_message')
         
     async def fetch_data(self, team, dat):
@@ -180,6 +186,8 @@ class Host:
         return '<%s %s:%s "%s">' % (self.__class__.__name__, self.protocolkey, self.id, self.team_name)
 
     def name_parser(self):
+        """Return a matcher for this host's name.
+        """
         return NeverMatch()
 
     async def open(self):
@@ -249,6 +257,9 @@ class Host:
         self.update_name_parser()
 
     def update_name_parser(self):
+        """Update the matcher for this host's name, accepting current
+        aliases.
+        """
         self.nameparser = ParseMatch(self.team_name, self.client.prefs.team_get('aliases', self))
         
     def short_name(self):
@@ -260,9 +271,13 @@ class Host:
         return self.team_name
 
     def set_last_channel(self, chanid):
+        """Note the last channel used for this team.
+        """
         pass
         
     def get_last_channel(self):
+        """Get the last channel used for this team.
+        """
         return None
         
     async def recap_channel(self, chanid, interval):
@@ -306,12 +321,20 @@ class Channel:
         return '<%s %s%s%s: "%s">' % (self.__class__.__name__, self.id, privflag, memberflag, self.name)
 
     def display_name(self):
+        """Return the channel's printed name.
+        """
         return self.name
 
     def muted(self):
+        """Is this channel muted?
+        """
         return False
 
     def name_parsers(self):
+        """Return the matcher or matchers for this channel's name.
+        (It's a list to allow for the possibility of channels named
+        X/Y/Z.)
+        """
         return [ NeverMatch() ]
 
 class User:
@@ -328,5 +351,7 @@ class User:
         return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)
 
     def display_name(self):
+        """Return the user's printed name.
+        """
         return self.name
 

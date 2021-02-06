@@ -983,6 +983,8 @@ class MattermHost(Host):
         #self.client.print('Users for %s: %s' % (self, list(self.users.values()),))
 
         res = await self.api_call_check('users/me/teams')
+        if not res:
+            return
         for obj in res:
             subteamid = obj['id']
             subteamname = obj['name']

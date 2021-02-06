@@ -495,6 +495,7 @@ class MattermUI(ProtoUI):
             if val and '/' in val:
                 subteamname, _, _ = val.partition('/')
         subteam = self.protoui.parse_subteam(team, subteamname)
+        team.set_sub_aliases(subteam.id, aliases)
 
         aliases = team.get_sub_aliases(subteam.id)
         if not aliases:
@@ -1064,7 +1065,8 @@ class MattermChannel(Channel):
         self.subteam = subteam
         self.client = team.client
         self.id = fullid   # the client indexes channels as subteam/id (except for DM channels)
-        self.realid = id   # what Mattermost thinks
+        self.realid = id      # what Mattermost calls it, no subteam
+        self.realname = name  # no subteam (but maybe '@user')
         if subteam is not None:
             self.name = '%s/%s' % (subteam.name, name,)
         else:
@@ -1078,6 +1080,15 @@ class MattermChannel(Channel):
         else:
             self.nameparselist = [ ParseMatch(name) ]
         
+    def display_name(self):
+        if self.subteam is None:
+            return self.realname
+        prefix = self.subteam.name
+        aliases = self.team.get_sub_aliases(self.subteam.id)
+        if aliases:
+            prefix = aliases[0]
+        return '%s/%s' % (prefix, self.realname)
+
     def name_parsers(self):
         return self.nameparselist
 

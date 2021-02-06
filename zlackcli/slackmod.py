@@ -280,6 +280,9 @@ class SlackUI(ProtoUI):
     pat_encoded_channel_id = re.compile('<#([a-z0-9_]+)([|][a-z0-9_-]*)?>', flags=re.IGNORECASE)
 
     def send_message(self, text, team, chanid):
+        """Send a message to the given team and channel.
+        (This returns immediately.)
+        """
         etext = self.encode_message(team, text)
         team.rtm_send({ 'type':'message', 'id':None, 'user':team.user_id, 'channel':chanid, 'text':etext })
     
@@ -426,10 +429,15 @@ class SlackUI(ProtoUI):
         return val
 
     async def fetch_data(self, team, fil):
+        """Fetch data stored by note_file_data().
+        """
         url = fil['url_private']
         await self.fetch_url(team, url)
         
     async def fetch_url(self, team, url):
+        """Fetch the given URL, using the team's web credentials.
+        Store the data in a temporary file.
+        """
         tup = urllib.parse.urlparse(url)
         if not tup.netloc.lower().endswith('.slack.com'):
             self.print('URL does not appear to be a Slack URL: %s' % (url,))
@@ -556,13 +564,19 @@ class SlackTeam(Host):
             return None
 
     def name_parser(self):
+        """Return a matcher for this host's name.
+        """
         return self.nameparser
 
     def set_last_channel(self, chanid):
+        """Note the last channel used for this team.
+        """
         self.lastchannel = chanid
         self.client.prefs.team_put('lastchannel', chanid, self)
         
     def get_last_channel(self):
+        """Get the last channel used for this team.
+        """
         return self.lastchannel
         
     def resolve_in_flight(self, val):
@@ -865,6 +879,8 @@ class SlackChannel(Channel):
         self.nameparselist = [ ParseMatch(name) ]
         
     def name_parsers(self):
+        """Return the matcher or matchers for this channel's name.
+        """
         return self.nameparselist
 
     def muted(self):

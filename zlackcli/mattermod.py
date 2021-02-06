@@ -296,6 +296,9 @@ class MattermUI(ProtoUI):
     """
     
     def send_message(self, text, team, chanid):
+        """Send a message to the given team and channel.
+        (This returns immediately.)
+        """
         if not team.rtm_socket:
             # We *can* send, actually, but it would be rude.
             self.print('Cannot send: %s not connected' % (team.team_name,))
@@ -306,6 +309,8 @@ class MattermUI(ProtoUI):
         task.add_done_callback(callback)
         
     async def send_message_async(self, text, team, chanid):
+        """Send a message to the given team and channel.
+        """
         chan = team.channels[chanid]
         etext = self.encode_message(team, text)
         await team.api_call_check('posts', httpmethod='post', channel_id=chan.realid, message=etext)
@@ -424,6 +429,9 @@ class MattermUI(ProtoUI):
         return val
     
     async def fetch_data(self, team, fil):
+        """Fetch data stored by note_file_data().
+        The fil argument is a Mattermost file object.
+        """
         filid = fil['id']
         filename = fil.get('name')
         if not filename:
@@ -439,6 +447,9 @@ class MattermUI(ProtoUI):
         await self.display_path(pathname)
         
     async def fetch_url(self, team, url):
+        """Fetch the given URL, using the team's web credentials.
+        Store the data in a temporary file.
+        """
         tup = urllib.parse.urlparse(url)
         if not tup.netloc.lower().endswith(team.id):
             self.print('URL does not appear to be a Mattermost URL: %s' % (url,))
@@ -446,6 +457,9 @@ class MattermUI(ProtoUI):
         await super().fetch_url(team, url)
 
     def parse_subteam(self, team, val):
+        """Parse a subteam name, ID, or alias. Returns the Subteam entry.
+        Raises ArgException if not recognized.
+        """
         for subteam in team.subteams.values():
             if subteam.nameparser(val):
                 return subteam
@@ -455,6 +469,8 @@ class MattermUI(ProtoUI):
                arghelp='[host/team] alias,alias,...',
                help='set the aliases for a Mattermost team on a server')
     def cmd_subalias(self, args):
+        """Command: Set the aliases for a subteam.
+        """
         if not args:
             # Show the current aliases
             if not self.client.ui.curchannel:
@@ -669,6 +685,8 @@ class MattermHost(Host):
             return None
 
     def name_parser(self):
+        """Return a matcher for this host's name.
+        """
         return self.nameparser
 
     def get_sub_aliases(self, subid):
@@ -692,6 +710,8 @@ class MattermHost(Host):
         subteam.update_name_parser()
 
     def set_last_channel(self, chanid):
+        """Note the last channel used for this team.
+        """
         self.lastchannel = chanid
         self.client.prefs.team_put('lastchannel', chanid, self)
         
@@ -701,6 +721,8 @@ class MattermHost(Host):
             self.client.prefs.team_put('lastsubchannels', self.lastsubchannels, self)
         
     def get_last_channel(self, sibling=None):
+        """Get the last channel used for this team.
+        """
         if sibling is not None:
             head, _, tail = sibling.id.rpartition('/')
             if head:
@@ -1048,6 +1070,9 @@ class MattermSubteam:
         return '<%s %s: "%s"/"%s">' % (self.__class__.__name__, self.id, self.name, self.real_name)
 
     def update_name_parser(self):
+        """Update the matcher for this subteam's name, accepting current
+        aliases.
+        """
         aliases = self.team.get_sub_aliases(self.id)
         self.nameparser.update_aliases(aliases)
         
@@ -1081,6 +1106,8 @@ class MattermChannel(Channel):
             self.nameparselist = [ ParseMatch(name) ]
         
     def display_name(self):
+        """Return the channel's printed name.
+        """
         if self.subteam is None:
             return self.realname
         prefix = self.subteam.name
@@ -1090,6 +1117,9 @@ class MattermChannel(Channel):
         return '%s/%s' % (prefix, self.realname)
 
     def name_parsers(self):
+        """Return the matchers for this channel's name.
+        (The first list entry is the subteam's matcher.)
+        """
         return self.nameparselist
 
     def muted(self):

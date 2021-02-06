@@ -19,14 +19,16 @@ Zlack now also supports [Mattermost][]. Mattermost is an open-source team messag
 
 This tool is written in Python3. You'll need a recent version of that. You'll also need some packages:
 
-> `pip3 install slackclient aiohttp aiodns websockets`
+> `pip3 install -r requirements.txt`
 
-(Note that I am not using the official [Python slackclient][slackclient] library. It's crufty and doesn't support async code, so I wrote my own. Sorry! Feel free to borrow this one, folks...)
+(Note that I am not using the official [Python Slack SDK][slack-sdk] library. Sorry! I'm using an extremely minimal subset of the Slack API, and it was easier to write my own, at least back when I started this project.)
 
-[slackclient]: https://github.com/slackapi/python-slackclient
+[slack-sdk]: https://pypi.org/project/slack-sdk/
 [prompt-toolkit]: https://github.com/jonathanslenders/python-prompt-toolkit
 
-You'll also have to create your own Slack and/or Mattermost app client ID. This repository doesn't include any such ID, because these IDs should not be publicized.
+## Setting up the Slack client
+
+You'll have to create your own Slackapp client ID. This repository doesn't include any such ID, because these IDs should not be publicized.
 
 ### Creating a Slack app client ID
 
@@ -36,7 +38,33 @@ Visit [Slack's developer page][slackapp] and create a new app. Then, under "Perm
 
 Once you've done this, set the `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` environment variables to the values shown on your "App Credentials" page. (Note that in earlier versions, these were named `ZLACK_...` with a Z. It's `SLACK_...` now.)
 
-(The developer page suggests that you add "features or permissions scopes", but you don't have to. You're not going to be submitting this to their App Directory.)
+(The developer page suggests that you add "features or permissions scopes", but you don't have to. You're not going to be submitting this to Slack's App Directory.)
+
+### Authenticating on Slack
+
+Run `zlack.py`, and then type `/auth slack` to authenticate. (The environment variables must be set for this command to work.)
+
+> `python3 zlack.py`
+
+If you don't know what an environment variable is, you can type everything out on the command line:
+
+> `python3 zlack.py --slack-client-id SLACK_CLIENT_ID --slack-client-secret SLACK_CLIENT_SECRET`
+
+...where *SLACK_CLIENT_ID* and *SLACK_CLIENT_SECRET* are the long hex strings you got off the developer page.
+
+When you type `/auth`, the script will display a Slack URL to visit. This will look like:
+
+	https://slack.com/oauth/authorize?client_id=CLIENT_ID&scope=client& redirect_uri=http%3A//localhost%3A8090/&state=state_NUMBER
+
+The script will then pause and wait for an authorization. It is listening on localhost port 8090.
+
+Go to the Slack URL in your web browser. Slack will ask you to authorize the client. When you do, you will be redirected back to the localhost port. The script will then pick up the authorization and write your authentication token into `~/.zlack-tokens`.
+
+You will only need to authenticate like this once (per machine). Your tokens will be saved; next time you run the script, it will connect right up. Unless you delete the `~/.zlack-tokens` file.
+
+## Setting up the Mattermost client
+
+This is basically the same procedure as for Slack.
 
 ### Creating a Mattermost app client ID
 
@@ -48,25 +76,23 @@ Leave the System Console and go to "Integrations" in the main Mattermost menu. Y
 
 Once you've done this, set the `MATTERMOST_CLIENT_ID` and `MATTERMOST_CLIENT_SECRET` environment variables to the values shown for the app.
 
-## Authentication
+### Authenticating on Mattermost
 
-Run `zlack.py`, and then type `/auth slack` or `/auth mattermost` to authenticate. (The environment variables must be set for this command to work.)
+Run `zlack.py`, and then type `/auth mattermost` to authenticate. (The environment variables must be set for this command to work.)
 
-> `python3 zlack.py`
+When you type `/auth`, the script will display a Mattermost URL to visit. The script will then pause and wait for an authorization. It is listening on localhost port 8090.
 
-If you don't know what an environment variable is, you can type everything out on the command line:
+Go to the URL in your web browser. Mattermost will ask you to authorize the client. When you do, you will be redirected back to the localhost port. The script will then pick up the authorization and write your authentication token into `~/.zlack-tokens`.
 
-> `python3 zlack.py --slack-client-id SLACK_CLIENT_ID --slack-client-secret SLACK_CLIENT_SECRET`
+### Authenticating on Mattermost with a Personal Access Token
 
-...where *SLACK_CLIENT_ID* and *SLACK_CLIENT_SECRET* are the long hex strings you got off the developer page.
+Mattermost also supports the idea of a Personal Access Token, which lets you authenticate directly. However, PATs have to be enabled for each user by the administrator, so this is less convenient.
 
-When you type `/auth`, the script will display a Slack URL to visit. It also starts listening on localhost port 8090. Go to the Slack URL in your web browser, authorize the client, and you will be redirected back to the localhost port. Once this succeeds, your authentication token will be written into `~/.zlack-tokens`.
-
-Since your tokens are saved, you will not need to authenticate again on the same machine. Unless you delete the `~/.zlack-tokens` file.
+If you have a PAT for your Mattermost account, type `/auth mattermost PAT` to authenticate with it.
 
 ## Running the client
 
-Once you're authenticated, you can Slack away! 
+Once you're authenticated, you can Slack away! Or Mattermost away! (They behave almost identically in this client.)
 
 At first you have no channel set. So to send a message, type
 
@@ -110,6 +136,7 @@ There are a handful of special commands, which start with a slash.
 - 2.0.0: Completely rewritten client library, fully async, no multithreading.
 - 1.0.0: Original release. Used the [Python slackclient][slackclient] library. Had questionable thread-safety logic.
 
+[slackclient]: https://github.com/slackapi/python-slackclient
 
 ## Work in progress
 

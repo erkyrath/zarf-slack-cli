@@ -80,7 +80,7 @@ class MattermProtocol(Protocol):
     async def api_call(self, method, mhost, httpmethod='post', **kwargs):
         """Make a Mattermost API call. If kwargs contains a "token"
         field, this is used; otherwise, the call is unauthenticated.
-        This is only used when authenticating to a new team.
+        This is only used when authenticating to a new team or refreshing.
         """
         url = self.base_api_url.replace('MHOST', mhost)
         url = '{0}/{1}'.format(url, method)
@@ -241,6 +241,7 @@ class MattermProtocol(Protocol):
         teammap['_protocol'] = MattermProtocol.key
         teammap['host'] = mhost
         teammap['access_token'] = access_token
+        teammap['updated_at'] = int(time.time())
 
         # If these exist, store them. We'll need them to refresh the
         # access_token.
@@ -265,6 +266,29 @@ class MattermProtocol(Protocol):
         self.client.write_teams()
 
         await team.open()
+
+    async def perform_tokenrefresh_async(self, team):
+        if not team.refresh_token:
+            raise Exception('Team has no refresh_token')
+        
+        res = await self.api_call('oauth/access_token', mhost=team.id, grant_type='refresh_token', client_id=self.client_id, client_secret=self.client_secret, refresh_token=team.refresh_token)
+
+        if not res.get('access_token'):
+            self.print('oauth/access_token response had no access_token')
+            return
+
+        team.access_token = res['access_token']
+        team.expires_in = res.get('expires_in')
+        team.refresh_token = res.get('refresh_token')
+        team.updated_at = int(time.time())
+
+        team.origmap['access_token'] = team.access_token
+        team.origmap['expires_in'] = team.expires_in
+        team.origmap['refresh_token'] = team.refresh_token
+        team.origmap['updated_at'] = team.updated_at
+
+        self.client.write_teams()
+        self.print('<Refreshed token: %s>' % (self.client.ui.team_name(team)))
         
     def construct_auth_url(self, mhost, authport, clientid):
         """Construct the URL which the user will use for authentication.
@@ -468,6 +492,12 @@ class MattermUI(ProtoUI):
             if subteam.nameparser(val):
                 return subteam
         raise ArgException('%s: No team: %s' % (team.short_name(), val))
+
+    @uicommand('refresh', isasync=True,
+               arghelp='[team]')
+    async def cmd_refresh(self, args):
+        team = self.client.ui.parse_team_or_current(args)
+        await self.perform_tokenrefresh_async(team)
         
     @uicommand('subalias', 'subaliases',
                arghelp='[host/team] alias,alias,...',
@@ -525,6 +555,7 @@ class MattermUI(ProtoUI):
 
     handler_list = [
         cmd_subalias,
+        cmd_refresh,
     ]
 
 class MattermHost(Host):
@@ -553,6 +584,7 @@ class MattermHost(Host):
         self.access_token = map['access_token']
         self.refresh_token = map.get('refresh_token', None)
         self.expires_in = map.get('expires_in', None)
+        self.updated_at = map.get('updated_at', None)
         self.origmap = map  # save the OrderedDict for writing out
 
         # The modularity here is wrong.

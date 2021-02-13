@@ -494,7 +494,8 @@ class MattermUI(ProtoUI):
         raise ArgException('%s: No team: %s' % (team.short_name(), val))
 
     @uicommand('refresh', isasync=True,
-               arghelp='[team]')
+               arghelp='[team]',
+               help='manually refresh the Mattermost access token')
     async def cmd_refresh(self, args):
         team = self.client.ui.parse_team_or_current(args)
         await self.perform_tokenrefresh_async(team)

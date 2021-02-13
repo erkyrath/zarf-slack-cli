@@ -242,6 +242,12 @@ class MattermProtocol(Protocol):
         teammap['host'] = mhost
         teammap['access_token'] = access_token
 
+        # If these exist, store them. We'll need them to refresh the
+        # access_token.
+        if expires_in and refresh_token:
+            teammap['expires_in'] = expires_in
+            teammap['refresh_token'] = refresh_token
+
         # Try fetching user info. (We want to include the user's name in the
         # ~/.zlack-tokens entry.)
         # (Note that the client-level api_call() method doesn't add the api/v4 for us.)
@@ -258,8 +264,6 @@ class MattermProtocol(Protocol):
         team = self.create_team(teammap)
         self.client.write_teams()
 
-        ### put expires_in/refresh_token in preferences?
-        
         await team.open()
         
     def construct_auth_url(self, mhost, authport, clientid):
@@ -547,6 +551,8 @@ class MattermHost(Host):
         self.team_name = self.id
         self.user_id = map['user_id']
         self.access_token = map['access_token']
+        self.refresh_token = map.get('refresh_token', None)
+        self.expires_in = map.get('expires_in', None)
         self.origmap = map  # save the OrderedDict for writing out
 
         # The modularity here is wrong.

@@ -34,6 +34,8 @@ class Protocol:
         # Call the HostClass's constructor.
         cla = self.hostclass
         team = cla(self, map)
+
+        ### if there's a team with this key, remove it and start a close task
         
         # Add it to both our team list and the master team list.
         self.teams[team.key] = team

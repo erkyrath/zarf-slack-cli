@@ -287,9 +287,12 @@ class MattermProtocol(Protocol):
         team.origmap['refresh_token'] = team.refresh_token
         team.origmap['updated_at'] = team.updated_at
 
+        # The access_token has changed so we need a new API session.
+        await team.open_session()
+        
         self.client.write_teams()
         self.print('<Refreshed token: %s>' % (self.client.ui.team_name(team)))
-        
+
     def construct_auth_url(self, mhost, authport, clientid):
         """Construct the URL which the user will use for authentication.
         Returns (authurl, redirecturl, statestring).
@@ -498,7 +501,18 @@ class MattermUI(ProtoUI):
                help='manually refresh the Mattermost access token')
     async def cmd_refresh(self, args):
         team = self.client.ui.parse_team_or_current(args)
+        if not isinstance(team, MattermHost):
+            raise ArgException('Host is not Mattermost: %s' % (team.short_name(),))
         await self.perform_tokenrefresh_async(team)
+        
+    @uicommand('resession', isasync=True,
+               arghelp='[team]',
+               help='manually recreate the Mattermost session')
+    async def cmd_resession(self, args):
+        team = self.client.ui.parse_team_or_current(args)
+        if not isinstance(team, MattermHost):
+            raise ArgException('Host is not Mattermost: %s' % (team.short_name(),))
+        await team.open_session()
         
     @uicommand('subalias', 'subaliases',
                arghelp='[host/team] alias,alias,...',
@@ -557,6 +571,7 @@ class MattermUI(ProtoUI):
     handler_list = [
         cmd_subalias,
         cmd_refresh,
+        cmd_resession,
     ]
 
 class MattermHost(Host):
@@ -623,12 +638,7 @@ class MattermHost(Host):
         """Create the web API session, load the team data, and open
         the RTM socket (if desired).
         """
-        headers = {
-            'user-agent': self.client.get_useragent(),
-            'Authorization': 'Bearer '+self.access_token,
-        }
-        self.session = aiohttp.ClientSession(headers=headers)
-
+        await self.open_session()
         await self.load_connection_data()
 
         if True:
@@ -648,6 +658,20 @@ class MattermHost(Host):
         if self.session:
             await self.session.close()
             self.session = None
+
+    async def open_session(self):
+        """Open the web API session (not the websocket session).
+        If there already was one open, close that first.
+        """
+        if self.session:
+            await self.session.close()
+            self.session = None
+            
+        headers = {
+            'user-agent': self.client.get_useragent(),
+            'Authorization': 'Bearer '+self.access_token,
+        }
+        self.session = aiohttp.ClientSession(headers=headers)
 
     async def api_call_data(self, method, httpmethod='get'):
         """Make a web API call. Return the result as raw data (bytes,

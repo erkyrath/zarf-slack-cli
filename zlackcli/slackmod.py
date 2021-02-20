@@ -155,13 +155,12 @@ class SlackProtocol(Protocol):
             return
 
         self.client.auth_in_progress = True
-        self.authtask = self.client.evloop.create_task(self.perform_auth_async())
+        self.authtask = self.client.launch_coroutine(self.perform_auth_async(), 'Begin auth')
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
             self.authtask = None
             self.client.auth_in_progress = False
-            self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
     async def perform_auth_async(self):
@@ -623,10 +622,7 @@ class SlackTeam(Host):
             self.rtm_socket = None
             return
 
-        self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM read')
-        self.readloop_task.add_done_callback(callback)
+        self.readloop_task = self.client.launch_coroutine(self.rtm_readloop_async(self.rtm_socket), 'RTM read')
         
     async def rtm_disconnect_async(self, from_reconnect=False):
         """Close the RTM (real-time) websocket.
@@ -656,12 +652,9 @@ class SlackTeam(Host):
         if self.reconnect_task:
             self.print('Already reconnecting!')
             return
-        self.reconnect_task = self.evloop.create_task(self.do_reconnect_async())
+        self.reconnect_task = self.client.launch_coroutine(self.do_reconnect_async(), 'Handle disconnect')
         def callback(future):
             self.reconnect_task = None
-            if future.cancelled():
-                return
-            self.print_exception(future.exception(), 'Handle disconnect')
         self.reconnect_task.add_done_callback(callback)
 
     async def do_reconnect_async(self):
@@ -735,10 +728,7 @@ class SlackTeam(Host):
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
-        task = self.evloop.create_task(self.rtm_send_async(msg))
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM send')
-        task.add_done_callback(callback)
+        self.client.launch_coroutine(self.rtm_send_async(msg), 'RTM send')
         
     async def rtm_send_async(self, msg):
         """Send a message via the RTM websocket.

@@ -73,6 +73,21 @@ class ZlackClient:
             for ln in ls:
                 self.print(ln.rstrip())
 
+    def launch_coroutine(self, coro, label='zlack'):
+        """Convenience function to begin an asynchronous task and report
+        any exception that occurs. This returns a task object. (You might
+        want to cancel it later.)
+        """
+        task = self.evloop.create_task(coro)
+        def callback(future):
+            if future.cancelled():
+                return
+            ex = future.exception()
+            if ex is not None:
+                self.print_exception(ex, label)
+        task.add_done_callback(callback)
+        return task
+
     def get_team(self, key):
         """Fetch a team by key ("slack:T01235X") If not found,
         return None.

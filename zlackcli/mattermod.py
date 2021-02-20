@@ -795,6 +795,11 @@ class MattermHost(Host):
             # Disconnect first
             await self.rtm_disconnect_async()
             await asyncio.sleep(0.05)
+
+        # First we do a regular API call. If the session is invalid, we'll get an error here.
+        res = await self.api_call_check('users/me')
+        if not res:
+            return
             
         self.want_connected = True
         url = self.protocol.base_api_url.replace('MHOST', self.id)

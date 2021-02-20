@@ -165,17 +165,16 @@ class MattermProtocol(Protocol):
                 return
 
         if patoken is None:
-            task = self.perform_oauth_async(mhost)
+            coro = self.perform_oauth_async(mhost)
         else:
-            task = self.perform_tokenauth_async(mhost, patoken)
+            coro = self.perform_tokenauth_async(mhost, patoken)
         self.client.auth_in_progress = True
-        self.authtask = self.client.evloop.create_task(task)
+        self.authtask = self.client.launch_coroutine(coro, 'Begin auth')
         def callback(future):
             # This is not called if authtask is cancelled. (But it is called
             # if the auth's future is cancelled.)
             self.authtask = None
             self.client.auth_in_progress = False
-            self.print_exception(future.exception(), 'Begin auth')
         self.authtask.add_done_callback(callback)
         
     async def perform_oauth_async(self, mhost):
@@ -334,10 +333,7 @@ class MattermUI(ProtoUI):
             # We *can* send, actually, but it would be rude.
             self.print('Cannot send: %s not connected' % (team.team_name,))
             return
-        task = self.client.evloop.create_task(self.send_message_async(text, team, chanid))
-        def callback(future):
-            team.print_exception(future.exception(), 'send message')
-        task.add_done_callback(callback)
+        self.client.launch_coroutine(self.send_message_async(text, team, chanid), 'send message')
         
     async def send_message_async(self, text, team, chanid):
         """Send a message to the given team and channel.
@@ -496,6 +492,7 @@ class MattermUI(ProtoUI):
                 return subteam
         raise ArgException('%s: No team: %s' % (team.short_name(), val))
 
+    ### This should happen automatically when the token expires_by time gets close.
     @uicommand('refresh', isasync=True,
                arghelp='[team]',
                help='manually refresh the Mattermost access token')
@@ -504,7 +501,8 @@ class MattermUI(ProtoUI):
         if not isinstance(team, MattermHost):
             raise ArgException('Host is not Mattermost: %s' % (team.short_name(),))
         await self.perform_tokenrefresh_async(team)
-        
+
+    ### I'm not sure when this is required.
     @uicommand('resession', isasync=True,
                arghelp='[team]',
                help='manually recreate the Mattermost session')
@@ -840,10 +838,7 @@ class MattermHost(Host):
 
         await self.rtm_send_async({ 'action':'authentication_challenge', 'seq':None, 'data':{ 'token':self.access_token } })
 
-        self.readloop_task = self.evloop.create_task(self.rtm_readloop_async(self.rtm_socket))
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM read')
-        self.readloop_task.add_done_callback(callback)
+        self.readloop_task = self.client.launch_coroutine(self.rtm_readloop_async(self.rtm_socket), 'RTM read')
         
     async def rtm_disconnect_async(self, from_reconnect=False):
         """Close the RTM (real-time) websocket.
@@ -873,12 +868,9 @@ class MattermHost(Host):
         if self.reconnect_task:
             self.print('Already reconnecting!')
             return
-        self.reconnect_task = self.evloop.create_task(self.do_reconnect_async())
+        self.reconnect_task = self.client.launch_coroutine(self.do_reconnect_async(), 'Handle disconnect')
         def callback(future):
             self.reconnect_task = None
-            if future.cancelled():
-                return
-            self.print_exception(future.exception(), 'Handle disconnect')
         self.reconnect_task.add_done_callback(callback)
 
     async def do_reconnect_async(self):
@@ -952,10 +944,7 @@ class MattermHost(Host):
         if not self.rtm_socket:
             self.print('Cannot send: %s not connected' % (self.team_name,))
             return
-        task = self.evloop.create_task(self.rtm_send_async(msg))
-        def callback(future):
-            self.print_exception(future.exception(), 'RTM send')
-        task.add_done_callback(callback)
+        self.client.launch_coroutine(self.rtm_send_async(msg), 'RTM send')
         
     async def rtm_send_async(self, msg):
         """Send a message via the RTM websocket.

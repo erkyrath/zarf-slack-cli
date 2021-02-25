@@ -47,7 +47,8 @@ class MattermProtocol(Protocol):
         headers = {
             'user-agent': self.client.get_useragent(),
         }
-        self.session = aiohttp.ClientSession(headers=headers)
+        # We use a disabled cookie jar because if we store cookies, Mattermost tries to store a MMCSRF cookie and (eventually) fails to recognize it. Not sure if this is a bug.
+        self.session = aiohttp.ClientSession(headers=headers, cookie_jar=aiohttp.DummyCookieJar())
             
         if self.teams:
             (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ], loop=self.client.evloop)
@@ -502,16 +503,6 @@ class MattermUI(ProtoUI):
             raise ArgException('Host is not Mattermost: %s' % (team.short_name(),))
         await self.perform_tokenrefresh_async(team)
 
-    ### I'm not sure when this is required.
-    @uicommand('resession', isasync=True,
-               arghelp='[team]',
-               help='manually recreate the Mattermost session')
-    async def cmd_resession(self, args):
-        team = self.client.ui.parse_team_or_current(args)
-        if not isinstance(team, MattermHost):
-            raise ArgException('Host is not Mattermost: %s' % (team.short_name(),))
-        await team.open_session()
-        
     @uicommand('subalias', 'subaliases',
                arghelp='[host/team] alias,alias,...',
                help='set the aliases for a Mattermost team on a server')
@@ -569,7 +560,6 @@ class MattermUI(ProtoUI):
     handler_list = [
         cmd_subalias,
         cmd_refresh,
-        cmd_resession,
     ]
 
 class MattermHost(Host):
@@ -669,7 +659,8 @@ class MattermHost(Host):
             'user-agent': self.client.get_useragent(),
             'Authorization': 'Bearer '+self.access_token,
         }
-        self.session = aiohttp.ClientSession(headers=headers)
+        # Again, we disable the cookie jar. See above.
+        self.session = aiohttp.ClientSession(headers=headers, cookie_jar=aiohttp.DummyCookieJar())
 
     async def api_call_data(self, method, httpmethod='get'):
         """Make a web API call. Return the result as raw data (bytes,

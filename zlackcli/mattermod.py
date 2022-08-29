@@ -51,7 +51,7 @@ class MattermProtocol(Protocol):
         self.session = aiohttp.ClientSession(headers=headers, cookie_jar=aiohttp.DummyCookieJar())
             
         if self.teams:
-            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ], loop=self.client.evloop)
+            (done, pending) = await asyncio.wait([ team.open() for team in self.teams.values() ])
             for res in done:
                 self.print_exception(res.exception(), 'Could not set up team')
 
@@ -71,7 +71,7 @@ class MattermProtocol(Protocol):
             self.waketask = None
 
         if self.teams:
-            (done, pending) = await asyncio.wait([ team.close() for team in self.teams.values() ], loop=self.client.evloop)
+            (done, pending) = await asyncio.wait([ team.close() for team in self.teams.values() ])
             # Ignore exceptions.
 
         if self.session:
@@ -134,7 +134,7 @@ class MattermProtocol(Protocol):
                         await team.rtm_connect_async()
                     
                 if self.teams:
-                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ], loop=self.client.evloop)
+                    (done, pending) = await asyncio.wait([ reconnect_if_connected(team) for team in self.teams.values() ])
                     for res in done:
                         self.print_exception(res.exception(), 'Could not reconnect team')
                 
@@ -198,7 +198,7 @@ class MattermProtocol(Protocol):
         # Wait for the callback. (With a timeout.)
         auth_code = None
         try:
-            auth_code = await asyncio.wait_for(future, 60, loop=self.client.evloop)
+            auth_code = await asyncio.wait_for(future, 60)
         except asyncio.TimeoutError:
             self.print('URL redirect timed out.')
         except asyncio.CancelledError:

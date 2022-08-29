@@ -120,9 +120,12 @@ async def mainloop(client):
 
 # Begin work.
 
-evloop = asyncio.get_event_loop()
-evloop.set_exception_handler(exception_handler)
+async def main():
+    evloop = asyncio.get_running_loop()
+    evloop.set_exception_handler(exception_handler)
 
-client = ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
+    client = ZlackClient(token_path, prefs_path, opts=opts, loop=evloop)
 
-evloop.run_until_complete(mainloop(client))
+    await mainloop(client)
+
+asyncio.run(main())

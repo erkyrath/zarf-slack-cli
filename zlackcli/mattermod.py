@@ -188,7 +188,7 @@ class MattermProtocol(Protocol):
         self.print('Visit this URL to authenticate with Mattermost:\n')
         self.print(authurl+'\n')
 
-        future = asyncio.Future(loop=self.client.evloop)
+        future = self.client.evloop.create_future()
 
         # Bring up a local web server to wait for the redirect callback.
         # When we get it, the future will be set.

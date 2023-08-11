@@ -337,12 +337,14 @@ class SlackUI(ProtoUI):
             if not origmsg:
                 self.print('Mismatched reply_to (id %d, msg %s)' % (msg.get('reply_to'), msg.get('text')))
                 return
-            chanid = origmsg.get('channel', '')
-            userid = origmsg.get('user', '')
-            # Print our successful messages even on muted channels
-            text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
-            val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
-            self.print(val)
+            if False:
+                # Print our successful messages even on muted channels
+                # (Or not -- this is redundant on normal channels and I don't feel like special-casing muted channels.)
+                chanid = origmsg.get('channel', '')
+                userid = origmsg.get('user', '')
+                text = self.decode_message(team, msg.get('text'), attachments=msg.get('attachments'), files=msg.get('files'))
+                val = '[%s/%s] %s: %s' % (self.ui.team_name(team), self.ui.channel_name(team, chanid), self.ui.user_name(team, userid), text)
+                self.print(val)
             return
         
         if typ == 'hello':

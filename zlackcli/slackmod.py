@@ -400,6 +400,7 @@ class SlackUI(ProtoUI):
         - User references look like <@USERID>
         - URLs look like <URL> or <URL|SLUG>
         - &, <, and > characters are &-encoded (as in HTML)
+        TODO: External user references are not properly converted!
         """
         if val is None:
             val = ''
